@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Travel App</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ホーム -->
+    <div id="view-home" class="view hidden">
+        <!-- スライダー -->
+        <div class="home-slider-wrapper">
+            <div class="home-slider" id="homeSlider">
+                <div class="home-slide slide-countdown">
+                    <div class="slide-icon">✈️</div>
+                    <div class="slide-label">次の旅行まで</div>
+                    <div class="slide-main" id="countdownDays">-- 日</div>
+                    <div class="slide-sub" id="countdownDestination">予定を登録してね</div>
+                </div>
+                <div class="home-slide slide-weather">
+                    <div class="slide-label" id="weatherLocation">目的地の天気</div>
+                    <div class="weather-main">
+                        <span class="weather-icon" id="weatherIcon">🌤️</span>
+                        <span class="slide-main" id="weatherTemp">--°C</span>
+                    </div>
+                    <div class="slide-sub" id="weatherDesc">予定を登録すると表示されます</div>
+                </div>
+            </div>
+            <div class="slider-dots">
+                <span class="dot active" onclick="goToSlide(0)"></span>
+                <span class="dot" onclick="goToSlide(1)"></span>
+            </div>
+        </div>
+
+        <!-- 4つのボタングリッド -->
+        <div class="home-grid">
+            <button class="home-grid-btn" onclick="openModal('favorites')">
+                <span class="grid-icon">⭐</span>
+                <span class="grid-label">お気に入り</span>
+                <span class="grid-count" id="favCount">0</span>
+            </button>
+            <button class="home-grid-btn" onclick="openModal('recent-likes')">
+                <span class="grid-icon">❤️</span>
+                <span class="grid-label">最近いいね</span>
+                <span class="grid-count" id="recentLikeCount">0</span>
+            </button>
+            <button class="home-grid-btn" onclick="openModal('plans')">
+                <span class="grid-icon">📅</span>
+                <span class="grid-label">旅行予定</span>
+                <span class="grid-count" id="planCount">0</span>
+            </button>
+            <button class="home-grid-btn" onclick="openModal('anmari')">
+                <span class="grid-icon">😐</span>
+                <span class="grid-label">あんまり</span>
+                <span class="grid-count" id="anmariCount">0</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 探す -->
+    <div id="view-swipe" class="view">
+        <div id="card-stack"></div>
+    </div>
+
+    <!-- 予定 -->
+    <div id="view-plan" class="view hidden">
+        <h2>予定</h2>
+    </div>
+
+    <!-- データ -->
+    <div id="view-data" class="view hidden">
+        <h2>スタンド能力値</h2>
+        <div class="chart-container">
+            <canvas id="standChart"></canvas>
+        </div>
+    </div>
+
+    <!-- 設定 -->
+    <div id="view-settings" class="view hidden">
+        <h2>設定</h2>
+    </div>
+
+    <!-- モーダル -->
+    <div id="modal-overlay" class="modal-overlay hidden" onclick="closeModal()">
+        <div class="modal-sheet" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <span class="modal-title" id="modalTitle"></span>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- ボトムナビ -->
+    <div class="bottom-nav">
+        <nav>
+            <ul>
+                <li class="nav-item" onclick="switchView('home', this)">
+                    <span class="material-icons">home</span>
+                    <span>ホーム</span>
+                </li>
+                <li class="nav-item active" onclick="switchView('swipe', this)">
+                    <span class="material-icons">swipe</span>
+                    <span>探す</span>
+                </li>
+                <li class="nav-item" onclick="switchView('plan', this)">
+                    <span class="material-icons">event_note</span>
+                    <span>予定</span>
+                </li>
+                <li class="nav-item" onclick="switchView('data', this)">
+                    <span class="material-icons">analytics</span>
+                    <span>データ</span>
+                </li>
+                <li class="nav-item" onclick="switchView('settings', this)">
+                    <span class="material-icons">settings</span>
+                    <span>設定</span>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
