@@ -3,88 +3,403 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Travel App</title>
+    <title>Kinki Wander - AI旅行プランナー</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js and Icons -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="theme-mc-blue">
 
-    <!-- ホーム -->
-    <div id="view-home" class="view hidden">
-        <!-- スライダー -->
-        <div class="home-slider-wrapper">
-            <div class="home-slider" id="homeSlider">
-                <div class="home-slide slide-countdown">
-                    <div class="slide-icon">✈️</div>
-                    <div class="slide-label">次の旅行まで</div>
-                    <div class="slide-main" id="countdownDays">-- 日</div>
-                    <div class="slide-sub" id="countdownDestination">予定を登録してね</div>
+    <div class="app-container">
+        <!-- Sidebar Backdrop for Mobile -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar Navigation -->
+        <aside class="app-sidebar" id="appSidebar">
+            <div class="sidebar-profile">
+                <div class="profile-avatar-wrapper">
+                    <img id="userAvatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=traveler" alt="Avatar">
                 </div>
-                <div class="home-slide slide-weather">
-                    <div class="slide-label" id="weatherLocation">目的地の天気</div>
-                    <div class="weather-main">
-                        <span class="weather-icon" id="weatherIcon">🌤️</span>
-                        <span class="slide-main" id="weatherTemp">--°C</span>
+                <div class="profile-info">
+                    <h4 id="userName">トラベラー</h4>
+                    <p id="userStatus">近畿エリア探索中</p>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="sidebar-item active" onclick="switchView('swipe', this)">
+                        <span class="material-icons">swipe</span>
+                        <span>探す (検索)</span>
+                    </li>
+                    <li class="sidebar-item" onclick="switchView('plan', this)">
+                        <span class="material-icons">event_note</span>
+                        <span>予定</span>
+                    </li>
+                    <li class="sidebar-item" onclick="switchView('home', this)">
+                        <span class="material-icons">home</span>
+                        <span>ホーム</span>
+                    </li>
+                    <li class="sidebar-item" onclick="switchView('data', this)">
+                        <span class="material-icons">analytics</span>
+                        <span>データ (スタンド)</span>
+                    </li>
+                    <li class="sidebar-item" onclick="switchView('settings', this)">
+                        <span class="material-icons">settings</span>
+                        <span>設定</span>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="sidebar-footer">
+                <span>Kinki Wander</span>
+                <span>v1.2.0</span>
+            </div>
+        </aside>
+
+        <!-- Mobile Header -->
+        <header class="mobile-header">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <span class="material-icons">menu</span>
+            </button>
+            <h1 class="header-title" id="headerTitle">Kinki Wander</h1>
+            <div class="header-avatar" onclick="switchView('settings')">
+                <img id="headerUserAvatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=traveler" alt="Avatar">
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="app-content">
+            
+            <!-- VIEW: SWIPE (探す/検索) -->
+            <div id="view-swipe" class="view">
+                <!-- Filtering Bar -->
+                <div class="filter-bar">
+                    <select class="filter-select" id="filterSeason" onchange="applyFilters()">
+                        <option value="all">時期: すべて</option>
+                        <option value="春">春</option>
+                        <option value="夏">夏</option>
+                        <option value="秋">秋</option>
+                        <option value="冬">冬</option>
+                    </select>
+                    <select class="filter-select" id="filterCategory" onchange="applyFilters()">
+                        <option value="all">カテゴリ: すべて</option>
+                        <option value="history">歴史・文化</option>
+                        <option value="nature">自然・アウトドア</option>
+                        <option value="food">グルメ</option>
+                        <option value="healing">温泉・癒やし</option>
+                    </select>
+                </div>
+
+                <!-- Card Stack -->
+                <div id="card-stack">
+                    <!-- Cards will be dynamically inserted here -->
+                </div>
+
+                <!-- Swipe Buttons (パッと見てもわかるようにする) -->
+                <div class="swipe-actions-container" id="swipeActionsContainer">
+                    <button class="swipe-action-btn btn-swipe-anmari" onclick="swipeTopCard('anmari')">
+                        <span class="material-icons-outlined">close</span>
+                        <span>あんまり</span>
+                    </button>
+                    <button class="swipe-action-btn btn-swipe-like" onclick="swipeTopCard('like')">
+                        <span class="material-icons-outlined">favorite</span>
+                        <span>いいね</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- VIEW: PLAN (予定) -->
+            <div id="view-plan" class="view hidden">
+                <div class="plan-view-container">
+                    <div class="plan-header">
+                        <h2>旅行プランの作成</h2>
+                        <p>「いいね」したスポットを選択して、AIに最適化された旅行計画を提案してもらいましょう。</p>
                     </div>
-                    <div class="slide-sub" id="weatherDesc">予定を登録すると表示されます</div>
+
+                    <div class="plan-grid">
+                        <!-- Left: Liked Places List -->
+                        <div class="liked-places-panel">
+                            <h3>いいねリスト</h3>
+                            <div class="liked-list" id="likedList">
+                                <!-- Liked items inserted here -->
+                            </div>
+                        </div>
+
+                        <!-- Right: Form and Proposals -->
+                        <div class="planning-panel" id="planningPanel">
+                            <!-- State 1: Select a place -->
+                            <div class="modal-empty" id="planFormPlaceholder">
+                                <span class="material-icons" style="font-size: 3rem; opacity: 0.3;">arrow_back</span>
+                                <p style="margin-top: 12px;">左のいいねリストからスポットを選択してください。</p>
+                            </div>
+
+                            <!-- State 2: Fill Form -->
+                            <form class="plan-form hidden" id="planForm" onsubmit="generateTravelPlan(event)">
+                                <h3 id="planTargetName">スポット名</h3>
+                                
+                                <div class="form-row-2">
+                                    <div class="form-group">
+                                        <label for="planDate">日程 (いつ行くか)</label>
+                                        <input type="date" id="planDate" class="form-input" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="planNights">泊数 (何泊か)</label>
+                                        <select id="planNights" class="form-select">
+                                            <option value="1">1泊2日</option>
+                                            <option value="2">2泊3日</option>
+                                            <option value="3">3泊4日</option>
+                                            <option value="4">4泊5日</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-row-2">
+                                    <div class="form-group">
+                                        <label for="planPeople">人数 (何人か)</label>
+                                        <input type="number" id="planPeople" class="form-input" min="1" value="2" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="planBudget">予算 (総額)</label>
+                                        <select id="planBudget" class="form-select">
+                                            <option value="30000">3万円以内</option>
+                                            <option value="50000">5万円以内</option>
+                                            <option value="100000">10万円以内</option>
+                                            <option value="200000">20万円以上</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>重視ポイント (何を重視しているか)</label>
+                                    <div class="priority-pills" id="priorityPills">
+                                        <span class="priority-pill active" onclick="togglePriorityPill(this)" data-val="グルメ">グルメ</span>
+                                        <span class="priority-pill" onclick="togglePriorityPill(this)" data-val="観光・歴史">観光・歴史</span>
+                                        <span class="priority-pill" onclick="togglePriorityPill(this)" data-val="自然・癒やし">自然・癒やし</span>
+                                        <span class="priority-pill" onclick="togglePriorityPill(this)" data-val="アクティビティ">アクティブ</span>
+                                        <span class="priority-pill" onclick="togglePriorityPill(this)" data-val="ショッピング">買い物</span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="planOthers">その他 (備考・要望)</label>
+                                    <textarea id="planOthers" class="form-textarea" rows="2" placeholder="例: 近辺で有名な甘味処に行きたい、バリアフリーを重視したい、など"></textarea>
+                                </div>
+
+                                <div class="generator-actions">
+                                    <label class="debug-simulator">
+                                        <input type="checkbox" id="simulateApiError">
+                                        <span>デバッグ用: 楽天APIエラー再現</span>
+                                    </label>
+                                    <button type="submit" class="btn-primary">AI旅行プランを生成する</button>
+                                </div>
+                            </form>
+
+                            <!-- State 3: Loading -->
+                            <div class="loading-view hidden" id="planLoading">
+                                <div class="spinner"></div>
+                                <h4 style="margin-top: 16px;">AIプランを生成中...</h4>
+                                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px;">楽天トラベルのホテル情報を取得しています</p>
+                            </div>
+
+                            <!-- State 4: Results (AI & Rakuten Hotels) -->
+                            <div class="ai-results-view hidden" id="planResults">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin-bottom: 0;">提案された旅行プラン</h3>
+                                    <button class="btn-primary" style="padding: 6px 14px; font-size: 0.8rem;" onclick="backToPlanForm()">再入力</button>
+                                </div>
+
+                                <div class="ai-plan-card">
+                                    <h3>📅 日程・プラン提案</h3>
+                                    <div class="ai-plan-text" id="aiPlanText"></div>
+                                </div>
+
+                                <div class="ai-plan-card">
+                                    <h3>🏨 おすすめホテル (楽天トラベル連携)</h3>
+                                    <div class="hotel-list" id="hotelList">
+                                        <!-- Hotel cards will be dynamically inserted here -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- State 5: API Error View -->
+                            <div class="api-error-card hidden" id="planError">
+                                <span class="material-icons error-icon">error_outline</span>
+                                <h3>API連携エラーが発生しました</h3>
+                                <p>楽天トラベルAPIがタイムアウトしたか、無効な応答を返しました。<br>安全なバックエンド通信をリトライしてください。</p>
+                                <button class="btn-retry" onclick="retryPlanGeneration()">再読み込み (再試行)</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="slider-dots">
-                <span class="dot active" onclick="goToSlide(0)"></span>
-                <span class="dot" onclick="goToSlide(1)"></span>
+
+            <!-- VIEW: HOME (ホーム/データ管理) -->
+            <div id="view-home" class="view hidden">
+                <!-- Welcome Banner -->
+                <div class="home-slider-wrapper">
+                    <div class="home-slider" id="homeSlider">
+                        <div class="home-slider-track" id="homeSliderTrack">
+                            <div class="home-slide slide-countdown">
+                                <div class="slide-icon">✈️</div>
+                                <div class="slide-label">次の旅行まで</div>
+                                <div class="slide-main" id="countdownDays">-- 日</div>
+                                <div class="slide-sub" id="countdownDestination">予定を登録してね</div>
+                            </div>
+                            <div class="home-slide slide-weather">
+                                <div class="slide-label" id="weatherLocation">目的地の天気</div>
+                                <div class="weather-main">
+                                    <span class="weather-icon" id="weatherIcon">🌤️</span>
+                                    <span class="slide-main" id="weatherTemp">--°C</span>
+                                </div>
+                                <div class="slide-sub" id="weatherDesc">予定を登録すると表示されます</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slider-dots">
+                        <span class="dot active" onclick="goToSlide(0)"></span>
+                        <span class="dot" onclick="goToSlide(1)"></span>
+                    </div>
+                </div>
+
+                <!-- 4 Grid Buttons -->
+                <div class="home-grid">
+                    <button class="home-grid-btn" onclick="openModal('favorites')">
+                        <span class="grid-icon">⭐</span>
+                        <span class="grid-label">お気に入り</span>
+                        <span class="grid-count" id="favCount">0</span>
+                    </button>
+                    <button class="home-grid-btn" onclick="openModal('recent-likes')">
+                        <span class="grid-icon">❤️</span>
+                        <span class="grid-label">最近いいね</span>
+                        <span class="grid-count" id="recentLikeCount">0</span>
+                    </button>
+                    <button class="home-grid-btn" onclick="openModal('plans')">
+                        <span class="grid-icon">📅</span>
+                        <span class="grid-label">旅行予定</span>
+                        <span class="grid-count" id="planCount">0</span>
+                    </button>
+                    <button class="home-grid-btn" onclick="openModal('anmari')">
+                        <span class="grid-icon">😐</span>
+                        <span class="grid-label">あんまり (不要データ)</span>
+                        <span class="grid-count" id="anmariCount">0</span>
+                    </button>
+                </div>
             </div>
-        </div>
 
-        <!-- 4つのボタングリッド -->
-        <div class="home-grid">
-            <button class="home-grid-btn" onclick="openModal('favorites')">
-                <span class="grid-icon">⭐</span>
-                <span class="grid-label">お気に入り</span>
-                <span class="grid-count" id="favCount">0</span>
-            </button>
-            <button class="home-grid-btn" onclick="openModal('recent-likes')">
-                <span class="grid-icon">❤️</span>
-                <span class="grid-label">最近いいね</span>
-                <span class="grid-count" id="recentLikeCount">0</span>
-            </button>
-            <button class="home-grid-btn" onclick="openModal('plans')">
-                <span class="grid-icon">📅</span>
-                <span class="grid-label">旅行予定</span>
-                <span class="grid-count" id="planCount">0</span>
-            </button>
-            <button class="home-grid-btn" onclick="openModal('anmari')">
-                <span class="grid-icon">😐</span>
-                <span class="grid-label">あんまり</span>
-                <span class="grid-count" id="anmariCount">0</span>
-            </button>
-        </div>
+            <!-- VIEW: DATA (スタンド) -->
+            <div id="view-data" class="view hidden">
+                <div class="data-header">
+                    <h2>スタンド能力値</h2>
+                    <p>あなたの旅行スワイプ傾向を学習した、オリジナルのスタンドパラメータを表示します。</p>
+                </div>
+
+                <div class="stand-badge-container">
+                    <div class="stand-name-title">TRAVEL STAND NAME</div>
+                    <div class="stand-name-val" id="standName">未決定の旅人</div>
+                    <div class="stand-rank-val" id="standRank">評価: -</div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="standChart"></canvas>
+                </div>
+            </div>
+
+            <!-- VIEW: SETTINGS (設定) -->
+            <div id="view-settings" class="view hidden">
+                <div class="plan-header" style="max-width: 700px; width: 100%; margin: 0 auto 20px auto;">
+                    <h2>アプリ設定</h2>
+                    <p>アカウント情報やデザイン、表示サイズの調整を行います。</p>
+                </div>
+
+                <div id="view-settings-container">
+                    <!-- Section: Account Settings -->
+                    <div class="settings-section">
+                        <h3>👤 アカウント設定</h3>
+                        
+                        <div class="form-group">
+                            <label for="settingsUsername">ユーザー名</label>
+                            <input type="text" id="settingsUsername" class="form-input" value="トラベラー" oninput="updateSettingsFromUI()">
+                        </div>
+
+                        <div class="form-group">
+                            <label>アイコン変更</label>
+                            <div class="avatar-selector">
+                                <img class="avatar-opt selected" onclick="selectAvatar('traveler', this)" src="https://api.dicebear.com/7.x/bottts/svg?seed=traveler" alt="bot1">
+                                <img class="avatar-opt" onclick="selectAvatar('explorer', this)" src="https://api.dicebear.com/7.x/bottts/svg?seed=explorer" alt="bot2">
+                                <img class="avatar-opt" onclick="selectAvatar('wanderer', this)" src="https://api.dicebear.com/7.x/bottts/svg?seed=wanderer" alt="bot3">
+                                <img class="avatar-opt" onclick="selectAvatar('adventurer', this)" src="https://api.dicebear.com/7.x/bottts/svg?seed=adventurer" alt="bot4">
+                                <img class="avatar-opt" onclick="selectAvatar('voyager', this)" src="https://api.dicebear.com/7.x/bottts/svg?seed=voyager" alt="bot5">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="settingsHeaderTitle">ヘッダータイトル</label>
+                            <input type="text" id="settingsHeaderTitle" class="form-input" value="Kinki Wander" oninput="updateSettingsFromUI()">
+                        </div>
+                    </div>
+
+                    <!-- Section: Display Settings -->
+                    <div class="settings-section">
+                        <h3>🎨 デザイン設定</h3>
+
+                        <div class="form-group">
+                            <label>カラーテーマ</label>
+                            <div class="theme-options">
+                                <button class="theme-btn active" id="btnThemeMcBlue" onclick="changeTheme('mc-blue')">
+                                    <span style="background-color: #007cff;"></span>
+                                    M&C ブルー
+                                </button>
+                                <button class="theme-btn" id="btnThemeMcEmerald" onclick="changeTheme('mc-emerald')">
+                                    <span style="background-color: #10b981;"></span>
+                                    エメラルド
+                                </button>
+                                <button class="theme-btn" id="btnThemeMcAmber" onclick="changeTheme('mc-amber')">
+                                    <span style="background-color: #f59e0b;"></span>
+                                    アンバー
+                                </button>
+                                <button class="theme-btn" id="btnThemeMcDark" onclick="changeTheme('mc-dark')">
+                                    <span style="background-color: #3b82f6;"></span>
+                                    チャコール
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>文字サイズ調整</label>
+                            <div class="size-slider-group">
+                                <span style="font-size: 0.8rem; opacity: 0.6;">A-</span>
+                                <input type="range" class="size-slider" id="textSizeSlider" min="80" max="120" value="100" oninput="changeFontSize(this.value)">
+                                <span style="font-size: 1.2rem; opacity: 0.6;">A+</span>
+                                <span id="sizeValText" style="font-size: 0.9rem; min-width: 45px;">100%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section: System Settings -->
+                    <div class="settings-section">
+                        <h3>🌐 システム設定</h3>
+
+                        <div class="form-group">
+                            <label for="settingsLang">表示言語</label>
+                            <select id="settingsLang" class="form-select" onchange="changeLanguage(this.value)">
+                                <option value="ja">日本語</option>
+                                <option value="en">English (Simulation)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
     </div>
 
-    <!-- 探す -->
-    <div id="view-swipe" class="view">
-        <div id="card-stack"></div>
-    </div>
-
-    <!-- 予定 -->
-    <div id="view-plan" class="view hidden">
-        <h2>予定</h2>
-    </div>
-
-    <!-- データ -->
-    <div id="view-data" class="view hidden">
-        <h2>スタンド能力値</h2>
-        <div class="chart-container">
-            <canvas id="standChart"></canvas>
-        </div>
-    </div>
-
-    <!-- 設定 -->
-    <div id="view-settings" class="view hidden">
-        <h2>設定</h2>
-    </div>
-
-    <!-- モーダル -->
+    <!-- Modal for lists -->
     <div id="modal-overlay" class="modal-overlay hidden" onclick="closeModal()">
         <div class="modal-sheet" onclick="event.stopPropagation()">
             <div class="modal-header">
@@ -95,33 +410,8 @@
         </div>
     </div>
 
-    <!-- ボトムナビ -->
-    <div class="bottom-nav">
-        <nav>
-            <ul>
-                <li class="nav-item" onclick="switchView('home', this)">
-                    <span class="material-icons">home</span>
-                    <span>ホーム</span>
-                </li>
-                <li class="nav-item active" onclick="switchView('swipe', this)">
-                    <span class="material-icons">swipe</span>
-                    <span>探す</span>
-                </li>
-                <li class="nav-item" onclick="switchView('plan', this)">
-                    <span class="material-icons">event_note</span>
-                    <span>予定</span>
-                </li>
-                <li class="nav-item" onclick="switchView('data', this)">
-                    <span class="material-icons">analytics</span>
-                    <span>データ</span>
-                </li>
-                <li class="nav-item" onclick="switchView('settings', this)">
-                    <span class="material-icons">settings</span>
-                    <span>設定</span>
-                </li>
-            </ul>
-        </nav>
-    </div>
+    <!-- Toast container -->
+    <div class="toast-container" id="toastContainer"></div>
 
     <script type="module" src="script.js"></script>
 </body>
