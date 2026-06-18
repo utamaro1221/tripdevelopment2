@@ -1,3 +1,30 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { 
+    getAuth, 
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword, 
+    signOut, 
+    onAuthStateChanged,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signInAnonymously
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyCD2GZE-GhpCgLU9LN32lBAEq8e2y0EwDo",
+  authDomain: "tripdevelopment-d109d.firebaseapp.com",
+  projectId: "tripdevelopment-d109d",
+  storageBucket: "tripdevelopment-d109d.firebasestorage.app",
+  messagingSenderId: "15713811869",
+  appId: "1:15713811869:web:0928db27dfa1d906e3c374",
+  measurementId: "G-ZLZET7PJMS"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
 // ==========================================
 // 1. 観光スポットデータ定義 (近畿地方限定)
 // ==========================================
@@ -354,6 +381,51 @@ let anmaris = JSON.parse(localStorage.getItem("kw_anmaris")) || [];
 let favorites = JSON.parse(localStorage.getItem("kw_favorites")) || [];
 let plans = JSON.parse(localStorage.getItem("kw_plans")) || [];
 
+const defaultSharedPlans = [
+    {
+        id: 10001,
+        author: "ひろし (温泉ソムリエ)",
+        avatar: "explorer",
+        destination: "有馬温泉",
+        prefecture: "兵庫",
+        date: "2026-11-23",
+        nights: 2,
+        people: 2,
+        budget: 50000,
+        itineraryText: `【有馬温泉を巡る 2泊3日 旅行プラン】\n📅 日程: 2026-11-23 〜 | 👥 人数: 2名様 | 💰 予算目安: 50,000円程度\n🌟 重視: グルメ, 温泉・癒やし\n\n--- 🗺️ スケジュール提案 ---\n■ 1日目:\n  ・午後: 神戸三宮からバスで有馬温泉へ直行。情緒あるレトロな温泉街を散策。\n  ・夕方: 有馬の金泉・銀泉を楽しめる伝統の旅館にチェックイン。\n  ・夜間: 旬の但馬牛や瀬戸内の新鮮な魚介をあしらった会席料理に舌鼓。\n\n■ 2日目:\n  ・午前: 瑞宝寺公園で紅葉や新緑をハイキング。\n  ・昼食: 炭酸せんべいや有馬ビールを片手に温泉街で食べ歩き。\n  ・午後: 六甲有馬ロープウェーで六甲山山頂へ登り、絶景を堪能。\n  ・夜間: 宿の露天風呂で星空を眺めながらゆったり。\n\n■ 最終日:\n  ・午前: 温泉寺の参拝と、お土産屋でのショッピング。\n  ・午後: カフェで名物の「炭酸和菓子」とお茶を頂きリフレッシュ。\n  ・夕方: バスまたは神戸電鉄で帰路へ。`
+    },
+    {
+        id: 10002,
+        author: "さくら",
+        avatar: "wanderer",
+        destination: "清水寺",
+        prefecture: "京都",
+        date: "2026-10-15",
+        nights: 1,
+        people: 1,
+        budget: 30000,
+        itineraryText: `【清水寺を巡る 1泊2日 旅行プラン】\n📅 日程: 2026-10-15 〜 | 👥 人数: 1名様 | 💰 予算目安: 30,000円程度\n🌟 重視: 観光・歴史, 自然・癒やし\n\n--- 🗺️ スケジュール提案 ---\n■ 1日目:\n  ・午前: JR京都駅到着。市バスで清水寺方面へ移動。\n  ・昼食: 清水坂近くで湯豆腐セットとお抹茶を味わう。\n  ・午後: 世界遺産・清水寺をゆっくり参拝。清水の舞台からの眺望と音羽の滝を体験。\n  ・夕方: 三寧坂（産念坂）・二寧坂を風情を感じながら散策し、和雑貨店巡り。\n  ・夜間: 東山の町家を改装したお洒落なゲストハウスにチェックイン。近隣の居酒屋で京風おばんざいディナー。\n\n■ 最終日:\n  ・午前: 早朝の静かな八坂神社と円山公園を散策。\n  ・午後: 祇園エリアで老舗甘味処のパフェを堪能。\n  ・夕方: 京都駅でお土産（八つ橋など）を調達して解散。`
+    },
+    {
+        id: 10003,
+        author: "たびびとA",
+        avatar: "adventurer",
+        destination: "奈良公園",
+        prefecture: "奈良",
+        date: "2026-09-05",
+        nights: 1,
+        people: 4,
+        budget: 40000,
+        itineraryText: `【奈良公園を巡る 1泊2日 旅行プラン】\n📅 日程: 2026-09-05 〜 | 👥 人数: 4名様 | 💰 予算目安: 40,000円程度\n🌟 重視: 観光・歴史, 自然・癒やし\n\n--- 🗺️ スケジュール提案 ---\n■ 1日目:\n  ・午前: 近鉄奈良駅に集合。徒歩で奈良公園へ。\n  ・午後: 東大寺大仏殿で大仏様を拝観。南大門の金剛力士像に圧倒される。その後、公園内の鹿と戯れ鹿せんべいを与える。\n  ・夕方: 若草山麓を散策し、夕日に染まる古都 of 絶景を眺める。\n  ・夜間: 奈良公園近くの和風旅館にチェックイン。大和ポークのしゃぶしゃぶを楽しむ。\n\n■ 最終日:\n  ・午前: 春日大社を参拝。朱塗りの本殿と燈籠の回廊を見学。\n  ・昼食: ならまち（旧市街）で名物の柿の葉寿司や大和茶粥ランチ。\n  ・午後: ならまちのクラフトビール店やカフェで旅の振り返り。\n  ・夕方: お土産を片手に近鉄奈良駅より解散。`
+    }
+];
+
+let sharedPlans = JSON.parse(localStorage.getItem("kw_shared_plans"));
+if (!sharedPlans || sharedPlans.length === 0) {
+    sharedPlans = [...defaultSharedPlans];
+    localStorage.setItem("kw_shared_plans", JSON.stringify(sharedPlans));
+}
+
 // アカウント・UI設定の読み込み
 let userName = localStorage.getItem("kw_username") || "トラベラー";
 let userAvatar = localStorage.getItem("kw_avatar") || "traveler";
@@ -371,6 +443,113 @@ let nextPoolIndex = 0;
 let isDragging = false;
 let activePlanTarget = null;
 let currentPriority = ["グルメ"];
+let recommendationMode = false;
+
+// ログイン状態の監視とUI更新
+onAuthStateChanged(auth, (user) => {
+    updateAuthUI(user);
+});
+
+function updateAuthUI(user) {
+    const settingsUserStatus = document.getElementById("settingsUserStatus");
+    const settingsAuthBtn = document.getElementById("settingsAuthBtn");
+    const shareLoggedOut = document.getElementById("shareLoggedOutState");
+    const shareLoggedIn = document.getElementById("shareLoggedInState");
+    
+    const nameEl = document.getElementById("userName");
+    const statusEl = document.getElementById("userStatus");
+
+    if (user) {
+        if (user.isAnonymous) {
+            // ゲストログイン状態
+            userName = "ゲストトラベラー";
+            if (nameEl) nameEl.textContent = userName;
+            if (statusEl) statusEl.textContent = "ゲストモードで利用中";
+            
+            if (settingsUserStatus) {
+                settingsUserStatus.innerHTML = `
+                    <div class="auth-status-card logged-out">
+                        <span class="material-icons status-icon">account_circle</span>
+                        <div>
+                            <div class="status-title">ゲストトラベラー</div>
+                            <div class="status-desc">ログインすると予定をクラウド同期できます</div>
+                        </div>
+                    </div>
+                `;
+            }
+            if (settingsAuthBtn) {
+                settingsAuthBtn.innerHTML = `
+                    <button class="btn-primary" style="background-color: var(--accent-anmari); width: 100%;" onclick="logoutUser()">
+                        <span class="material-icons" style="font-size: 1.1rem; vertical-align: middle; margin-right: 6px;">logout</span>
+                        ログアウト (ゲスト終了)
+                    </button>
+                `;
+            }
+
+            // ゲストは共有機能を使えない
+            if (shareLoggedOut) shareLoggedOut.classList.remove("hidden");
+            if (shareLoggedIn) shareLoggedIn.classList.add("hidden");
+        } else {
+            // 本ログイン状態
+            userName = user.displayName || user.email.split('@')[0];
+            if (nameEl) nameEl.textContent = userName;
+            if (statusEl) statusEl.textContent = "アカウント同期中 (連携済み)";
+            
+            if (settingsUserStatus) {
+                settingsUserStatus.innerHTML = `
+                    <div class="auth-status-card logged-in">
+                        <span class="material-icons status-icon">verified_user</span>
+                        <div>
+                            <div class="status-title">同期完了</div>
+                            <div class="status-email">${user.email}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            if (settingsAuthBtn) {
+                settingsAuthBtn.innerHTML = `
+                    <button class="btn-primary" style="background-color: var(--accent-anmari); width: 100%;" onclick="logoutUser()">
+                        <span class="material-icons" style="font-size: 1.1rem; vertical-align: middle; margin-right: 6px;">logout</span>
+                        ログアウト
+                    </button>
+                `;
+            }
+
+            // ログイン済みの場合は共有機能を利用可能
+            if (shareLoggedOut) shareLoggedOut.classList.add("hidden");
+            if (shareLoggedIn) shareLoggedIn.classList.remove("hidden");
+        }
+    } else {
+        // 未ログイン状態
+        userName = localStorage.getItem("kw_username") || "トラベラー";
+        if (nameEl) nameEl.textContent = userName;
+        if (statusEl) statusEl.textContent = "近畿エリア探索中";
+        
+        if (settingsUserStatus) {
+            settingsUserStatus.innerHTML = `
+                <div class="auth-status-card logged-out">
+                    <span class="material-icons status-icon">no_accounts</span>
+                    <div>
+                        <div class="status-title">未連携</div>
+                        <div class="status-desc">ログインすると予定をクラウド同期できます</div>
+                    </div>
+                </div>
+            `;
+        }
+        if (settingsAuthBtn) {
+            settingsAuthBtn.innerHTML = `
+                <button class="btn-primary" style="width: 100%;" onclick="openAuthModal()">
+                    <span class="material-icons" style="font-size: 1.1rem; vertical-align: middle; margin-right: 6px;">login</span>
+                    アカウント連携 / ログイン
+                </button>
+            `;
+        }
+
+        // 未ログインは共有機能を使えない
+        if (shareLoggedOut) shareLoggedOut.classList.remove("hidden");
+        if (shareLoggedIn) shareLoggedIn.classList.add("hidden");
+    }
+}
 
 // ==========================================
 // 4. 初期化処理 (アプリ起動時)
@@ -466,6 +645,7 @@ window.switchView = function (viewId, element) {
             if (viewId === "plan" && labelText.includes("予定")) item.classList.add("active");
             if (viewId === "home" && labelText.includes("ホーム")) item.classList.add("active");
             if (viewId === "data" && labelText.includes("データ")) item.classList.add("active");
+            if (viewId === "share" && labelText.includes("共有")) item.classList.add("active");
             if (viewId === "settings" && labelText.includes("設定")) item.classList.add("active");
         });
     }
@@ -479,6 +659,9 @@ window.switchView = function (viewId, element) {
     }
     if (viewId === "plan") {
         renderLikedList();
+    }
+    if (viewId === "share") {
+        renderShareView();
     }
 
     // モバイル用サイドバーを閉じる
@@ -498,13 +681,13 @@ function showToast(message) {
     toast.innerHTML = `<span class="material-icons" style="font-size: 1.2rem; color: var(--primary-color);">info</span><span>${message}</span>`;
     container.appendChild(toast);
 
-    // 3秒後にフェードアウトして削除
+    // 1.2秒後にフェードアウトして削除
     setTimeout(() => {
-        toast.style.transition = "opacity 0.5s ease, transform 0.5s ease";
+        toast.style.transition = "opacity 0.3s ease, transform 0.3s ease";
         toast.style.opacity = "0";
         toast.style.transform = "translateY(-10px)";
-        setTimeout(() => toast.remove(), 500);
-    }, 3000);
+        setTimeout(() => toast.remove(), 300);
+    }, 1200);
 }
 
 // ==========================================
@@ -525,12 +708,59 @@ window.applyFilters = function () {
         // すでに「いいね」または「あんまり」に入っているものは除く (リセットされない限り)
         const isAlreadySelected = likes.some(l => l.id === place.id) || anmaris.some(a => a.id === place.id);
 
-        return matchSeason && matchCat && !isAlreadySelected;
+        let matchRecommendation = true;
+        if (recommendationMode) {
+            const highestVal = Math.max(...standStats);
+            const highestIndex = standStats.indexOf(highestVal);
+            matchRecommendation = matchesGenre(place, highestIndex);
+        }
+
+        return matchSeason && matchCat && !isAlreadySelected && matchRecommendation;
     });
 
     nextPoolIndex = 0;
     renderStack();
 };
+
+window.startPersonalizedSearch = function () {
+    calculateStandStats(); // 最新数値を計算
+    const highestVal = Math.max(...standStats);
+    const highestIndex = standStats.indexOf(highestVal);
+    const labels = ["温泉・癒やし", "自然・景観", "歴史・文化", "グルメ", "アクティビティ", "都市・ショッピング"];
+    const topGenreLabel = labels[highestIndex];
+
+    recommendationMode = true;
+
+    // UIのバナー表示と更新
+    const banner = document.getElementById("personalizedRecommendationBanner");
+    const genreText = document.getElementById("recommendationGenreName");
+    if (banner) banner.classList.remove("hidden");
+    if (genreText) genreText.textContent = topGenreLabel;
+
+    showToast(`💡 ${topGenreLabel}特化レコメンドモードを開始しました！`);
+    
+    // スワイプ画面に切り替える
+    switchView("swipe");
+};
+
+window.disableRecommendationMode = function () {
+    recommendationMode = false;
+    const banner = document.getElementById("personalizedRecommendationBanner");
+    if (banner) banner.classList.add("hidden");
+    
+    showToast("標準検索モードに戻しました。");
+    applyFilters();
+};
+
+function matchesGenre(place, genreIndex) {
+    if (genreIndex === 0) return place.category === "healing" || place.tags.includes("癒やし") || place.tags.includes("リラックス");
+    if (genreIndex === 1) return place.category === "nature" || place.tags.includes("自然");
+    if (genreIndex === 2) return place.category === "history" || place.tags.includes("歴史");
+    if (genreIndex === 3) return place.category === "food" || place.tags.includes("グルメ");
+    if (genreIndex === 4) return place.tags.includes("アクティブ");
+    if (genreIndex === 5) return place.tags.includes("都市") || place.tags.includes("観光");
+    return true;
+}
 
 function renderStack() {
     const stack = document.getElementById("card-stack");
@@ -1031,6 +1261,35 @@ window.generatePlacesWithAI = async function() {
     }
 };
 
+const transitAccessRoutes = {
+    "清水寺": "京都駅から京都市営バス206号系統で「五条坂」下車、徒歩約10分。または京阪本線「清水五条駅」から徒歩約25分。",
+    "有馬温泉": "神戸電鉄有馬線「有馬温泉駅」下車すぐ。大阪・三宮から高速バス「有馬エクスプレス号」で約45〜60分。",
+    "道頓堀": "大阪メトロ御堂筋線・四つ橋線・千日前線「なんば駅」14番出口から徒歩約5分。近鉄難波線「大阪難波駅」からもアクセス可能。",
+    "奈良公園": "近鉄奈良線「近鉄奈良駅」から徒歩約10分。JR関西本線「奈良駅」から奈良交通バス（市内循環）で約7分、「大仏殿春日大社前」下車すぐ。",
+    "メタセコイア並木": "JR湖西線「マキノ駅」からマキノ高原線コミュニティバスで約10分、「メタセコイア並木」下車すぐ。",
+    "那智の滝": "JR紀勢本線「紀伊勝浦駅」から熊野御坊南海バスで約30分、「那智の滝前」下車、徒歩約5分。",
+    "姫路城": "JR山陽新幹線・山陽本線「姫路駅」北口、または山陽電鉄「山陽姫路駅」から徒歩約15分。または神姫バスで約5分、「姫路城大手門前」下車すぐ。",
+    "嵐山竹林の小径": "京福電鉄嵐山本線（嵐電）「嵐山駅」から徒歩約10分。JR山陰本線（嵯峨野線）「嵯峨嵐山駅」から徒歩約15分。",
+    "白良浜": "JR紀勢本線「白浜駅」から明光バスで約15分、「白良浜」下車すぐ。",
+    "比叡山延暦寺": "京阪石山坂本線「坂本比叡山口駅」から江若交通バスで「ケーブル坂本駅」へ、坂本ケーブルに乗り換え「ケーブル延暦寺駅」下車、徒歩約10分。",
+    "黒門市場": "大阪メトロ千日前線・堺筋線「日本橋駅」10番出口から徒歩約3分。近鉄難波線「近鉄日本橋駅」からも至近。",
+    "伏見稲荷大社": "JR奈良線「稲荷駅」下車すぐ。または京阪本線「伏見稲荷駅」から徒歩約5分。",
+    "竹田城跡": "JR播但線「竹田駅」から「天空バス」で約20分、「竹田城跡」バス停下車、徒歩約20分（※登山道あり、歩きやすい靴を推奨）。",
+    "吉野山": "近鉄吉野線「吉野駅」下車。下千本までは吉野山ロープウェイで約3分（桜シーズンは徒歩やシャトルバス運行あり）。",
+    "高野山 金剛峯寺": "南海高野線「極楽橋駅」から南海高野山ケーブルで「高野山駅」へ、南海りんかんバスに乗り換え約10分、「金剛峯寺前」下車すぐ。",
+    "近江八幡の水郷": "JR東海道本線（琵琶湖線）「近江八幡駅」から近江鉄道バスで約15分、「豊年橋」または「水郷めぐり乗船場」下車すぐ。",
+    "天橋立": "京都丹後鉄道宮豊線「天橋立駅」下車、天橋立公園の入り口まで徒歩約5分。展望台へは天橋立ビューランドのモノレール・リフトを利用。",
+    "彦根城": "JR東海道本線（琵琶湖線）「彦根駅」から徒歩約15分。彦根駅西口よりお城キャッスルロード経由でアクセス可能。",
+    "アドベンチャーワールド": "JR紀勢本線「白浜駅」から明光バスで約10分、「アドベンチャーワールド」下車すぐ。大阪からJR特急くろしお直通もあり。",
+    "熊野古道": "中辺路コースの起点へは、JR「紀伊勝浦駅」または「新宮駅」から路線バスで「滝尻王子」または「熊野那智大社」へアクセス。",
+    "大阪城公園": "JR大阪環状線「大阪城公園駅」または「森ノ宮駅」下車すぐ。大阪メトロ中央線「谷町四丁目駅」からもアクセス可能。",
+    "法隆寺": "JR関西本線「法隆寺駅」から奈良交通バス「法隆寺門前」行きで約8分、終点下車すぐ。または法隆寺駅から徒歩約20分。",
+    "城崎温泉": "JR山陰本線「城崎温泉駅」下車、駅前がすぐ温泉街の中心地です（各外湯へは徒歩圏内）。",
+    "天龍寺": "京福電鉄嵐山本線（嵐電）「嵐山駅」下車すぐ。JR嵯峨野線「嵯峨嵐山駅」から徒歩約13分。阪急嵐山線「嵐山駅」から徒歩約15分。",
+    "琵琶湖バレイ": "JR湖西線「志賀駅」から江若交通バスで約10分、「びわ湖バレイ前」下車、ロープウェイで山頂テラスへ（乗車約5分）。",
+    "六甲山テラス": "阪急神戸線「御影駅」から神戸市バス16系統で「六甲ケーブル下駅」へ。六甲ケーブルで山頂へ登り、六甲山上バスで「六甲ガーデンテラス」下車。"
+};
+
 // 旅行プランの生成 (※APIを中で await するため async 関数に変更)
 window.generateTravelPlan = async function (event) {
     event.preventDefault();
@@ -1131,6 +1390,12 @@ window.generateTravelPlan = async function (event) {
 
         // 提案表示
         document.getElementById("aiPlanText").textContent = itinerary;
+        
+        // アクセス情報表示
+        const transitText = transitAccessRoutes[activePlanTarget.name] || "公共交通機関の情報が見つかりませんでした。詳細なルートはナビアプリ等でご確認ください。";
+        const transitEl = document.getElementById("aiPlanTransitText");
+        if (transitEl) transitEl.textContent = transitText;
+
         loadingView.classList.add("hidden");
         document.getElementById("planResults").classList.remove("hidden");
 
@@ -1330,73 +1595,74 @@ function initSliderSwipe() {
 // ==========================================
 // 9. データ機能 (スタンドパラメータロジック)
 // ==========================================
-let standStats = [50, 50, 50, 50, 50, 50]; // 破壊力, スピード, 射程距離, 持続力, 精密動作, 成長性
+let standStats = [50, 50, 50, 50, 50, 50]; // 温泉・癒やし, 自然・景観, 歴史・文化, グルメ, アクティビティ, 都市・ショッピング
 let myChart = null;
 
 function calculateStandStats() {
-    // 基本パラメータ
-    let power = 50;
-    let speed = 50;
-    let range = 50;
-    let durability = 50;
-    let precision = 50;
-    let growth = 30 + (likes.length + anmaris.length) * 2.5; // スワイプ回数で成長
+    let healing = 10;
+    let nature = 10;
+    let history = 10;
+    let food = 10;
+    let active = 10;
+    let urban = 10;
 
-    // 府県の多様性算出 (射程距離ボーナス)
-    const distinctPrefs = new Set(likes.map(l => l.prefecture));
-    range += distinctPrefs.size * 8; // 6府県全てで最大+48
-
-    // いいねごとの加算
+    // 1. いいね(likes)からの加算
     likes.forEach(item => {
-        // カテゴリ影響
-        if (item.category === "food") {
-            power += 6;
-            speed += 4;
-            durability -= 1;
-        } else if (item.category === "nature") {
-            durability += 6;
-            range += 3;
-            speed -= 1;
-        } else if (item.category === "history") {
-            precision += 7;
-            durability += 2;
-            power -= 1;
-        } else if (item.category === "healing") {
-            durability += 5;
-            precision += 3;
-            power -= 3;
-        }
+        if (item.category === "healing") healing += 25;
+        if (item.category === "nature") nature += 25;
+        if (item.category === "history") history += 25;
+        if (item.category === "food") food += 25;
 
-        // タグの影響
-        if (item.tags.includes("アクティブ")) { power += 4; speed += 4; }
-        if (item.tags.includes("リラックス")) { durability += 5; speed -= 2; }
-        if (item.tags.includes("歴史")) { precision += 4; }
-        if (item.tags.includes("自然")) { range += 3; }
-        if (item.tags.includes("グルメ")) { power += 3; }
+        if (item.tags.includes("癒やし") || item.tags.includes("リラックス")) healing += 15;
+        if (item.tags.includes("自然")) nature += 15;
+        if (item.tags.includes("歴史")) history += 15;
+        if (item.tags.includes("グルメ")) food += 15;
+        if (item.tags.includes("アクティブ")) active += 30;
+        if (item.tags.includes("都市") || item.tags.includes("観光")) urban += 20;
     });
 
-    // あんまりの影響 (少しマイナス調整で引き締める)
+    // 2. あんまり(anmaris)からの減算 (嗜好の除外を表現)
     anmaris.forEach(item => {
-        if (item.category === "nature") durability -= 2;
-        if (item.category === "food") power -= 2;
-        if (item.category === "history") precision -= 2;
-        if (item.category === "healing") durability -= 1;
+        if (item.category === "healing") healing -= 10;
+        if (item.category === "nature") nature -= 10;
+        if (item.category === "history") history -= 10;
+        if (item.category === "food") food -= 10;
+
+        if (item.tags.includes("癒やし") || item.tags.includes("リラックス")) healing -= 5;
+        if (item.tags.includes("自然")) nature -= 5;
+        if (item.tags.includes("歴史")) history -= 5;
+        if (item.tags.includes("グルメ")) food -= 5;
+        if (item.tags.includes("アクティブ")) active -= 10;
+        if (item.tags.includes("都市") || item.tags.includes("観光")) urban -= 8;
     });
 
-    // 計画の多さ（予定機能使用数）
+    // 3. 予定(plans)からの加算
     plans.forEach(plan => {
-        precision += 6;     // 予定を細かく立てている＝精密
-        durability += 4;    // 連泊数＝持続力
+        const spot = kinkiPlaces.find(p => p.name === plan.destination);
+        if (spot) {
+            if (spot.category === "healing") healing += 20;
+            if (spot.category === "nature") nature += 20;
+            if (spot.category === "history") history += 20;
+            if (spot.category === "food") food += 20;
+
+            if (spot.tags.includes("アクティブ")) active += 20;
+            if (spot.tags.includes("都市") || spot.tags.includes("観光")) urban += 15;
+        } else {
+            healing += 5;
+            nature += 5;
+            history += 5;
+            food += 5;
+        }
     });
 
     // 10から100の間にクランプ
     standStats = [
-        Math.min(100, Math.max(10, power)),
-        Math.min(100, Math.max(10, speed)),
-        Math.min(100, Math.max(10, range)),
-        Math.min(100, Math.max(10, durability)),
-        Math.min(100, Math.max(10, precision)),
-        Math.min(100, Math.max(10, growth))
+        Math.min(100, Math.max(10, healing)),
+        Math.min(100, Math.max(10, nature)),
+        Math.min(100, Math.max(10, history)),
+        Math.min(100, Math.max(10, food)),
+        Math.min(100, Math.max(10, active)),
+        Math.min(100, Math.max(10, urban))
     ];
 
     saveToStorage();
@@ -1404,7 +1670,7 @@ function calculateStandStats() {
 }
 
 function updateStandProfile() {
-    const labels = ["破壊力", "スピード", "射程距離", "持続力", "精密動作", "成長性"];
+    const labels = ["温泉・癒やし", "自然・景観", "歴史・文化", "グルメ", "アクティビティ", "都市・ショッピング"];
     const highestVal = Math.max(...standStats);
     const highestIndex = standStats.indexOf(highestVal);
 
@@ -1412,12 +1678,12 @@ function updateStandProfile() {
     let rankText = "C";
 
     // 突出したステータスに基づくスタンド名生成
-    if (highestIndex === 0) standName = "ザ・グルメブレイカー";
-    else if (highestIndex === 1) standName = "アーバン・ハリケーン";
-    else if (highestIndex === 2) standName = "近畿・レンジャー";
-    else if (highestIndex === 3) standName = "グリーン・ガーディアン";
-    else if (highestIndex === 4) standName = "ヒストリー・クロニクル";
-    else if (highestIndex === 5) standName = "インフィニット・フューチャー";
+    if (highestIndex === 0) standName = "温泉の守護神 (スパ・ガーディアン)";
+    else if (highestIndex === 1) standName = "大自然の開拓者 (フォレスト・ウォーカー)";
+    else if (highestIndex === 2) standName = "歴史の探求者 (クロニクル・アーカイブ)";
+    else if (highestIndex === 3) standName = "美食の支配者 (グルメ・マスター)";
+    else if (highestIndex === 4) standName = "冒険のアスリート (ワイルド・チャレンジャー)";
+    else if (highestIndex === 5) standName = "都市のナビゲーター (アーバン・エクスプローラー)";
 
     // バランスが良い場合
     const sum = standStats.reduce((a, b) => a + b, 0);
@@ -1427,7 +1693,7 @@ function updateStandProfile() {
         if (Math.abs(s - avg) > 15) isBalanced = false;
     });
     if (isBalanced) {
-        standName = "ハーモニアス・ジャーニー";
+        standName = "調和の旅人 (ハーモニアス・ジャーニー)";
     }
 
     // ランク決定
@@ -1461,7 +1727,7 @@ function updateChart() {
     myChart = new Chart(ctx, {
         type: "radar",
         data: {
-            labels: ["破壊力", "スピード", "射程距離", "持続力", "精密動作", "成長性"],
+            labels: ["温泉・癒やし", "自然・景観", "歴史・文化", "グルメ", "アクティビティ", "都市・ショッピング"],
             datasets: [{
                 data: standStats,
                 fill: true,
@@ -1736,6 +2002,12 @@ window.viewItineraryDetails = function (planId) {
     });
 
     document.getElementById("aiPlanText").textContent = plan.itineraryText;
+
+    // アクセス情報表示
+    const transitText = transitAccessRoutes[plan.destination] || "公共交通機関の情報が見つかりませんでした。詳細なルートはナビアプリ等でご確認ください。";
+    const transitEl = document.getElementById("aiPlanTransitText");
+    if (transitEl) transitEl.textContent = transitText;
+
     document.getElementById("planResults").classList.remove("hidden");
 };
 
@@ -1784,7 +2056,261 @@ window.deleteModalItem = function (type, id) {
     }
 
     showToast("項目を削除しました。");
+};
 
+// ==========================================
+// 12. プラン共有・コミュニティ機能の制御ロジック
+// ==========================================
+window.renderShareView = function () {
+    const sharedListContainer = document.getElementById("sharedPlansList");
+    const myPlansContainer = document.getElementById("myPlansToShare");
+    if (!sharedListContainer || !myPlansContainer) return;
 
+    // 1. みんなの投稿プランを描画
+    sharedListContainer.innerHTML = "";
+    if (sharedPlans.length === 0) {
+        sharedListContainer.innerHTML = `<div class="modal-empty">投稿されたプランはありません。</div>`;
+    } else {
+        sharedPlans.forEach(sp => {
+            const nightsText = `${sp.nights}泊${sp.nights + 1}日`;
+            const div = document.createElement("div");
+            div.className = "shared-plan-card";
+            div.innerHTML = `
+                <div class="shared-card-header">
+                    <div class="shared-author-info">
+                        <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${sp.avatar || 'traveler'}" class="shared-author-avatar" alt="Avatar">
+                        <div>
+                            <span class="shared-author-name">${sp.author}</span>
+                            <span class="shared-date-badge">プラン作成日: ${sp.date}</span>
+                        </div>
+                    </div>
+                    <span class="shared-pref-badge">📍 ${sp.prefecture}</span>
+                </div>
+                <div class="shared-card-body">
+                    <h4>📅 ${sp.destination} の旅 (${nightsText})</h4>
+                    <p class="shared-details">👥 ${sp.people}名様 | 💰 予算目安: ${sp.budget.toLocaleString()}円程度</p>
+                    <div class="shared-itinerary-preview" onclick="toggleSharedItinerary(this)">
+                        <div class="preview-text">${sp.itineraryText}</div>
+                        <div class="preview-fade"></div>
+                        <div class="preview-toggle-btn">行程をすべて表示</div>
+                    </div>
+                </div>
+                <div class="shared-card-footer">
+                    <button class="btn-primary" style="padding: 8px 16px; font-size: 0.85rem;" onclick="useSharedPlan(${sp.id})">
+                        <span class="material-icons-outlined" style="font-size: 1rem; vertical-align: middle; margin-right: 4px;">content_copy</span>
+                        このプランを自分の予定にコピー
+                    </button>
+                </div>
+            `;
+            sharedListContainer.appendChild(div);
+        });
+    }
 
+    // 2. マイプランの投稿候補を描画
+    myPlansContainer.innerHTML = "";
+    if (plans.length === 0) {
+        myPlansContainer.innerHTML = `<div class="modal-empty" style="padding: 16px;">作成した旅行予定がありません。「予定」タブからAIプランを生成すると、ここに表示されて共有できます。</div>`;
+    } else {
+        plans.forEach(p => {
+            const isAlreadyShared = sharedPlans.some(sp => sp.author.includes(userName) && sp.destination === p.destination && sp.date === p.date);
+            const div = document.createElement("div");
+            div.className = "my-shareable-item";
+            div.innerHTML = `
+                <div style="flex: 1;">
+                    <span class="shareable-title">📅 ${p.destination} の旅 (${p.nights}泊${p.nights + 1}日)</span>
+                    <span class="shareable-sub">日付: ${p.date} | 人数: ${p.people}名 | 予算: ${p.budget.toLocaleString()}円</span>
+                </div>
+                <button class="btn-primary" style="padding: 6px 14px; font-size: 0.8rem; background-color: ${isAlreadyShared ? 'var(--text-muted)' : 'var(--primary-color)'};" onclick="sharePlan(${p.id})" ${isAlreadyShared ? 'disabled' : ''}>
+                    ${isAlreadyShared ? '投稿済み' : '共有する'}
+                </button>
+            `;
+            myPlansContainer.appendChild(div);
+        });
+    }
+};
+
+window.toggleSharedItinerary = function (element) {
+    element.classList.toggle("expanded");
+    const btn = element.querySelector(".preview-toggle-btn");
+    if (element.classList.contains("expanded")) {
+        btn.textContent = "折りたたむ";
+    } else {
+        btn.textContent = "行程をすべて表示";
+    }
+};
+
+window.sharePlan = function (planId) {
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+
+    // 既に共有されているかチェック
+    const isAlreadyShared = sharedPlans.some(sp => sp.author.includes(userName) && sp.destination === plan.destination && sp.date === plan.date);
+    if (isAlreadyShared) {
+        showToast("このプランは既に共有されています。");
+        return;
+    }
+
+    const newShared = {
+        id: Date.now(),
+        author: `${userName} (あなた)`,
+        avatar: userAvatar,
+        destination: plan.destination,
+        prefecture: plan.prefecture,
+        date: plan.date,
+        nights: plan.nights,
+        people: plan.people,
+        budget: plan.budget,
+        itineraryText: plan.itineraryText
+    };
+
+    sharedPlans.unshift(newShared);
+    localStorage.setItem("kw_shared_plans", JSON.stringify(sharedPlans));
+
+    showToast("✨ プランをコミュニティに共有しました！");
+    renderShareView();
+};
+
+window.useSharedPlan = function (sharedPlanId) {
+    const sp = sharedPlans.find(s => s.id === sharedPlanId);
+    if (!sp) return;
+
+    const newPlan = {
+        id: Date.now(),
+        destination: sp.destination,
+        prefecture: sp.prefecture,
+        date: new Date().toISOString().split('T')[0], // 今日をデフォルト出発日に設定
+        nights: sp.nights,
+        people: sp.people,
+        budget: sp.budget,
+        itineraryText: sp.itineraryText,
+        lat: kinkiPlaces.find(p => p.name === sp.destination)?.lat || 34.6873,
+        lon: kinkiPlaces.find(p => p.name === sp.destination)?.lon || 135.5262
+    };
+
+    plans.push(newPlan);
+    saveToStorage();
+
+    showToast(`📅 「${sp.destination}」のプランをあなたの予定にコピーしました！`);
+    
+    // ホーム画面へ遷移して追加された予定を表示
+    switchView("home");
+};
+
+// ==========================================
+// 13. Firebase Authentication 制御ロジック
+// ==========================================
+let isSignUpMode = false; // デフォルトはログイン（サインイン）モード
+
+window.openAuthModal = function () {
+    const modal = document.getElementById("auth-modal");
+    if (modal) {
+        modal.classList.remove("hidden");
+        isSignUpMode = false;
+        updateAuthModalUI();
+    }
+};
+
+window.closeAuthModal = function () {
+    const modal = document.getElementById("auth-modal");
+    if (modal) modal.classList.add("hidden");
+    
+    const emailInput = document.getElementById("authEmail");
+    const passInput = document.getElementById("authPassword");
+    if (emailInput) emailInput.value = "";
+    if (passInput) passInput.value = "";
+};
+
+window.toggleAuthMode = function (event) {
+    if (event) event.preventDefault();
+    isSignUpMode = !isSignUpMode;
+    updateAuthModalUI();
+};
+
+function updateAuthModalUI() {
+    const title = document.getElementById("authModalTitle");
+    const submitBtn = document.getElementById("authSubmitBtn");
+    const toggleText = document.getElementById("authToggleText");
+    const toggleLink = document.getElementById("authToggleLink");
+
+    if (isSignUpMode) {
+        if (title) title.textContent = "新規アカウント登録";
+        if (submitBtn) submitBtn.textContent = "登録する";
+        if (toggleText) toggleText.textContent = "既にアカウントをお持ちですか？";
+        if (toggleLink) toggleLink.textContent = "ログイン";
+    } else {
+        if (title) title.textContent = "ログイン";
+        if (submitBtn) submitBtn.textContent = "ログイン";
+        if (toggleText) toggleText.textContent = "アカウントをお持ちでないですか？";
+        if (toggleLink) toggleLink.textContent = "新規登録";
+    }
+}
+
+window.handleAuthSubmit = async function (event) {
+    event.preventDefault();
+    const email = document.getElementById("authEmail").value.trim();
+    const password = document.getElementById("authPassword").value;
+
+    if (password.length < 6) {
+        showToast("⚠️ パスワードは6文字以上で入力してください。");
+        return;
+    }
+
+    try {
+        if (isSignUpMode) {
+            await createUserWithEmailAndPassword(auth, email, password);
+            showToast("✨ アカウントを作成し、ログインしました！");
+        } else {
+            await signInWithEmailAndPassword(auth, email, password);
+            showToast("🔑 ログインしました！");
+        }
+        closeAuthModal();
+    } catch (error) {
+        console.error("認証エラー:", error);
+        let errorMsg = "認証に失敗しました。";
+        if (error.code === "auth/email-already-in-use") {
+            errorMsg = "⚠️ このメールアドレスは既に登録されています。";
+        } else if (error.code === "auth/invalid-email") {
+            errorMsg = "⚠️ 無効なメールアドレス形式です。";
+        } else if (error.code === "auth/weak-password") {
+            errorMsg = "⚠️ パスワードが弱すぎます。";
+        } else if (error.code === "auth/invalid-credential") {
+            errorMsg = "⚠️ メールアドレスまたはパスワードが正しくありません。";
+        } else {
+            errorMsg = `エラー: ${error.message}`;
+        }
+        showToast(errorMsg);
+    }
+};
+
+window.logoutUser = async function () {
+    try {
+        await signOut(auth);
+        showToast("👋 ログアウトしました。");
+    } catch (error) {
+        console.error("ログアウトエラー:", error);
+        showToast(`ログアウトに失敗しました: ${error.message}`);
+    }
+};
+
+window.signInWithGoogle = async function () {
+    const provider = new GoogleAuthProvider();
+    try {
+        await signInWithPopup(auth, provider);
+        showToast("🔑 Googleアカウントでログインしました！");
+        closeAuthModal();
+    } catch (error) {
+        console.error("Google認証エラー:", error);
+        showToast(`⚠️ Googleログインに失敗しました: ${error.message}`);
+    }
+};
+
+window.signInAsGuest = async function () {
+    try {
+        await signInAnonymously(auth);
+        showToast("👤 ゲストとしてログインしました。");
+        closeAuthModal();
+    } catch (error) {
+        console.error("匿名ログインエラー:", error);
+        showToast(`⚠️ ゲストログインに失敗しました: ${error.message}`);
+    }
 };
