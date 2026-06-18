@@ -2152,6 +2152,7 @@ body {
     offset-rotate: auto;
     animation: flyAlongSpiral 3.8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
     filter: drop-shadow(0 0 8px var(--primary-color)) drop-shadow(0 0 15px rgba(255, 255, 255, 0.6));
+    will-change: transform, opacity;
 }
 
 @keyframes flyAlongSpiral {
@@ -2182,6 +2183,7 @@ body {
     offset-rotate: auto;
     animation: runAlongCircle 4.5s linear infinite;
     filter: drop-shadow(0 0 6px #10b981) drop-shadow(0 0 12px rgba(255, 255, 255, 0.5));
+    will-change: transform;
 }
 
 @keyframes runAlongCircle {
@@ -2267,6 +2269,22 @@ body {
 
     .launch-title {
         font-size: 2.2rem;
+        text-shadow: 0 0 15px rgba(var(--primary-color-rgb), 0.6) !important;
+        animation: splashFadeIn 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+    }
+
+    .moving-plane {
+        filter: none !important;
+        will-change: transform;
+    }
+
+    .moving-train {
+        filter: none !important;
+        will-change: transform;
+    }
+
+    .animation-path {
+        filter: none !important;
     }
 
     .launch-subtitle {

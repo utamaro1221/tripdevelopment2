@@ -913,6 +913,91 @@ window.toggleFavorite = function (starBtn, event, id) {
     updateGridCounts();
 };
 
+function initCardDrag(card, data) {
+    let startX = 0, startY = 0;
+    let currentX = 0, currentY = 0;
+    const stampLike = card.querySelector(".stamp-like");
+    const stampAnmari = card.querySelector(".stamp-anmari");
+
+    card.addEventListener("pointerdown", e => {
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        card.style.transition = "none";
+        card.setPointerCapture(e.pointerId);
+    });
+
+    card.addEventListener("pointermove", e => {
+        if (!isDragging) return;
+        currentX = e.clientX - startX;
+        currentY = e.clientY - startY;
+
+        // 傾きと回転
+        const rotate = currentX * 0.08;
+        card.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) rotate(${rotate}deg)`;
+
+        // スワイプスタンプの透明度コントロール
+        if (currentX > 30) {
+            const opacity = Math.min(1, (currentX - 30) / 100);
+            if (stampLike) stampLike.style.opacity = opacity;
+            if (stampAnmari) stampAnmari.style.opacity = 0;
+        } else if (currentX < -30) {
+            const opacity = Math.min(1, (-currentX - 30) / 100);
+            if (stampAnmari) stampAnmari.style.opacity = opacity;
+            if (stampLike) stampLike.style.opacity = 0;
+        } else {
+            if (stampLike) stampLike.style.opacity = 0;
+            if (stampAnmari) stampAnmari.style.opacity = 0;
+        }
+    });
+
+    card.addEventListener("pointerup", e => {
+        if (!isDragging) return;
+        isDragging = false;
+
+        // スワイプ判定 (130px以上移動)
+        if (Math.abs(currentX) > 130) {
+            const dir = currentX > 0 ? "like" : "anmari";
+            card.style.transition = "transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease";
+            card.style.transform = `translate3d(${currentX > 0 ? 1000 : -1000}px, ${currentY}px, 0) rotate(${currentX > 0 ? 45 : -45}deg)`;
+            card.style.opacity = "0";
+
+            handleSwipeAction(dir, data);
+
+            // 次のカードへ移行
+            setTimeout(() => {
+                card.remove();
+                currentCardPool.shift();
+                renderStack();
+            }, 300);
+        } else {
+            // 元の位置に戻す (バネのようなスプリングイージング)
+            card.style.transition = "transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.2)";
+            card.style.transform = "translate3d(0, 0, 0) rotate(0deg)";
+            if (stampLike) stampLike.style.opacity = 0;
+            if (stampAnmari) stampAnmari.style.opacity = 0;
+        }
+    });
+}
+
+function handleSwipeAction(type, data) {
+    if (type === "like") {
+        if (!likes.some(l => l.id === data.id)) {
+            likes.push(data);
+            showToast(`❤️「${data.name}」をいいねしました！`);
+        }
+    } else {
+        if (!anmaris.some(a => a.id === data.id)) {
+            anmaris.push({ ...data, savedAt: Date.now() });
+            showToast(`😐「${data.name}」はあんまりかも`);
+        }
+    }
+    saveToStorage();
+    updateGridCounts();
+    // スタンドパラメータのリアルタイム計算
+    calculateStandStats();
+}
+
 window.resetSwipeHistory = function () {
     likes = [];
     anmaris = [];
