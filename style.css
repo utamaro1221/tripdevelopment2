@@ -920,6 +920,102 @@ body {
     }
 }
 
+/* Boat Spinner and Progress Bar */
+.boat-spinner-container {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.water-circle {
+    position: absolute;
+    width: 64px;
+    height: 64px;
+    border: 3px dashed rgba(var(--primary-color-rgb), 0.3);
+    border-radius: 50%;
+    animation: spin 6s linear infinite;
+}
+
+.boat-icon {
+    font-size: 2.2rem;
+    color: var(--primary-color);
+    animation: boatBob 1.6s ease-in-out infinite;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+}
+
+@keyframes boatBob {
+    0%, 100% {
+        transform: translateY(0) rotate(0deg);
+    }
+    25% {
+        transform: translateY(-4px) rotate(-3deg);
+    }
+    75% {
+        transform: translateY(3px) rotate(3deg);
+    }
+}
+
+/* Shinkansen Progress Bar */
+.progress-container {
+    width: 100%;
+    max-width: 320px;
+    margin: 16px auto 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+}
+
+.progress-bar-track {
+    position: relative;
+    width: 100%;
+    height: 6px;
+    background-color: var(--border-color);
+    border-radius: 10px;
+    overflow: visible;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--primary-color), #3b82f6);
+    border-radius: 10px;
+    transition: width 0.1s linear;
+}
+
+.progress-train-icon {
+    position: absolute;
+    top: 50%;
+    left: 0%;
+    transform: translate(-50%, -50%);
+    width: 28px;
+    height: 28px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--primary-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: left 0.1s linear;
+}
+
+.progress-train-icon span {
+    font-size: 1.1rem;
+}
+
+.progress-percentage {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-color);
+    letter-spacing: 0.05em;
+}
+
 /* AI Generated Itinerary and Hotel Results */
 .ai-results-view {
     display: flex;

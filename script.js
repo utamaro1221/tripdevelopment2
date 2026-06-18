@@ -1352,6 +1352,28 @@ window.generateTravelPlan = async function (event) {
     const loadingView = document.getElementById("planLoading");
     loadingView.classList.remove("hidden");
 
+    // progress bar reset
+    let progressValue = 0;
+    const fill = document.getElementById("planProgressBarFill");
+    const train = document.getElementById("planProgressTrain");
+    const percent = document.getElementById("planProgressPercent");
+    if (fill) fill.style.width = "0%";
+    if (train) train.style.left = "0%";
+    if (percent) percent.textContent = "0%";
+
+    // Ensure loading screen is visible to show off animations
+    const startTime = Date.now();
+
+    let progressInterval = setInterval(() => {
+        if (progressValue < 95) {
+            progressValue += Math.floor(Math.random() * 4) + 2;
+            if (progressValue > 95) progressValue = 95;
+            if (fill) fill.style.width = `${progressValue}%`;
+            if (train) train.style.left = `${progressValue}%`;
+            if (percent) percent.textContent = `${progressValue}%`;
+        }
+    }, 80);
+
     try {
         // デバッグ用の「APIエラーを再現」チェックボックスがONの場合
         if (simulateError) {
@@ -1441,6 +1463,18 @@ window.generateTravelPlan = async function (event) {
         const transitEl = document.getElementById("aiPlanTransitText");
         if (transitEl) transitEl.textContent = transitText;
 
+        const elapsedTime = Date.now() - startTime;
+        const minDuration = 1400;
+        if (elapsedTime < minDuration) {
+            await new Promise(resolve => setTimeout(resolve, minDuration - elapsedTime));
+        }
+
+        clearInterval(progressInterval);
+        if (fill) fill.style.width = "100%";
+        if (train) train.style.left = "100%";
+        if (percent) percent.textContent = "100%";
+        await new Promise(resolve => setTimeout(resolve, 250));
+
         loadingView.classList.add("hidden");
         document.getElementById("planResults").classList.remove("hidden");
 
@@ -1452,6 +1486,7 @@ window.generateTravelPlan = async function (event) {
         calculateStandStats();
 
     } catch (error) {
+        clearInterval(progressInterval);
         loadingView.classList.add("hidden");
         document.getElementById("planError").classList.remove("hidden");
         showToast("⚠️ プラン作成に失敗しました。");

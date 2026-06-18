@@ -11,7 +11,7 @@
     <!-- Chart.js and Icons -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=1.2.4">
+    <link rel="stylesheet" href="style.css?v=1.2.6">
 </head>
 <body class="theme-mc-blue">
 
@@ -235,7 +235,7 @@
                                 <div class="form-row-2">
                                     <div class="form-group">
                                         <label for="planDate">日程 (いつ行くか)</label>
-                                        <input type="date" id="planDate" class="form-input" required>
+                                        <input type="date" id="planDate" class="form-input" required onkeydown="event.preventDefault()" onclick="if(typeof this.showPicker === 'function') this.showPicker()">
                                     </div>
                                     <div class="form-group">
                                         <label for="planNights">泊数 (何泊か)</label>
@@ -291,9 +291,23 @@
 
                             <!-- State 3: Loading -->
                             <div class="loading-view hidden" id="planLoading">
-                                <div class="spinner"></div>
+                                <div class="boat-spinner-container">
+                                    <div class="water-circle"></div>
+                                    <span class="material-icons boat-icon">sailing</span>
+                                </div>
                                 <h4 style="margin-top: 16px;">AIプランを生成中...</h4>
-                                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px;">楽天トラベルのホテル情報を取得しています</p>
+                                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">楽天トラベルのホテル情報を取得しています</p>
+                                
+                                <!-- Shinkansen Progress Bar -->
+                                <div class="progress-container">
+                                    <div class="progress-bar-track">
+                                        <div class="progress-bar-fill" id="planProgressBarFill"></div>
+                                        <div class="progress-train-icon" id="planProgressTrain">
+                                            <span class="material-icons">train</span>
+                                        </div>
+                                    </div>
+                                    <div class="progress-percentage" id="planProgressPercent">0%</div>
+                                </div>
                             </div>
 
                             <!-- State 4: Results (AI & Rakuten Hotels) -->
