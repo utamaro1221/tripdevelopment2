@@ -11,12 +11,16 @@
     <!-- Chart.js and Icons -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=1.2.2">
+    <link rel="stylesheet" href="style.css?v=1.2.4">
 </head>
 <body class="theme-mc-blue">
 
     <!-- Launch Screen (Opening Animation Overlay) -->
     <div id="launch-screen" class="launch-screen">
+        <!-- Ambient Blur Blobs -->
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+
         <div class="animation-container">
             <!-- Title -->
             <div class="launch-title-container">
@@ -105,17 +109,17 @@
             
             <nav class="sidebar-nav">
                 <ul>
-                    <li class="sidebar-item active" onclick="switchView('swipe', this)">
+                    <li class="sidebar-item active" onclick="switchView('home', this)">
+                        <span class="material-icons">home</span>
+                        <span>ホーム</span>
+                    </li>
+                    <li class="sidebar-item" onclick="switchView('swipe', this)">
                         <span class="material-icons">swipe</span>
                         <span>探す (検索)</span>
                     </li>
                     <li class="sidebar-item" onclick="switchView('plan', this)">
                         <span class="material-icons">event_note</span>
                         <span>予定</span>
-                    </li>
-                    <li class="sidebar-item" onclick="switchView('home', this)">
-                        <span class="material-icons">home</span>
-                        <span>ホーム</span>
                     </li>
                     <li class="sidebar-item" onclick="switchView('data', this)">
                         <span class="material-icons">analytics</span>
@@ -153,7 +157,7 @@
         <main class="app-content">
             
             <!-- VIEW: SWIPE (探す/検索) -->
-            <div id="view-swipe" class="view">
+            <div id="view-swipe" class="view hidden">
                 <!-- Recommendation Banner -->
                 <div id="personalizedRecommendationBanner" class="recommendation-banner hidden">
                     <span class="banner-content">
@@ -330,7 +334,7 @@
             </div>
 
             <!-- VIEW: HOME (ホーム/データ管理) -->
-            <div id="view-home" class="view hidden">
+            <div id="view-home" class="view">
                 <!-- Welcome Banner -->
                 <div class="home-slider-wrapper">
                     <div class="home-slider" id="homeSlider">
