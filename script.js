@@ -12,7 +12,7 @@ import {
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyCD2GZE-GhpCgLU9LN32lBAEq8e2y0EwDo",
+  apiKey: "AIzaSyDeC3R7NLajt8zesqmQalgoeYSdtmicOPk",
   authDomain: "tripdevelopment-d109d.firebaseapp.com",
   projectId: "tripdevelopment-d109d",
   storageBucket: "tripdevelopment-d109d.firebasestorage.app",
@@ -434,7 +434,11 @@ let currentTheme = localStorage.getItem("kw_theme") || "mc-blue";
 let currentFontSize = localStorage.getItem("kw_fontsize") || "100";
 let currentLanguage = localStorage.getItem("kw_lang") || "ja";
 let rakutenAppId = (localStorage.getItem("kw_rakuten_appid") || "").trim();
-let geminiApiKey = (localStorage.getItem("kw_gemini_apikey") || "").trim();
+const DEFAULT_GEMINI_API_KEY = "AQ.Ab8RN6KFH8axdvRQQ0D9RSYAHu-f_EFbJrpWVXXb4ncEEDx5EA";
+const DEFAULT_AI_API_KEY = ""; // 使用するOpenAI APIキー（sk-...）
+// AQ.形式はGoogle AI Studioの新しいAPIキーフォーマットのため、削除せずそのまま保持します
+const _storedGeminiKey = (localStorage.getItem("kw_gemini_apikey") || "").trim();
+let geminiApiKey = _storedGeminiKey;
 
 // カード関連の一時状態
 let activeFilters = { season: "all", category: "all" };
@@ -909,91 +913,6 @@ window.toggleFavorite = function (starBtn, event, id) {
     updateGridCounts();
 };
 
-function initCardDrag(card, data) {
-    let startX = 0, startY = 0;
-    let currentX = 0, currentY = 0;
-    const stampLike = card.querySelector(".stamp-like");
-    const stampAnmari = card.querySelector(".stamp-anmari");
-
-    card.addEventListener("pointerdown", e => {
-        isDragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        card.style.transition = "none";
-        card.setPointerCapture(e.pointerId);
-    });
-
-    card.addEventListener("pointermove", e => {
-        if (!isDragging) return;
-        currentX = e.clientX - startX;
-        currentY = e.clientY - startY;
-
-        // 傾きと回転
-        const rotate = currentX * 0.08;
-        card.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) rotate(${rotate}deg)`;
-
-        // スワイプスタンプの透明度コントロール
-        if (currentX > 30) {
-            const opacity = Math.min(1, (currentX - 30) / 100);
-            stampLike.style.opacity = opacity;
-            stampAnmari.style.opacity = 0;
-        } else if (currentX < -30) {
-            const opacity = Math.min(1, (-currentX - 30) / 100);
-            stampAnmari.style.opacity = opacity;
-            stampLike.style.opacity = 0;
-        } else {
-            stampLike.style.opacity = 0;
-            stampAnmari.style.opacity = 0;
-        }
-    });
-
-    card.addEventListener("pointerup", e => {
-        if (!isDragging) return;
-        isDragging = false;
-
-        // スワイプ判定 (120px以上移動)
-        if (Math.abs(currentX) > 130) {
-            const dir = currentX > 0 ? "like" : "anmari";
-            card.style.transition = "transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease";
-            card.style.transform = `translate3d(${currentX > 0 ? 1000 : -1000}px, ${currentY}px, 0) rotate(${currentX > 0 ? 45 : -45}deg)`;
-            card.style.opacity = "0";
-
-            handleSwipeAction(dir, data);
-
-            // 次のカードへ移行
-            setTimeout(() => {
-                card.remove();
-                currentCardPool.shift();
-                renderStack();
-            }, 300);
-        } else {
-            // 元の位置に戻す (バネのようなスプリングイージング)
-            card.style.transition = "transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.2)";
-            card.style.transform = "translate3d(0, 0, 0) rotate(0deg)";
-            stampLike.style.opacity = 0;
-            stampAnmari.style.opacity = 0;
-        }
-    });
-}
-
-function handleSwipeAction(type, data) {
-    if (type === "like") {
-        if (!likes.some(l => l.id === data.id)) {
-            likes.push(data);
-            showToast(`❤️ 「${data.name}」をお気に入りに登録！`);
-        }
-    } else {
-        if (!anmaris.some(a => a.id === data.id)) {
-            anmaris.push({ ...data, savedAt: Date.now() });
-            showToast(`😐 「${data.name}」はあんまりかも`);
-        }
-    }
-    saveToStorage();
-    updateGridCounts();
-    // スタンドパラメータのリアルタイム計算
-    calculateStandStats();
-}
-
 window.resetSwipeHistory = function () {
     likes = [];
     anmaris = [];
@@ -1166,7 +1085,10 @@ async function fetchRakutenHotels(lat, lon, appId) {
 
 // Gemini APIを用いて新しい観光地を生成する関数
 async function fetchGeminiPlaces(apiKey, excludeNames) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const isOAuthToken = apiKey.startsWith("ya29.");
+    const url = isOAuthToken
+        ? `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`
+        : `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     const excludeStr = excludeNames.length > 0 ? `ただし、以下の観光地はすでに登録済みまたはスワイプ済みであるため、絶対に含めないでください: ${excludeNames.join(", ")}` : "";
 
     const promptText = `
@@ -1200,11 +1122,12 @@ ${excludeStr}
         }
     };
 
+    const headers = { "Content-Type": "application/json" };
+    if (isOAuthToken) headers["Authorization"] = `Bearer ${apiKey}`;
+
     const response = await fetch(url, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
+        headers,
         body: JSON.stringify(requestBody)
     });
 
@@ -1257,7 +1180,8 @@ ${excludeStr}
 
 // AIでの観光地追加ボタンのアクション
 window.generatePlacesWithAI = async function() {
-    if (!geminiApiKey) {
+    const apiKey = geminiApiKey || DEFAULT_GEMINI_API_KEY;
+    if (!apiKey) {
         showToast("⚠️ 設定画面で Gemini API キーを設定してください。");
         setTimeout(() => {
             switchView("settings");
@@ -1271,15 +1195,49 @@ window.generatePlacesWithAI = async function() {
     
     stack.innerHTML = `
         <div class="empty-stack-view" style="animation: fadeIn 0.3s ease;">
-            <div class="spinner"></div>
-            <h3>AIが新しい観光地を探索中...</h3>
-            <p style="font-size: 0.85rem; color: var(--text-muted);">近畿地方の魅力的なスポットを生成しています</p>
+            <div class="boat-spinner-container">
+                <div class="water-circle"></div>
+                <span class="material-icons boat-icon">sailing</span>
+            </div>
+            <h3 style="margin-top: 16px;">AIが新しい観光地を探索中...</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">近畿地方の魅力的なスポットを生成しています</p>
+            <!-- Shinkansen Progress Bar -->
+            <div class="progress-container">
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="placesProgressBarFill"></div>
+                    <div class="progress-train-icon" id="placesProgressTrain">
+                        <span class="material-icons">train</span>
+                    </div>
+                </div>
+                <div class="progress-percentage" id="placesProgressPercent">0%</div>
+            </div>
         </div>
     `;
 
+    let progressValue = 0;
+    const fill = document.getElementById("placesProgressBarFill");
+    const train = document.getElementById("placesProgressTrain");
+    const percent = document.getElementById("placesProgressPercent");
+
+    let progressInterval = setInterval(() => {
+        if (progressValue < 95) {
+            progressValue += Math.floor(Math.random() * 4) + 2;
+            if (progressValue > 95) progressValue = 95;
+            if (fill) fill.style.width = `${progressValue}%`;
+            if (train) train.style.left = `${progressValue}%`;
+            if (percent) percent.textContent = `${progressValue}%`;
+        }
+    }, 80);
+
     try {
         const existingNames = kinkiPlaces.map(p => p.name);
-        const newPlaces = await fetchGeminiPlaces(geminiApiKey, existingNames);
+        const newPlaces = await fetchGeminiPlaces(apiKey, existingNames);
+        
+        clearInterval(progressInterval);
+        if (fill) fill.style.width = "100%";
+        if (train) train.style.left = "100%";
+        if (percent) percent.textContent = "100%";
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         if (newPlaces && newPlaces.length > 0) {
             kinkiPlaces.unshift(...newPlaces);
@@ -1289,6 +1247,7 @@ window.generatePlacesWithAI = async function() {
             throw new Error("Empty list returned");
         }
     } catch (err) {
+        clearInterval(progressInterval);
         console.error(err);
         showToast(`⚠️ 自動生成に失敗しました: ${err.message}`);
         stack.innerHTML = `
@@ -2386,3 +2345,190 @@ window.signInAsGuest = async function () {
 window.signInAsGuestSplash = async function () {
     await signInAsGuest();
 };
+
+// ==========================================
+// 14. AIチャットボット (旅行相談窓口) 制御ロジック
+// ==========================================
+
+window.openChatDrawer = function () {
+    // 認証状態のチェック: ログインユーザー限定 (ゲストは無効)
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) {
+        showToast("⚠️ AI相談窓口の利用には本ログイン（アカウント連携）が必要です。");
+        return;
+    }
+
+    // APIキーチェック
+    const apiKey = geminiApiKey || DEFAULT_GEMINI_API_KEY;
+    if (!apiKey) {
+        showToast("⚠️ 設定画面で Gemini API キーを登録してください。");
+        setTimeout(() => switchView("settings"), 1200);
+        return;
+    }
+    
+    const drawer = document.getElementById("chat-drawer");
+    if (drawer) {
+        drawer.classList.remove("hidden");
+    }
+};
+
+window.closeChatDrawer = function () {
+    const drawer = document.getElementById("chat-drawer");
+    if (drawer) {
+        drawer.classList.add("hidden");
+    }
+};
+
+window.handleSendChatMessage = async function (event) {
+    event.preventDefault();
+    const input = document.getElementById("chatInput");
+    if (!input) return;
+    const messageText = input.value.trim();
+    if (!messageText) return;
+    
+    // 入力欄をクリア
+    input.value = "";
+    
+    // ユーザー発言を吹き出し追加
+    appendChatBubble("user", messageText);
+    
+    // AI入力中インジケータ表示
+    const typingId = appendTypingIndicator();
+    
+    try {
+        const apiKey = geminiApiKey || DEFAULT_GEMINI_API_KEY;
+        if (!apiKey) {
+            throw new Error("APIキーが見つかりません。");
+        }
+        
+        // レーダーチャート値のフォーマット
+        const labels = ["温泉・癒やし", "自然・景観", "歴史・文化", "グルメ", "アクティビティ", "都市・ショッピング"];
+        const prefStatsStr = standStats.map((val, idx) => `${labels[idx]}: ${val}%`).join(", ");
+        
+        const systemPrompt = `ユーザー名: ${userName}
+旅行の好みパラメータ: ${prefStatsStr}
+
+あなたは旅行プランナーのAI相談員です。回答を行う際は、ユーザーの興味関心が高いパラメータ（特に値が大きい項目）を優先的に考慮した提案・目的地選定やアドバイスを行ってください。
+【重要・最優先ルール】
+- 回答は極めて簡潔に、短く要点をまとめて答えてください。
+- 長文は厳禁とし、最大でも「100〜150文字程度」または「3行以内」で簡潔に答えてください。
+- 箇条書きを活用して読みやすくしてください。`;
+
+        const isOAuthToken = apiKey.startsWith("ya29.");
+        const chatUrl = isOAuthToken
+            ? `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`
+            : `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const chatHeaders = { "Content-Type": "application/json" };
+        if (isOAuthToken) {
+            chatHeaders["Authorization"] = `Bearer ${apiKey}`;
+            chatHeaders["x-goog-user-project"] = "tripdevelopment-d109d";
+        }
+
+        const response = await fetch(chatUrl, {
+            method: "POST",
+            headers: chatHeaders,
+            body: JSON.stringify({
+                contents: [
+                    {
+                        role: "user",
+                        parts: [
+                            {
+                                text: `${systemPrompt}\n\nユーザーからの相談: ${messageText}`
+                            }
+                        ]
+                    }
+                ]
+            })
+        });
+        
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            const errMsg = errData.error?.message || `HTTP ${response.status}`;
+            // 401エラーならデフォルトキーでリトライ
+            if (response.status === 401 && apiKey !== DEFAULT_GEMINI_API_KEY && DEFAULT_GEMINI_API_KEY) {
+                const retryHeaders = { "Content-Type": "application/json" };
+                const retryUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${DEFAULT_GEMINI_API_KEY}`;
+                const retryResponse = await fetch(retryUrl, {
+                    method: "POST",
+                    headers: retryHeaders,
+                    body: JSON.stringify({
+                        contents: [{ role: "user", parts: [{ text: `${systemPrompt}\n\nユーザーからの相談: ${messageText}` }] }]
+                    })
+                });
+                if (retryResponse.ok) {
+                    const retryData = await retryResponse.json();
+                    const retryText = retryData.candidates?.[0]?.content?.parts?.[0]?.text || "申し訳ありません、お答えを生成できませんでした。";
+                    removeTypingIndicator(typingId);
+                    appendChatBubble("ai", retryText);
+                    return;
+                }
+            }
+            throw new Error(errMsg);
+        }
+        
+        const data = await response.json();
+        const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || "申し訳ありません、お答えを生成できませんでした。";
+        
+        // 入力中を消す
+        removeTypingIndicator(typingId);
+        
+        // AIの返答を吹き出し追加
+        appendChatBubble("ai", replyText);
+        
+    } catch (error) {
+        console.error("Gemini API Error:", error);
+        removeTypingIndicator(typingId);
+        appendChatBubble("ai", `⚠️ エラーが発生しました: ${error.message}\n設定画面で正しい API キーが登録されているかご確認ください。`);
+    }
+};
+
+function appendChatBubble(sender, text) {
+    const body = document.getElementById("chatDrawerBody");
+    if (!body) return;
+    
+    const bubble = document.createElement("div");
+    bubble.className = `chat-bubble chat-bubble-${sender}`;
+    bubble.innerHTML = `
+        <div class="chat-avatar">${sender === 'user' ? '👤' : '🤖'}</div>
+        <div class="chat-text">${escapeHTML(text)}</div>
+    `;
+    body.appendChild(bubble);
+    body.scrollTop = body.scrollHeight;
+}
+
+function appendTypingIndicator() {
+    const body = document.getElementById("chatDrawerBody");
+    if (!body) return null;
+    
+    const typingId = "typing-" + Date.now();
+    const bubble = document.createElement("div");
+    bubble.id = typingId;
+    bubble.className = "chat-typing-bubble";
+    bubble.innerHTML = `
+        <div class="chat-typing-boat-train">
+            <span class="material-icons boat-icon-mini">sailing</span>
+            <div class="chat-typing-track">
+                <div class="chat-typing-train-icon">
+                    <span class="material-icons">train</span>
+                </div>
+            </div>
+        </div>
+    `;
+    body.appendChild(bubble);
+    body.scrollTop = body.scrollHeight;
+    return typingId;
+}
+
+function removeTypingIndicator(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+}
+
+function escapeHTML(str) {
+    return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}

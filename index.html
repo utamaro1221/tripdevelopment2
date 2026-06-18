@@ -417,10 +417,14 @@
                     <canvas id="standChart"></canvas>
                 </div>
 
-                <div class="stand-action-container" style="margin-top: 24px; text-align: center;">
+                <div class="stand-action-container" style="margin-top: 24px; text-align: center; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
                     <button class="btn-primary" onclick="startPersonalizedSearch()">
                         <span class="material-icons" style="font-size: 1.1rem; vertical-align: middle; margin-right: 6px;">star</span>
                         嗜好特化レコメンド検索を開始
+                    </button>
+                    <button class="btn-primary" onclick="openChatDrawer()" style="background-color: var(--accent-anmari);">
+                        <span class="material-icons" style="font-size: 1.1rem; vertical-align: middle; margin-right: 6px;">chat</span>
+                        AI旅行相談窓口を開く
                     </button>
                 </div>
             </div>
@@ -567,11 +571,14 @@
                         </div>
 
                         <div class="form-group" style="margin-top: 16px;">
-                            <label for="settingsGeminiApiKey">Gemini API キー</label>
-                            <input type="password" id="settingsGeminiApiKey" class="form-input" placeholder="AIによる観光地生成に使用します" oninput="updateSettingsFromUI()">
-                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; line-height: 1.4;">
-                                ※ キーはブラウザのLocalStorageに保存されます。<br>
-                                取得は <a href="https://aistudio.google.com/" target="_blank" style="color: var(--primary-color); text-decoration: underline;">Google AI Studio</a> から行えます。
+                            <label for="settingsGeminiApiKey">Gemini API キー (オプション)</label>
+                            <input type="text" id="settingsGeminiApiKey" class="form-input" placeholder="（省略時は内蔵キーを使用します）" oninput="updateSettingsFromUI()">
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; line-height: 1.6;">
+                                ※ 標準キーが最初から内蔵されているため、通常は入力不要です。独自のキーを使用したい場合のみ入力してください。<br>
+                                <strong style="color: var(--primary-color);">取得方法:</strong><br>
+                                ① <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--primary-color); text-decoration: underline;">Google AI Studio</a> を開く<br>
+                                ② 「Create API key」をクリック<br>
+                                ③ 表示されたキー（<code style="background: rgba(0,0,0,0.15); padding: 1px 4px; border-radius: 3px;">AIzaSy...</code> または <code style="background: rgba(0,0,0,0.15); padding: 1px 4px; border-radius: 3px;">AQ.Ab8...</code>）を貼り付け
                             </p>
                         </div>
                     </div>
@@ -594,9 +601,36 @@
 
 
 
+    <!-- AI Chatbot Drawer -->
+    <div id="chat-drawer" class="chat-drawer hidden">
+        <div class="chat-drawer-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="material-icons" style="color: var(--primary-color);">support_agent</span>
+                <span class="chat-drawer-title">AI旅行相談窓口</span>
+            </div>
+            <button class="chat-drawer-close" onclick="closeChatDrawer()">✕</button>
+        </div>
+        <div class="chat-drawer-body" id="chatDrawerBody">
+            <div class="chat-bubble chat-bubble-ai">
+                <div class="chat-avatar">🤖</div>
+                <div class="chat-text">
+                    こんにちは！旅行プランナーのAI相談員です。あなたの旅行傾向（レーダーチャート）を学習し、最適な旅行計画や不安解消のアドバイスをします。何でもお気軽にご相談ください！
+                </div>
+            </div>
+        </div>
+        <div class="chat-drawer-footer">
+            <form id="chatBotForm" onsubmit="handleSendChatMessage(event)" style="display: flex; width: 100%; gap: 8px; margin: 0;">
+                <input type="text" id="chatInput" class="form-input" placeholder="質問を入力してください..." required autocomplete="off">
+                <button type="submit" class="btn-primary" style="padding: 10px 16px; min-width: auto; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+                    <span class="material-icons" style="font-size: 1.2rem;">send</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Toast container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script type="module" src="script.js?v=1.2.1"></script>
+    <script type="module" src="script.js?v=1.2.7"></script>
 </body>
 </html>
