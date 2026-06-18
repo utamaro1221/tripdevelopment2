@@ -444,10 +444,47 @@ let isDragging = false;
 let activePlanTarget = null;
 let currentPriority = ["グルメ"];
 let recommendationMode = false;
+let isSplashAnimationFinished = false;
+let isAuthStateResolved = false;
+
+window.tryEnteringApp = function () {
+    if (!isSplashAnimationFinished || !isAuthStateResolved) return;
+    
+    if (auth.currentUser) {
+        const splash = document.getElementById("launch-screen");
+        if (splash) {
+            splash.classList.add("fade-out");
+            setTimeout(() => {
+                splash.classList.add("hidden");
+                const panel = document.getElementById("onboarding-panel");
+                if (panel) {
+                    panel.classList.remove("slide-in");
+                    panel.classList.add("hidden");
+                }
+            }, 800);
+        }
+    } else {
+        const splash = document.getElementById("launch-screen");
+        if (splash) {
+            splash.classList.remove("hidden", "fade-out");
+        }
+        const panel = document.getElementById("onboarding-panel");
+        if (panel) {
+            panel.classList.remove("hidden");
+            // Force reflow
+            void panel.offsetWidth;
+            panel.classList.add("slide-in");
+        }
+    }
+};
 
 // ログイン状態の監視とUI更新
 onAuthStateChanged(auth, (user) => {
+    isAuthStateResolved = true;
     updateAuthUI(user);
+    if (isSplashAnimationFinished) {
+        tryEnteringApp();
+    }
 });
 
 function updateAuthUI(user) {
@@ -559,6 +596,14 @@ window.onload = function () {
 };
 
 function initApp() {
+    // 起動スプラッシュの3秒タイマー
+    setTimeout(() => {
+        isSplashAnimationFinished = true;
+        if (isAuthStateResolved) {
+            tryEnteringApp();
+        }
+    }, 3000);
+
     // UIの設定反映
     applyTheme(currentTheme);
     applyFontSize(currentFontSize);
@@ -2313,4 +2358,8 @@ window.signInAsGuest = async function () {
         console.error("匿名ログインエラー:", error);
         showToast(`⚠️ ゲストログインに失敗しました: ${error.message}`);
     }
+};
+
+window.signInAsGuestSplash = async function () {
+    await signInAsGuest();
 };

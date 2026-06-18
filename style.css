@@ -201,8 +201,15 @@ body {
 }
 
 @keyframes activePulse {
-    0%, 100% { filter: drop-shadow(0 0 2px rgba(var(--primary-color-rgb), 0.3)); }
-    50% { filter: drop-shadow(0 0 6px rgba(var(--primary-color-rgb), 0.5)); }
+
+    0%,
+    100% {
+        filter: drop-shadow(0 0 2px rgba(var(--primary-color-rgb), 0.3));
+    }
+
+    50% {
+        filter: drop-shadow(0 0 6px rgba(var(--primary-color-rgb), 0.5));
+    }
 }
 
 .sidebar-item .material-icons {
@@ -264,8 +271,10 @@ body {
     flex: 1;
     position: relative;
     width: 100%;
-    margin-top: 60px; /* offset top header */
-    margin-bottom: 90px; /* offset bottom bar */
+    margin-top: 60px;
+    /* offset top header */
+    margin-bottom: 90px;
+    /* offset bottom bar */
     height: calc(100vh - 150px);
     overflow: hidden;
     background-color: var(--bg-color);
@@ -303,13 +312,16 @@ body {
     width: 8px;
     height: 8px;
 }
+
 ::-webkit-scrollbar-track {
     background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
     background: var(--border-color);
     border-radius: 8px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     background: var(--text-extra-muted);
 }
@@ -441,7 +453,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
     z-index: 10;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -647,8 +659,15 @@ body {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* ------------------------------------- */
@@ -730,7 +749,7 @@ body {
 .liked-item:hover {
     border-color: var(--primary-color);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
 .liked-item.selected {
@@ -802,7 +821,9 @@ body {
     color: var(--text-muted);
 }
 
-.form-input, .form-select, .form-textarea {
+.form-input,
+.form-select,
+.form-textarea {
     background-color: var(--bg-color);
     border: 1px solid var(--border-color);
     color: var(--text-color);
@@ -814,7 +835,9 @@ body {
     font-family: inherit;
 }
 
-.form-input:focus, .form-select:focus, .form-textarea:focus {
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.12);
 }
@@ -892,7 +915,9 @@ body {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* AI Generated Itinerary and Hotel Results */
@@ -1398,8 +1423,15 @@ body {
 }
 
 @keyframes zoomUp {
-    from { opacity: 0; transform: scale(0.95) translateY(10px); }
-    to   { opacity: 1; transform: scale(1) translateY(0); }
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }
 
 .modal-header {
@@ -1538,8 +1570,15 @@ body {
 }
 
 @keyframes toastUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Recommendation Banner */
@@ -1562,8 +1601,15 @@ body {
 }
 
 @keyframes slideDownBanner {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .banner-content {
@@ -1590,7 +1636,8 @@ body {
 }
 
 /* Share View Layout */
-.shared-plans-panel, .my-shareable-panel {
+.shared-plans-panel,
+.my-shareable-panel {
     background-color: var(--sidebar-bg);
     border-radius: 20px;
     border: 1px solid var(--border-color);
@@ -1600,7 +1647,8 @@ body {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
 }
 
-.shared-plans-panel h3, .my-shareable-panel h3 {
+.shared-plans-panel h3,
+.my-shareable-panel h3 {
     font-size: 1.15rem;
     font-weight: 800;
     margin-bottom: 16px;
@@ -1745,7 +1793,7 @@ body {
     border: 1px solid var(--border-color);
     padding: 2px 10px;
     border-radius: 10px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 .shared-itinerary-preview.expanded .preview-toggle-btn {
@@ -1846,19 +1894,210 @@ body {
     color: var(--text-muted);
 }
 
+
+
+/* Launch Screen & Opening Animation Styles */
+.launch-screen {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #0c111d;
+    /* 深みのあるブラックアウト */
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.8s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.8s;
+    overflow: hidden;
+}
+
+.launch-screen.fade-out {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+.launch-screen .animation-container {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    height: 100%;
+    max-height: 500px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.launch-title-container {
+    position: absolute;
+    text-align: center;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.launch-subtitle {
+    color: var(--primary-color);
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.3em;
+    display: block;
+    margin-bottom: 6px;
+    opacity: 0;
+    animation: splashFadeIn 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    animation-delay: 0.5s;
+}
+
+.launch-title {
+    color: #ffffff;
+    font-size: 2.8rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    opacity: 0;
+    animation: splashFadeIn 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    animation-delay: 0.8s;
+    text-shadow: 0 0 40px rgba(var(--primary-color-rgb), 0.3);
+}
+
+@keyframes splashFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.path-svg {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+}
+
+.path-svg.bottom-path {
+    top: auto;
+    bottom: 20px;
+    height: 160px;
+}
+
+.animation-path {
+    stroke: rgba(255, 255, 255, 0.08);
+    stroke-width: 1.5;
+    stroke-dasharray: 6 6;
+    fill: none;
+}
+
+/* 飛行機の螺旋軌道アニメーション */
+.moving-plane {
+    offset-path: url(#spiral-path);
+    offset-rotate: auto;
+    animation: flyAlongSpiral 3.8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+@keyframes flyAlongSpiral {
+    0% {
+        offset-distance: 0%;
+        transform: scale(0.6);
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    90% {
+        opacity: 1;
+    }
+
+    100% {
+        offset-distance: 100%;
+        transform: scale(1.1);
+        opacity: 0;
+    }
+}
+
+/* 新幹線の楕円軌道アニメーション */
+.moving-train {
+    offset-path: url(#circle-path);
+    offset-rotate: auto;
+    animation: runAlongCircle 4.5s linear infinite;
+}
+
+@keyframes runAlongCircle {
+    0% {
+        offset-distance: 0%;
+    }
+
+    100% {
+        offset-distance: 100%;
+    }
+}
+
+/* オンボーディングパネルのスライドインスタイル */
+.onboarding-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(to top, #0c111d 85%, transparent);
+    padding: 50px 24px 40px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    transform: translateY(100%);
+    transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 10000;
+}
+
+.onboarding-panel.slide-in {
+    transform: translateY(0);
+}
+
+.onboarding-panel h2 {
+    color: #ffffff;
+    font-size: 1.4rem;
+    font-weight: 800;
+}
+
+.onboarding-panel p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    max-width: 320px;
+    margin-bottom: 12px;
+}
+
+.onboarding-actions {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 320px;
+    gap: 12px;
+}
+
 /* Responsive Overrides */
 @media (max-width: 768px) {
     .sidebar-nav ul {
         gap: 6px;
         padding: 0 8px;
     }
+
     .sidebar-item {
         font-size: 0.75rem;
         gap: 2px;
     }
+
     .sidebar-item .material-icons {
         font-size: 1.5rem;
     }
+
     .swipe-actions-container {
         gap: 12px;
     }

@@ -11,9 +11,54 @@
     <!-- Chart.js and Icons -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=1.2.1">
 </head>
 <body class="theme-mc-blue">
+
+    <!-- Launch Screen (Opening Animation Overlay) -->
+    <div id="launch-screen" class="launch-screen">
+        <div class="animation-container">
+            <!-- Title -->
+            <div class="launch-title-container">
+                <span class="launch-subtitle">AI TRAVEL PLANNER</span>
+                <h1 class="launch-title">Kinki Wander</h1>
+            </div>
+
+            <!-- SVG Line Art for Spiral Path (Airplane) -->
+            <svg class="path-svg" viewBox="0 0 500 500">
+                <path id="spiral-path" class="animation-path" d="M 250 450 C 120 380, 80 280, 250 220 C 420 160, 320 80, 250 30" fill="none" />
+                <g class="moving-plane">
+                    <path d="M -8,-10 L 0,-15 L 8,-10 L 8,-4 L 16,0 L 16,4 L 4,2 L 4,9 L 8,12 L 8,14 L 0,12 L -8,14 L -8,12 L -4,9 L -4,2 L -16,4 L -16,0 L -8,-4 Z" fill="#ffffff" />
+                </g>
+            </svg>
+
+            <!-- SVG Line Art for Circle/Oval Path (Shinkansen) -->
+            <svg class="path-svg bottom-path" viewBox="0 0 500 200">
+                <path id="circle-path" class="animation-path" d="M 50 100 C 50 30, 450 30, 450 100 C 450 170, 50 170, 50 100 Z" fill="none" />
+                <g class="moving-train">
+                    <path d="M -20,4 L 10,4 C 18,4 23,2 25,-1 C 27,-3 26,-5 20,-5 L -20,-5 Z" fill="#ffffff" />
+                    <rect x="-15" y="-3" width="6" height="2" fill="#0f172a" />
+                    <rect x="-5" y="-3" width="6" height="2" fill="#0f172a" />
+                    <path d="M 5,-3 L 12,-3 L 10,-1 L 5,-1 Z" fill="#0f172a" />
+                </g>
+            </svg>
+        </div>
+
+        <!-- Onboarding Panel -->
+        <div id="onboarding-panel" class="onboarding-panel hidden">
+            <h2>新しい旅を始めましょう</h2>
+            <p>旅の好みスワイプ分析や、AIプラン生成をお楽しみください。</p>
+            <div class="onboarding-actions">
+                <button class="btn-primary" onclick="openAuthModal()" style="width: 100%; padding: 14px;">
+                    <span class="material-icons" style="font-size: 1.2rem; vertical-align: middle; margin-right: 8px;">login</span>
+                    ログイン / 新規登録
+                </button>
+                <button class="btn-primary" onclick="signInAsGuestSplash()" style="width: 100%; padding: 14px; background-color: transparent; border: 2px solid #ffffff; box-shadow: none;">
+                    ゲストとして利用する (匿名)
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div class="app-container">
         <!-- Sidebar Backdrop for Mobile -->
@@ -551,6 +596,6 @@
     <!-- Toast container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script type="module" src="script.js"></script>
+    <script type="module" src="script.js?v=1.2.1"></script>
 </body>
 </html>
