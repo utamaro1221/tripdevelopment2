@@ -2246,24 +2246,12 @@ window.useSharedPlan = function (sharedPlanId) {
 // ==========================================
 let isSignUpMode = false; // デフォルトはログイン（サインイン）モード
 
-window.openAuthModal = function () {
-    const modal = document.getElementById("auth-modal");
-    if (modal) {
-        modal.classList.remove("hidden");
-        isSignUpMode = false;
-        updateAuthModalUI();
-    }
-};
-
-window.closeAuthModal = function () {
-    const modal = document.getElementById("auth-modal");
-    if (modal) modal.classList.add("hidden");
-    
+function clearAuthInputs() {
     const emailInput = document.getElementById("authEmail");
     const passInput = document.getElementById("authPassword");
     if (emailInput) emailInput.value = "";
     if (passInput) passInput.value = "";
-};
+}
 
 window.toggleAuthMode = function (event) {
     if (event) event.preventDefault();
@@ -2308,7 +2296,7 @@ window.handleAuthSubmit = async function (event) {
             await signInWithEmailAndPassword(auth, email, password);
             showToast("🔑 ログインしました！");
         }
-        closeAuthModal();
+        clearAuthInputs();
     } catch (error) {
         console.error("認証エラー:", error);
         let errorMsg = "認証に失敗しました。";
@@ -2342,7 +2330,7 @@ window.signInWithGoogle = async function () {
     try {
         await signInWithPopup(auth, provider);
         showToast("🔑 Googleアカウントでログインしました！");
-        closeAuthModal();
+        clearAuthInputs();
     } catch (error) {
         console.error("Google認証エラー:", error);
         showToast(`⚠️ Googleログインに失敗しました: ${error.message}`);
@@ -2353,7 +2341,7 @@ window.signInAsGuest = async function () {
     try {
         await signInAnonymously(auth);
         showToast("👤 ゲストとしてログインしました。");
-        closeAuthModal();
+        clearAuthInputs();
     } catch (error) {
         console.error("匿名ログインエラー:", error);
         showToast(`⚠️ ゲストログインに失敗しました: ${error.message}`);
