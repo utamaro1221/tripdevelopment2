@@ -392,6 +392,24 @@
                                 <option value="en">English (Simulation)</option>
                             </select>
                         </div>
+
+                        <div class="form-group" style="margin-top: 16px;">
+                            <label for="settingsRakutenAppId">楽天トラベル API アプリID (デベロッパーID)</label>
+                            <input type="password" id="settingsRakutenAppId" class="form-input" placeholder="例: 1012345678901234567" oninput="updateSettingsFromUI()">
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; line-height: 1.4;">
+                                ※ IDはブラウザのLocalStorageに保存されます。<br>
+                                登録は <a href="https://webservice.rakuten.co.jp/" target="_blank" style="color: var(--primary-color); text-decoration: underline;">楽天ウェブサービス</a> から行えます。
+                            </p>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 16px;">
+                            <label for="settingsGeminiApiKey">Gemini API キー</label>
+                            <input type="password" id="settingsGeminiApiKey" class="form-input" placeholder="AIによる観光地生成に使用します" oninput="updateSettingsFromUI()">
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; line-height: 1.4;">
+                                ※ キーはブラウザのLocalStorageに保存されます。<br>
+                                取得は <a href="https://aistudio.google.com/" target="_blank" style="color: var(--primary-color); text-decoration: underline;">Google AI Studio</a> から行えます。
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
