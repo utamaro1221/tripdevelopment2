@@ -2101,4 +2101,107 @@ body {
     .swipe-actions-container {
         gap: 12px;
     }
+
+    /* Mobile Launch Screen Layout Overrides */
+    .launch-screen .animation-container {
+        max-height: 360px;
+        transform: translateY(-50px);
+    }
+
+    .launch-title {
+        font-size: 2.2rem;
+    }
+
+    .launch-subtitle {
+        font-size: 0.75rem;
+        letter-spacing: 0.25em;
+    }
+
+    .onboarding-panel {
+        left: 16px;
+        right: 16px;
+        width: calc(100% - 32px);
+        bottom: 24px;
+        border-radius: 20px;
+        background: rgba(12, 17, 29, 0.85);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 24px 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        transform: translateY(calc(100% + 30px));
+        gap: 10px;
+    }
+
+    .onboarding-panel.slide-in {
+        transform: translateY(0);
+    }
+
+    .onboarding-panel h2 {
+        font-size: 1.25rem;
+    }
+
+    .onboarding-panel p {
+        font-size: 0.8rem;
+        margin-bottom: 4px;
+    }
+
+    .onboarding-actions {
+        max-width: 100%;
+        gap: 8px;
+    }
+
+    .onboarding-actions button {
+        padding: 12px !important;
+        font-size: 0.85rem;
+    }
+}
+
+@media (min-width: 769px) {
+    /* PC Launch Screen Layout (More Impact) */
+    .launch-screen .animation-container {
+        max-width: 650px;
+        max-height: 650px;
+    }
+
+    .launch-title {
+        font-size: 3.8rem;
+        text-shadow: 0 0 60px rgba(var(--primary-color-rgb), 0.5);
+    }
+
+    .launch-subtitle {
+        font-size: 1rem;
+        letter-spacing: 0.4em;
+        margin-bottom: 10px;
+    }
+
+    .onboarding-panel {
+        left: 50%;
+        width: 90%;
+        max-width: 460px;
+        bottom: 40px;
+        border-radius: 28px;
+        background: rgba(12, 17, 29, 0.8);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 36px 32px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        transform: translate(-50%, calc(100% + 50px));
+        gap: 16px;
+    }
+
+    .onboarding-panel.slide-in {
+        transform: translate(-50%, 0);
+    }
+
+    .onboarding-panel h2 {
+        font-size: 1.6rem;
+    }
+
+    .onboarding-panel p {
+        font-size: 0.95rem;
+        max-width: 360px;
+        margin-bottom: 8px;
+    }
 }
