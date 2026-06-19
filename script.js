@@ -542,7 +542,7 @@ function updateAuthUI(user) {
                         <span class="material-icons status-icon">verified_user</span>
                         <div>
                             <div class="status-title">同期完了</div>
-                            <div class="status-email">${user.email}</div>
+                            <div class="status-desc">アカウント連携済み</div>
                         </div>
                     </div>
                 `;
@@ -920,6 +920,10 @@ function initCardDrag(card, data) {
     const stampAnmari = card.querySelector(".stamp-anmari");
 
     card.addEventListener("pointerdown", e => {
+        // お気に入りボタンをクリックした時はカードのドラッグを開始しない
+        if (e.target.closest('.card-star-btn')) {
+            return;
+        }
         isDragging = true;
         startX = e.clientX;
         startY = e.clientY;
@@ -2495,6 +2499,7 @@ window.handleSendChatMessage = async function (event) {
 
 あなたは旅行プランナーのAI相談員です。回答を行う際は、ユーザーの興味関心が高いパラメータ（特に値が大きい項目）を優先的に考慮した提案・目的地選定やアドバイスを行ってください。
 【重要・最優先ルール】
+- 提案やアドバイスを行う目的地は、必ず近畿地方（大阪府、京都府、兵庫県、奈良県、滋賀県、和歌山県）のスポットに限定してください。東京や北海道、沖縄など、近畿地方以外の地域は絶対に提案しないでください。
 - 回答は極めて簡潔に、短く要点をまとめて答えてください。
 - 長文は厳禁とし、最大でも「100〜150文字程度」または「3行以内」で簡潔に答えてください。
 - 箇条書きを活用して読みやすくしてください。`;
