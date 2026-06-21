@@ -499,6 +499,8 @@ function updateAuthUI(user) {
     
     const nameEl = document.getElementById("userName");
     const statusEl = document.getElementById("userStatus");
+    const myPageName = document.getElementById("myPageName");
+    const myPageStatus = document.getElementById("myPageStatus");
 
     if (user) {
         if (user.isAnonymous) {
@@ -506,6 +508,8 @@ function updateAuthUI(user) {
             userName = "ゲストトラベラー";
             if (nameEl) nameEl.textContent = userName;
             if (statusEl) statusEl.textContent = "ゲストモードで利用中";
+            if (myPageName) myPageName.textContent = userName;
+            if (myPageStatus) myPageStatus.textContent = "ゲストモードで利用中";
             
             if (settingsUserStatus) {
                 settingsUserStatus.innerHTML = `
@@ -535,6 +539,8 @@ function updateAuthUI(user) {
             userName = user.displayName || user.email.split('@')[0];
             if (nameEl) nameEl.textContent = userName;
             if (statusEl) statusEl.textContent = "アカウント同期中 (連携済み)";
+            if (myPageName) myPageName.textContent = userName;
+            if (myPageStatus) myPageStatus.textContent = "アカウント同期中 (連携済み)";
             
             if (settingsUserStatus) {
                 settingsUserStatus.innerHTML = `
@@ -565,6 +571,8 @@ function updateAuthUI(user) {
         userName = localStorage.getItem("kw_username") || "トラベラー";
         if (nameEl) nameEl.textContent = userName;
         if (statusEl) statusEl.textContent = "近畿エリア探索中";
+        if (myPageName) myPageName.textContent = userName;
+        if (myPageStatus) myPageStatus.textContent = "近畿エリア探索中";
         
         if (settingsUserStatus) {
             settingsUserStatus.innerHTML = `
@@ -630,23 +638,24 @@ function initApp() {
     if (currentTheme === "mc-amber") document.getElementById("btnThemeMcAmber")?.classList.add("active");
     if (currentTheme === "mc-dark") document.getElementById("btnThemeMcDark")?.classList.add("active");
 
-    // 「あんまり」リストの自動削除 (15日経過したものをパージ)
+    // 「興味なし」リストの自動削除 (15日経過したものをパージ)
     purgeOldAnmaris();
 
     // 検索カードプールの準備
     applyFilters();
 
-    // ホームカウントの表示
+    // ホームカウントとリストの表示
     updateGridCounts();
     updateCountdown();
     simulateWeather();
-
-    // スライダーの動作
-    startSliderAuto();
-    initSliderSwipe();
+    renderSavedSpotsHome();
+    renderHomePlans();
 
     // チャート表示の更新
     updateChart();
+    
+    // 共有リストの更新
+    renderShareView();
 }
 
 function saveToStorage() {
@@ -693,30 +702,32 @@ window.switchView = function (viewId, element) {
             if (viewId === "swipe" && labelText.includes("探す")) item.classList.add("active");
             if (viewId === "plan" && labelText.includes("予定")) item.classList.add("active");
             if (viewId === "home" && labelText.includes("ホーム")) item.classList.add("active");
-            if (viewId === "data" && labelText.includes("データ")) item.classList.add("active");
-            if (viewId === "share" && labelText.includes("共有")) item.classList.add("active");
-            if (viewId === "settings" && labelText.includes("設定")) item.classList.add("active");
+            if (viewId === "mypage" && labelText.includes("マイページ")) item.classList.add("active");
+            if (viewId === "settings" && labelText.includes("マイページ")) item.classList.add("active");
         });
     }
 
     // 各画面特有の更新トリガー
-    if (viewId === "data") updateChart();
+    if (viewId === "mypage") {
+        updateGridCounts();
+        updateChart();
+        renderShareView();
+    }
     if (viewId === "home") {
         updateGridCounts();
         updateCountdown();
         simulateWeather();
+        renderSavedSpotsHome();
+        renderHomePlans();
     }
     if (viewId === "plan") {
         renderLikedList();
-    }
-    if (viewId === "share") {
-        renderShareView();
     }
 
     // モバイル用サイドバーを閉じる
     const sidebar = document.getElementById("appSidebar");
     const overlay = document.getElementById("sidebarOverlay");
-    if (sidebar.classList.contains("open")) {
+    if (sidebar && sidebar.classList.contains("open")) {
         sidebar.classList.remove("open");
         overlay.classList.remove("open");
     }
@@ -747,14 +758,16 @@ window.applyFilters = function () {
     const catSelect = document.getElementById("filterCategory");
 
     activeFilters.season = seasonSelect ? seasonSelect.value : "all";
-    activeFilters.category = catSelect ? catSelect.value : "all";
+    if (catSelect) {
+        activeFilters.category = catSelect.value;
+    }
 
     // フィルタ条件に合致するスポットプールを作成
     currentCardPool = kinkiPlaces.filter(place => {
         const matchSeason = (activeFilters.season === "all" || place.season === activeFilters.season);
         const matchCat = (activeFilters.category === "all" || place.category === activeFilters.category);
 
-        // すでに「いいね」または「あんまり」に入っているものは除く (リセットされない限り)
+        // すでに「いいね」または「興味なし」に入っているものは除く (リセットされない限り)
         const isAlreadySelected = likes.some(l => l.id === place.id) || anmaris.some(a => a.id === place.id);
 
         let matchRecommendation = true;
@@ -875,7 +888,7 @@ function createCardElement(data, isTopCard) {
             <span class="card-prefecture-badge">📍 ${data.prefecture}</span>
             <span class="card-season-badge">🍂 ${data.season}おすすめ</span>
             <div class="swipe-stamp stamp-like">いいね</div>
-            <div class="swipe-stamp stamp-anmari">あんまり</div>
+            <div class="swipe-stamp stamp-anmari">興味なし</div>
         </div>
         <button class="card-star-btn ${isStarred ? 'starred' : ''}" onclick="toggleFavorite(this, event, ${data.id})"><span class="material-icons-outlined star-icon">${isStarred ? 'star' : 'star_border'}</span></button>
         <div class="card-info">
@@ -908,6 +921,11 @@ window.toggleFavorite = function (starBtn, event, id) {
         starBtn.classList.add("starred");
         if (starIcon) starIcon.textContent = "star";
         showToast("お気に入りに追加しました！⭐");
+        
+        // Ensure favorited item is also in Saved Spots (likes)
+        if (!likes.some(l => l.id === id)) {
+            likes.push(item);
+        }
     }
     saveToStorage();
     updateGridCounts();
@@ -993,7 +1011,7 @@ function handleSwipeAction(type, data) {
     } else {
         if (!anmaris.some(a => a.id === data.id)) {
             anmaris.push({ ...data, savedAt: Date.now() });
-            showToast(`😐「${data.name}」はあんまりかも`);
+            showToast(`😐「${data.name}」は興味なしにしました`);
         }
     }
     saveToStorage();
@@ -1051,10 +1069,11 @@ window.swipeTopCard = function (direction) {
 // ==========================================
 function renderLikedList() {
     const listContainer = document.getElementById("likedList");
+    if (!listContainer) return;
     listContainer.innerHTML = "";
 
     if (likes.length === 0) {
-        listContainer.innerHTML = `<div class="modal-empty">いいねした観光地がまだありません。「探す」からスワイプしてください。</div>`;
+        listContainer.innerHTML = `<div class="modal-empty">保存したスポットがまだありません。「探す」からスワイプしてください。</div>`;
         return;
     }
 
@@ -1062,6 +1081,7 @@ function renderLikedList() {
         const isSelected = activePlanTarget && activePlanTarget.id === item.id;
         const div = document.createElement("div");
         div.className = `liked-item ${isSelected ? 'selected' : ''}`;
+        div.setAttribute("data-id", item.id);
         div.onclick = () => selectPlanTarget(item, div);
         div.innerHTML = `
             <img src="${item.img}" class="liked-item-thumb">
@@ -1075,20 +1095,29 @@ function renderLikedList() {
 }
 
 function selectPlanTarget(item, element) {
-    document.querySelectorAll(".liked-item").forEach(i => i.classList.remove("selected"));
-    element.classList.add("selected");
-
     activePlanTarget = item;
+    document.querySelectorAll(".liked-item").forEach(i => {
+        if (i.getAttribute("data-id") == item.id) {
+            i.classList.add("selected");
+        } else {
+            i.classList.remove("selected");
+        }
+    });
 
     // プレースホルダーを非表示にし、フォームを表示する
-    document.getElementById("planFormPlaceholder").classList.add("hidden");
-    document.getElementById("planResults").classList.add("hidden");
-    document.getElementById("planError").classList.add("hidden");
-    document.getElementById("planLoading").classList.add("hidden");
+    const placeholder = document.getElementById("planFormPlaceholder");
+    if (placeholder) placeholder.classList.add("hidden");
+    const results = document.getElementById("planResults");
+    if (results) results.classList.add("hidden");
+    const errorCard = document.getElementById("planError");
+    if (errorCard) errorCard.classList.add("hidden");
+    const loadingView = document.getElementById("planLoading");
+    if (loadingView) loadingView.classList.add("hidden");
 
     const form = document.getElementById("planForm");
-    form.classList.remove("hidden");
-    document.getElementById("planTargetName").innerHTML = `<span class="material-icons" style="vertical-align: middle; color: var(--primary-color);">location_on</span> ${item.name} 行き旅行プラン設定`;
+    if (form) form.classList.remove("hidden");
+    const targetName = document.getElementById("planTargetName");
+    if (targetName) targetName.innerHTML = `<span class="material-icons" style="vertical-align: middle; color: var(--primary-color);">location_on</span> ${item.name} 行き旅行プラン設定`;
 }
 
 window.togglePriorityPill = function (pill) {
@@ -1393,7 +1422,7 @@ window.generateTravelPlan = async function (event) {
     const peopleVal = parseInt(document.getElementById("planPeople").value);
     const budgetVal = parseInt(document.getElementById("planBudget").value);
     const othersVal = document.getElementById("planOthers").value;
-    const simulateError = document.getElementById("simulateApiError").checked;
+    const simulateError = false;
 
     // フォームを隠してローディング表示
     document.getElementById("planForm").classList.add("hidden");
@@ -1581,7 +1610,7 @@ function generateItineraryText(name, pref, date, nightsText, people, budget, pri
 }
 
 // ==========================================
-// 8. ホーム機能 (「あんまり」データ自動削除 & 管理)
+// 8. ホーム機能 (「興味なし」データ自動削除 & 管理)
 // ==========================================
 function purgeOldAnmaris() {
     const now = Date.now();
@@ -1598,61 +1627,105 @@ function purgeOldAnmaris() {
     if (deletedCount > 0) {
         // わずかに遅らせてトーストを表示
         setTimeout(() => {
-            showToast(`🧹 15日以上経過した「あんまり」データを ${deletedCount} 件自動クリーンアップしました。`);
+            showToast(`🧹 15日以上経過した「興味なし」データを ${deletedCount} 件自動クリーンアップしました。`);
         }, 1000);
     }
 }
 
 function updateGridCounts() {
-    document.getElementById("favCount").textContent = favorites.length;
-    document.getElementById("recentLikeCount").textContent = likes.length;
-    document.getElementById("planCount").textContent = plans.length;
-    document.getElementById("anmariCount").textContent = anmaris.length;
+    const savedEl = document.getElementById("savedSpotsCount");
+    const anmariEl = document.getElementById("anmariCount");
+    const planEl = document.getElementById("homePlansCount");
+    
+    if (savedEl) savedEl.textContent = likes.length;
+    if (anmariEl) anmariEl.textContent = anmaris.length;
+    if (planEl) planEl.textContent = plans.length;
 }
 
 function updateCountdown() {
-    const el = document.getElementById("countdownDays");
-    const dest = document.getElementById("countdownDestination");
+    const el = document.getElementById("heroCountdownDays");
+    const dest = document.getElementById("heroCountdownDest");
+    
+    const homeEmptyState = document.getElementById("home-empty-state");
+    const homeHeroCard = document.getElementById("home-hero-card");
 
     if (plans.length === 0) {
-        el.textContent = "-- 日";
-        dest.textContent = "予定を登録してね";
+        if (homeEmptyState) homeEmptyState.classList.remove("hidden");
+        if (homeHeroCard) homeHeroCard.classList.add("hidden");
+        
+        const homeCtaBtn = document.getElementById("homeCtaBtn");
+        if (homeCtaBtn) {
+            if (likes.length > 0) {
+                homeCtaBtn.textContent = "いいねしたスポットでプランを作る";
+            } else {
+                homeCtaBtn.textContent = "AIに次の旅行を相談する";
+            }
+        }
+        
+        renderSavedSpotsHome();
+        renderHomePlans();
         return;
     }
+
+    if (homeEmptyState) homeEmptyState.classList.add("hidden");
+    if (homeHeroCard) homeHeroCard.classList.remove("hidden");
 
     // 未来の予定を日付でソートして直近のものを取得
     const sortedPlans = [...plans].filter(p => new Date(p.date) >= new Date().setHours(0, 0, 0, 0))
         .sort((a, b) => new Date(a.date) - new Date(b.date));
 
     if (sortedPlans.length === 0) {
-        el.textContent = "-- 日";
-        dest.textContent = "次の予定を作成してね";
+        if (el) el.textContent = "-- 日";
+        if (dest) dest.textContent = "次の予定を作成してね";
+        if (homeHeroCard) {
+            homeHeroCard.style.backgroundImage = "url('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&auto=format&fit=crop')";
+            homeHeroCard.style.backgroundSize = "cover";
+            homeHeroCard.style.backgroundPosition = "center";
+        }
+        renderSavedSpotsHome();
+        renderHomePlans();
         return;
     }
 
     const next = sortedPlans[0];
     const diff = Math.ceil((new Date(next.date) - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24));
 
-    if (diff === 0) {
-        el.textContent = "今日！";
-    } else {
-        el.textContent = `${diff} 日`;
+    if (el) {
+        if (diff === 0) {
+            el.textContent = "今日！";
+        } else {
+            el.textContent = `${diff} 日`;
+        }
     }
-    dest.textContent = `📍 ${next.destination}`;
+    if (dest) dest.textContent = `📍 ${next.destination}`;
+
+    const place = kinkiPlaces.find(p => p.name === next.destination);
+    if (place && homeHeroCard) {
+        homeHeroCard.style.backgroundImage = `url('${place.img}')`;
+        homeHeroCard.style.backgroundSize = "cover";
+        homeHeroCard.style.backgroundPosition = "center";
+    } else if (homeHeroCard) {
+        homeHeroCard.style.backgroundImage = "url('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&auto=format&fit=crop')";
+        homeHeroCard.style.backgroundSize = "cover";
+        homeHeroCard.style.backgroundPosition = "center";
+    }
+    
+    renderSavedSpotsHome();
+    renderHomePlans();
 }
 
 // 天気シミュレーター (APIキー未設定でも近畿の天気を出力)
 function simulateWeather() {
-    const weatherIcon = document.getElementById("weatherIcon");
-    const weatherTemp = document.getElementById("weatherTemp");
-    const weatherDesc = document.getElementById("weatherDesc");
-    const weatherLocation = document.getElementById("weatherLocation");
+    const weatherIcon = document.getElementById("heroWeatherIcon");
+    const weatherTemp = document.getElementById("heroWeatherTemp");
+    const weatherDesc = document.getElementById("heroWeatherDesc");
+    const weatherLocation = document.getElementById("heroWeatherLoc");
 
     if (plans.length === 0) {
-        weatherIcon.textContent = "🌤️";
-        weatherTemp.textContent = "--°C";
-        weatherDesc.textContent = "予定を登録すると表示されます";
-        weatherLocation.textContent = "目的地の天気";
+        if (weatherIcon) weatherIcon.textContent = "🌤️";
+        if (weatherTemp) weatherTemp.textContent = "--°C";
+        if (weatherDesc) weatherDesc.textContent = "予定を登録すると表示されます";
+        if (weatherLocation) weatherLocation.textContent = "目的地の天気";
         return;
     }
 
@@ -1673,10 +1746,10 @@ function simulateWeather() {
     };
 
     const mockInfo = weatherData[next.prefecture] || { icon: "🌤️", temp: "20°C", desc: "快適な旅行日和" };
-    weatherIcon.textContent = mockInfo.icon;
-    weatherTemp.textContent = mockInfo.temp;
-    weatherDesc.textContent = mockInfo.desc;
-    weatherLocation.textContent = `📍 ${next.destination} (${next.prefecture})の天気`;
+    if (weatherIcon) weatherIcon.textContent = mockInfo.icon;
+    if (weatherTemp) weatherTemp.textContent = mockInfo.temp;
+    if (weatherDesc) weatherDesc.textContent = mockInfo.desc;
+    if (weatherLocation) weatherLocation.textContent = `📍 ${next.destination} (${next.prefecture})の天気`;
 }
 
 // ---------------------------
@@ -1749,7 +1822,7 @@ function calculateStandStats() {
         if (item.tags.includes("都市") || item.tags.includes("観光")) urban += 20;
     });
 
-    // 2. あんまり(anmaris)からの減算 (嗜好の除外を表現)
+    // 2. 興味なし(anmaris)からの減算 (嗜好の除外を表現)
     anmaris.forEach(item => {
         if (item.category === "healing") healing -= 10;
         if (item.category === "nature") nature -= 10;
@@ -1834,7 +1907,7 @@ function updateStandProfile() {
     const standNameEl = document.getElementById("standName");
     const standRankEl = document.getElementById("standRank");
     if (standNameEl) standNameEl.textContent = standName;
-    if (standRankEl) standRankEl.textContent = `スタンド評価: Rank ${rankText}`;
+    if (standRankEl) standRankEl.textContent = `診断評価: Rank ${rankText}`;
 }
 
 function updateChart() {
@@ -1927,6 +2000,12 @@ function applyAccountSettings() {
     const headerAvatarImg = document.getElementById("headerUserAvatar");
     if (mobileHeaderTitle) mobileHeaderTitle.textContent = headerTitle;
     if (headerAvatarImg) headerAvatarImg.src = userAvatarUrl;
+
+    // マイページ更新
+    const myPageName = document.getElementById("myPageName");
+    const myPageAvatar = document.getElementById("myPageAvatar");
+    if (myPageName) myPageName.textContent = userName;
+    if (myPageAvatar) myPageAvatar.src = userAvatarUrl;
 }
 
 window.changeTheme = function (theme) {
@@ -1998,7 +2077,7 @@ window.openModal = function (type) {
         "favorites": { label: "⭐ お気に入りスポット", list: favorites, emptyMsg: "お気に入りはまだありません。" },
         "recent-likes": { label: "❤️ 最近いいねしたスポット", list: likes, emptyMsg: "いいねしたスポットはまだありません。" },
         "plans": { label: "📅 作成した旅行予定", list: plans, emptyMsg: "旅行予定はまだありません。予定タブから作成してください。" },
-        "anmari": { label: "😐 あんまり（自動クリーンアップ予定）", list: anmaris, emptyMsg: "「あんまり」としたスポットはありません。" }
+        "anmari": { label: "👎 興味なし（自動クリーンアップ予定）", list: anmaris, emptyMsg: "「興味なし」としたスポットはありません。" }
     };
 
     const cfg = configs[type];
@@ -2174,7 +2253,7 @@ window.deleteModalItem = function (type, id) {
         "favorites": "お気に入りはまだありません。",
         "recent-likes": "いいねしたスポットはまだありません。",
         "plans": "旅行予定はまだありません。予定タブから作成してください。",
-        "anmari": "「あんまり」としたスポットはありません。"
+        "anmari": "「興味なし」としたスポットはありません。"
     };
 
     if (list.length === 0) {
@@ -2443,14 +2522,14 @@ window.openChatDrawer = function () {
     // 認証状態のチェック: ログインユーザー限定 (ゲストは無効)
     const user = auth.currentUser;
     if (!user || user.isAnonymous) {
-        showToast("⚠️ AI相談窓口の利用には本ログイン（アカウント連携）が必要です。");
+        showToast("⚠️ AIチャットのご利用にはログインが必要です。");
         return;
     }
 
     // APIキーチェック
     const apiKey = geminiApiKey || DEFAULT_GEMINI_API_KEY;
     if (!apiKey) {
-        showToast("⚠️ 設定画面で Gemini API キーを登録してください。");
+        showToast("⚠️ AIチャットのご利用には、設定でキーの登録が必要です。");
         setTimeout(() => switchView("settings"), 1200);
         return;
     }
@@ -2568,7 +2647,7 @@ window.handleSendChatMessage = async function (event) {
     } catch (error) {
         console.error("Gemini API Error:", error);
         removeTypingIndicator(typingId);
-        appendChatBubble("ai", `⚠️ エラーが発生しました: ${error.message}\n設定画面で正しい API キーが登録されているかご確認ください。`);
+        appendChatBubble("ai", `⚠️ メッセージの送信に失敗しました。接続状況や設定をご確認ください。`);
     }
 };
 
@@ -2622,3 +2701,120 @@ function escapeHTML(str) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 }
+
+// ==========================================
+// 15. New Custom Helper Functions
+// ==========================================
+window.selectCategoryFilter = function (category, element) {
+    document.querySelectorAll("#categoryFilters .filter-pill").forEach(el => el.classList.remove("active"));
+    element.classList.add("active");
+    activeFilters.category = category;
+    applyFilters();
+};
+
+window.renderSavedSpotsHome = function () {
+    const scrollContainer = document.getElementById("savedSpotsScroll");
+    if (!scrollContainer) return;
+    scrollContainer.innerHTML = "";
+
+    if (likes.length === 0) {
+        scrollContainer.innerHTML = `
+            <div class="saved-spots-empty" style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.85rem; width: 100%;">
+                保存したスポットはまだありません。<br>「探す」タブでスワイプして保存しましょう！
+            </div>
+        `;
+        return;
+    }
+
+    likes.forEach(item => {
+        const isStarred = favorites.some(f => f.id === item.id);
+        const card = document.createElement("div");
+        card.className = "saved-spot-thumbnail-card";
+        card.onclick = () => selectPlanAndGo(item);
+        card.innerHTML = `
+            <img src="${item.img}" alt="${item.name}">
+            <div class="thumbnail-overlay"></div>
+            <span class="thumbnail-pref">📍 ${item.prefecture}</span>
+            <h4 class="thumbnail-name">${item.name}</h4>
+            <button class="thumbnail-star-btn ${isStarred ? 'starred' : ''}" onclick="toggleFavoriteFromHome(this, event, ${item.id})">
+                <span class="material-icons star-icon">${isStarred ? 'star' : 'star_border'}</span>
+            </button>
+        `;
+        scrollContainer.appendChild(card);
+    });
+};
+
+window.toggleFavoriteFromHome = function (starBtn, event, id) {
+    event.stopPropagation();
+    const item = kinkiPlaces.find(p => p.id === id);
+    const starIcon = starBtn.querySelector('.star-icon');
+    const index = favorites.findIndex(f => f.id === id);
+
+    if (index > -1) {
+        favorites.splice(index, 1);
+        starBtn.classList.remove("starred");
+        if (starIcon) starIcon.textContent = "star_border";
+        showToast("お気に入りから削除しました。");
+    } else {
+        favorites.push(item);
+        starBtn.classList.add("starred");
+        if (starIcon) starIcon.textContent = "star";
+        showToast("お気に入りに追加しました！⭐");
+        
+        // Ensure starred item is also in Saved Spots (likes)
+        if (!likes.some(l => l.id === id)) {
+            likes.push(item);
+        }
+    }
+    saveToStorage();
+    updateGridCounts();
+    renderSavedSpotsHome();
+};
+
+window.selectPlanAndGo = function (item) {
+    switchView("plan");
+    renderLikedList();
+    selectPlanTarget(item, null);
+};
+
+window.renderHomePlans = function () {
+    const plansContainer = document.getElementById("homePlansList");
+    const plansSection = document.getElementById("homePlansSection");
+    if (!plansContainer) return;
+
+    plansContainer.innerHTML = "";
+
+    if (plans.length === 0) {
+        if (plansSection) plansSection.classList.add("hidden");
+        return;
+    }
+
+    if (plansSection) plansSection.classList.remove("hidden");
+
+    plans.forEach(plan => {
+        const card = document.createElement("div");
+        card.className = "home-plan-item";
+        card.onclick = () => viewItineraryDetails(plan.id);
+        card.innerHTML = `
+            <div class="home-plan-item-info">
+                <span class="home-plan-dest">📅 ${plan.destination} の旅</span>
+                <span class="home-plan-date">出発日: ${plan.date} | ${plan.nights}泊${plan.nights + 1}日 | ${plan.people}名</span>
+            </div>
+            <span class="material-icons arrow-icon">chevron_right</span>
+        `;
+        plansContainer.appendChild(card);
+    });
+};
+
+window.handleHomeCta = function () {
+    if (likes.length > 0) {
+        switchView("plan");
+    } else {
+        const user = auth.currentUser;
+        if (user && !user.isAnonymous) {
+            openChatDrawer();
+        } else {
+            switchView("swipe");
+        }
+    }
+};

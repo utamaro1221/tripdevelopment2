@@ -82,6 +82,9 @@
                 <button type="button" class="btn-primary" style="background-color: transparent; color: #ffffff; border: 2px solid #ffffff; box-shadow: none; padding: 12px;" onclick="signInAsGuestSplash()">
                     ゲストとして利用する (匿名)
                 </button>
+                <div class="guest-restriction-note" style="color: #94a3b8; font-size: 0.75rem; margin-top: 8px; text-align: center;">
+                    ※ ゲストは閲覧・保存のみ。プラン共有にはログインが必要です
+                </div>
             </div>
             
             <div style="margin-top: 12px; text-align: center; font-size: 0.8rem;">
@@ -115,23 +118,15 @@
                     </li>
                     <li class="sidebar-item" onclick="switchView('swipe', this)">
                         <span class="material-icons">swipe</span>
-                        <span>探す (検索)</span>
+                        <span>探す</span>
                     </li>
                     <li class="sidebar-item" onclick="switchView('plan', this)">
                         <span class="material-icons">event_note</span>
                         <span>予定</span>
                     </li>
-                    <li class="sidebar-item" onclick="switchView('data', this)">
-                        <span class="material-icons">analytics</span>
-                        <span>データ</span>
-                    </li>
-                    <li class="sidebar-item" onclick="switchView('share', this)">
-                        <span class="material-icons">share</span>
-                        <span>共有</span>
-                    </li>
-                    <li class="sidebar-item" onclick="switchView('settings', this)">
-                        <span class="material-icons">settings</span>
-                        <span>設定</span>
+                    <li class="sidebar-item" onclick="switchView('mypage', this)">
+                        <span class="material-icons">account_circle</span>
+                        <span>マイページ</span>
                     </li>
                 </ul>
             </nav>
@@ -176,13 +171,13 @@
                         <option value="秋">秋</option>
                         <option value="冬">冬</option>
                     </select>
-                    <select class="filter-select" id="filterCategory" onchange="applyFilters()">
-                        <option value="all">カテゴリ: すべて</option>
-                        <option value="history">歴史・文化</option>
-                        <option value="nature">自然・アウトドア</option>
-                        <option value="food">グルメ</option>
-                        <option value="healing">温泉・癒やし</option>
-                    </select>
+                    <div class="category-filters" id="categoryFilters">
+                        <button class="filter-pill active" onclick="selectCategoryFilter('all', this)">✨ すべて</button>
+                        <button class="filter-pill" onclick="selectCategoryFilter('history', this)">🏛️ 歴史・文化</button>
+                        <button class="filter-pill" onclick="selectCategoryFilter('nature', this)">🌳 自然・アウトドア</button>
+                        <button class="filter-pill" onclick="selectCategoryFilter('food', this)">🍔 グルメ</button>
+                        <button class="filter-pill" onclick="selectCategoryFilter('healing', this)">♨️ 温泉・癒やし</button>
+                    </div>
                 </div>
 
                 <!-- Card Stack -->
@@ -194,7 +189,7 @@
                 <div class="swipe-actions-container" id="swipeActionsContainer">
                     <button class="swipe-action-btn btn-swipe-anmari" onclick="swipeTopCard('anmari')">
                         <span class="material-icons-outlined">close</span>
-                        <span>あんまり</span>
+                        <span>興味なし</span>
                     </button>
                     <button class="swipe-action-btn btn-swipe-like" onclick="swipeTopCard('like')">
                         <span class="material-icons-outlined">favorite</span>
@@ -280,11 +275,7 @@
                                     <textarea id="planOthers" class="form-textarea" rows="2" placeholder="例: 近辺で有名な甘味処に行きたい、バリアフリーを重視したい、など"></textarea>
                                 </div>
 
-                                <div class="generator-actions">
-                                    <label class="debug-simulator">
-                                        <input type="checkbox" id="simulateApiError">
-                                        <span>デバッグ用: 楽天APIエラー再現</span>
-                                    </label>
+                                <div class="generator-actions" style="justify-content: flex-end;">
                                     <button type="submit" class="btn-primary">AI旅行プランを生成する</button>
                                 </div>
                             </form>
@@ -338,8 +329,8 @@
                             <!-- State 5: API Error View -->
                             <div class="api-error-card hidden" id="planError">
                                 <span class="material-icons error-icon">error_outline</span>
-                                <h3>API連携エラーが発生しました</h3>
-                                <p>楽天トラベルAPIがタイムアウトしたか、無効な応答を返しました。<br>安全なバックエンド通信をリトライしてください。</p>
+                                <h3>ホテル情報の取得に時間がかかっています</h3>
+                                <p>もう一度お試しください。</p>
                                 <button class="btn-retry" onclick="retryPlanGeneration()">再読み込み (再試行)</button>
                             </div>
                         </div>
@@ -347,129 +338,171 @@
                 </div>
             </div>
 
-            <!-- VIEW: HOME (ホーム/データ管理) -->
+            <!-- VIEW: HOME (ホーム) -->
             <div id="view-home" class="view">
-                <!-- Welcome Banner -->
-                <div class="home-slider-wrapper">
-                    <div class="home-slider" id="homeSlider">
-                        <div class="home-slider-track" id="homeSliderTrack">
-                            <div class="home-slide slide-countdown">
-                                <div class="slide-icon">✈️</div>
-                                <div class="slide-label">次の旅行まで</div>
-                                <div class="slide-main" id="countdownDays">-- 日</div>
-                                <div class="slide-sub" id="countdownDestination">予定を登録してね</div>
+                <!-- Home Empty State (Plans = 0) -->
+                <div id="home-empty-state" class="home-empty-state hidden">
+                    <div class="cta-card">
+                        <div class="cta-icon">✨</div>
+                        <h3>次の旅を計画しましょう</h3>
+                        <p>AIがあなたにぴったりの旅行プランを作成します。</p>
+                        <button id="homeCtaBtn" class="btn-primary btn-large" onclick="handleHomeCta()">
+                            AIに次の旅行を相談する
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Home Hero Area (Plans >= 1) -->
+                <div id="home-hero-card" class="home-hero-card hidden">
+                    <div class="hero-overlay"></div>
+                    <div class="hero-content">
+                        <div class="hero-countdown">
+                            <span class="hero-label">次の旅行まで</span>
+                            <h2 id="heroCountdownDays">-- 日</h2>
+                            <span id="heroCountdownDest" class="hero-dest">予定を登録してね</span>
+                        </div>
+                        <div class="hero-weather">
+                            <div id="heroWeatherLoc" class="weather-loc">目的地の天気</div>
+                            <div class="weather-details">
+                                <span id="heroWeatherIcon" class="weather-icon">🌤️</span>
+                                <span id="heroWeatherTemp" class="weather-temp">--°C</span>
                             </div>
-                            <div class="home-slide slide-weather">
-                                <div class="slide-label" id="weatherLocation">目的地の天気</div>
-                                <div class="weather-main">
-                                    <span class="weather-icon" id="weatherIcon">🌤️</span>
-                                    <span class="slide-main" id="weatherTemp">--°C</span>
+                            <div id="heroWeatherDesc" class="weather-desc">予定を登録すると表示されます</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Saved Spots Section (Horizontal Scroll of Thumbnails) -->
+                <div class="home-section">
+                    <div class="section-header">
+                        <h3 class="section-title">保存したスポット <span id="savedSpotsCount" class="badge">0</span></h3>
+                        <button class="btn-text" onclick="openModal('recent-likes')">すべて見る</button>
+                    </div>
+                    <div class="saved-spots-scroll" id="savedSpotsScroll">
+                        <!-- Thumbnails will be dynamically inserted here -->
+                    </div>
+                </div>
+
+                <!-- Upcoming Plans Section -->
+                <div class="home-section" id="homePlansSection">
+                    <div class="section-header">
+                        <h3 class="section-title">旅行予定 <span id="homePlansCount" class="badge">0</span></h3>
+                    </div>
+                    <div class="home-plans-list" id="homePlansList">
+                        <!-- Plans will be dynamically inserted here -->
+                    </div>
+                </div>
+
+                <!-- AI Search / Chat Bar at the Bottom -->
+                <div class="home-ai-chat-bar-container">
+                    <div class="home-ai-chat-bar" onclick="openChatDrawer()">
+                        <span class="material-icons ai-chat-icon">support_agent</span>
+                        <span class="ai-chat-placeholder">今日はどんな旅がしたい気分ですか？</span>
+                        <button class="btn-ai-chat-go">
+                            <span class="material-icons">arrow_forward</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: MYPAGE (マイページ) -->
+            <div id="view-mypage" class="view hidden">
+                <div class="mypage-header-card">
+                    <div class="mypage-profile">
+                        <div class="mypage-avatar-wrapper">
+                            <img id="myPageAvatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=traveler" alt="Avatar">
+                        </div>
+                        <div class="mypage-profile-info">
+                            <h4 id="myPageName">トラベラー</h4>
+                            <p id="myPageStatus">近畿エリア探索中</p>
+                        </div>
+                    </div>
+                    <button class="settings-gear-btn" onclick="switchView('settings')">
+                        <span class="material-icons">settings</span>
+                    </button>
+                </div>
+
+                <div class="mypage-sections-container">
+                    <!-- Section: Diagnosis (旅タイプ診断) -->
+                    <div class="mypage-section diagnosis-section">
+                        <h3 class="section-title">📊 あなたの旅タイプ診断</h3>
+                        <div class="stand-badge-container">
+                            <div class="stand-name-title">TRAVEL TYPE CARD</div>
+                            <div class="stand-name-val" id="standName">未決定の旅人</div>
+                            <div class="stand-rank-val" id="standRank">診断評価: -</div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="standChart"></canvas>
+                        </div>
+                        <div style="margin-top: 16px; text-align: center; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+                            <button class="btn-primary" onclick="startPersonalizedSearch()">
+                                <span class="material-icons" style="font-size: 1.1rem; vertical-align: middle; margin-right: 6px;">star</span>
+                                嗜好特化レコメンド検索を開始
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Section: Sharing (共有コミュニティ) -->
+                    <div class="mypage-section community-section">
+                        <h3 class="section-title">👥 共有コミュニティ</h3>
+                        <!-- Logged Out State Banner -->
+                        <div id="shareLoggedOutState" class="empty-stack-view" style="padding: 30px 20px;">
+                            <span class="material-icons" style="font-size: 3rem; opacity: 0.5; color: var(--primary-color);">people_outline</span>
+                            <h3>共有コミュニティの利用にはログインが必要です</h3>
+                            <p style="font-size: 0.85rem; margin-bottom: 8px;">他のトラベラーの旅行プランを参考にしたり、自身のプランをシェアするにはアカウント連携を行ってください。</p>
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 16px;">※ ゲストモード（匿名ログイン）の場合は閲覧・共有が制限されます。</p>
+                            <button class="btn-primary" onclick="logoutUser()">
+                                <span class="material-icons" style="font-size: 1.1rem; vertical-align: middle; margin-right: 6px;">login</span>
+                                ログイン・新規登録して始める
+                            </button>
+                        </div>
+
+                        <!-- Logged In State Container -->
+                        <div id="shareLoggedInState" class="share-view-container hidden" style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+                            <!-- Community Shared Plans -->
+                            <div class="shared-plans-panel">
+                                <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 8px;">みんなの投稿プラン</h4>
+                                <div class="shared-plans-list" id="sharedPlansList">
+                                    <!-- Shared plans will be inserted here -->
                                 </div>
-                                <div class="slide-sub" id="weatherDesc">予定を登録すると表示されます</div>
+                            </div>
+                            
+                            <!-- My Shareable Plans -->
+                            <div class="my-shareable-panel">
+                                <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 8px;">マイプランを投稿</h4>
+                                <div class="my-shareable-list" id="myPlansToShare">
+                                    <!-- User's shareable plans list -->
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="slider-dots">
-                        <span class="dot active" onclick="goToSlide(0)"></span>
-                        <span class="dot" onclick="goToSlide(1)"></span>
-                    </div>
-                </div>
 
-                <!-- 4 Grid Buttons -->
-                <div class="home-grid">
-                    <button class="home-grid-btn" onclick="openModal('favorites')">
-                        <span class="grid-icon">⭐</span>
-                        <span class="grid-label">お気に入り</span>
-                        <span class="grid-count" id="favCount">0</span>
-                    </button>
-                    <button class="home-grid-btn" onclick="openModal('recent-likes')">
-                        <span class="grid-icon">❤️</span>
-                        <span class="grid-label">最近いいね</span>
-                        <span class="grid-count" id="recentLikeCount">0</span>
-                    </button>
-                    <button class="home-grid-btn" onclick="openModal('plans')">
-                        <span class="grid-icon">📅</span>
-                        <span class="grid-label">旅行予定</span>
-                        <span class="grid-count" id="planCount">0</span>
-                    </button>
-                    <button class="home-grid-btn" onclick="openModal('anmari')">
-                        <span class="grid-icon">😐</span>
-                        <span class="grid-label">あんまり (不要データ)</span>
-                        <span class="grid-count" id="anmariCount">0</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- VIEW: DATA (スタンド) -->
-            <div id="view-data" class="view hidden">
-                <div class="data-header">
-                    <h2>スタンド能力値</h2>
-                    <p>あなたの旅行スワイプ傾向を学習した、オリジナルのスタンドパラメータを表示します。</p>
-                </div>
-
-                <div class="stand-badge-container">
-                    <div class="stand-name-title">TRAVEL STAND NAME</div>
-                    <div class="stand-name-val" id="standName">未決定の旅人</div>
-                    <div class="stand-rank-val" id="standRank">評価: -</div>
-                </div>
-
-                <div class="chart-container">
-                    <canvas id="standChart"></canvas>
-                </div>
-
-                <div class="stand-action-container" style="margin-top: 24px; text-align: center; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
-                    <button class="btn-primary" onclick="startPersonalizedSearch()">
-                        <span class="material-icons" style="font-size: 1.1rem; vertical-align: middle; margin-right: 6px;">star</span>
-                        嗜好特化レコメンド検索を開始
-                    </button>
-                    <button class="btn-primary" onclick="openChatDrawer()" style="background-color: var(--accent-anmari);">
-                        <span class="material-icons" style="font-size: 1.1rem; vertical-align: middle; margin-right: 6px;">chat</span>
-                        AI旅行相談窓口を開く
-                    </button>
-                </div>
-            </div>
-
-            <!-- VIEW: SHARE (共有コミュニティ) -->
-            <div id="view-share" class="view hidden">
-                <div class="plan-header" style="max-width: 900px; width: 100%; margin: 0 auto 20px auto; padding: 30px 30px 0 30px;">
-                    <h2>共有コミュニティ</h2>
-                    <p>他のユーザーが作成した旅行予定を参考にしたり、自身のプランをシェアできます。</p>
-                </div>
-
-                <!-- Logged Out State Banner -->
-                <div id="shareLoggedOutState" class="empty-stack-view" style="padding: 60px 20px; max-width: 600px; margin: 0 auto;">
-                    <span class="material-icons" style="font-size: 4rem; opacity: 0.5; color: var(--primary-color);">people_outline</span>
-                    <h3>共有コミュニティの利用にはログインが必要です</h3>
-                    <p style="margin-bottom: 8px;">他のトラベラーの旅行プランを参考にしたり、自身のプランをシェアするにはアカウント連携を行ってください。</p>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px;">※ ゲストモード（匿名ログイン）の場合は閲覧・共有が制限されます。</p>
-                    <button class="btn-primary" onclick="logoutUser()">
-                        <span class="material-icons" style="font-size: 1.1rem; vertical-align: middle; margin-right: 6px;">login</span>
-                        ログイン・新規登録して始める
-                    </button>
-                </div>
-
-                <!-- Logged In State Container -->
-                <div id="shareLoggedInState" class="share-view-container hidden" style="max-width: 900px; width: 100%; margin: 0 auto; padding: 0 30px 30px 30px; display: grid; grid-template-columns: 1fr 320px; gap: 30px;">
-                    <!-- Left: Community Shared Plans -->
-                    <div class="shared-plans-panel">
-                        <h3>みんなの投稿プラン</h3>
-                        <div class="shared-plans-list" id="sharedPlansList">
-                            <!-- Shared plans will be inserted here -->
+                    <!-- Section: Stats (興味なし履歴) -->
+                    <div class="mypage-section stats-section">
+                        <h3 class="section-title">😐 興味なしにした件数</h3>
+                        <div class="interest-stats-card" onclick="openModal('anmari')">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span class="interest-stats-icon" style="font-size: 1.8rem;">😐</span>
+                                <div class="interest-stats-info" style="display: flex; flex-direction: column;">
+                                    <span class="interest-stats-label" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">「興味なし」に設定したスポット</span>
+                                    <span class="interest-stats-count" style="font-size: 1.2rem; font-weight: 800; color: var(--text-color);"><span id="anmariCount">0</span> 件</span>
+                                </div>
+                            </div>
+                            <span class="material-icons arrow-icon" style="color: var(--text-muted);">chevron_right</span>
                         </div>
-                    </div>
-                    
-                    <!-- Right: My Shareable Plans -->
-                    <div class="my-shareable-panel">
-                        <h3>マイプランを投稿</h3>
-                        <div class="my-shareable-list" id="myPlansToShare">
-                            <!-- User's shareable plans list -->
-                        </div>
+                        <p class="interest-stats-hint" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; line-height: 1.4;">※ 興味なしにしたスポットは15日後に自動的にクリーンアップされます。</p>
                     </div>
                 </div>
             </div>
 
             <!-- VIEW: SETTINGS (設定) -->
             <div id="view-settings" class="view hidden">
+                <div class="settings-back-header" style="max-width: 700px; width: 100%; margin: 20px auto 10px auto; padding: 0 20px;">
+                    <button class="btn-back" onclick="switchView('mypage')" style="background: none; border: none; color: var(--primary-color); cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.95rem;">
+                        <span class="material-icons" style="font-size: 1.2rem;">arrow_back</span>
+                        <span>マイページに戻る</span>
+                    </button>
+                </div>
                 <div class="plan-header" style="max-width: 700px; width: 100%; margin: 0 auto 20px auto;">
                     <h2>アプリ設定</h2>
                     <p>アカウント情報やデザイン、表示サイズの調整を行います。</p>
@@ -561,26 +594,34 @@
                             </select>
                         </div>
 
-                        <div class="form-group" style="margin-top: 16px;">
-                            <label for="settingsRakutenAppId">楽天トラベル API アプリID (デベロッパーID)</label>
-                            <input type="password" id="settingsRakutenAppId" class="form-input" placeholder="例: 1012345678901234567" oninput="updateSettingsFromUI()">
-                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; line-height: 1.4;">
-                                ※ IDはブラウザのLocalStorageに保存されます。<br>
-                                登録は <a href="https://webservice.rakuten.co.jp/" target="_blank" style="color: var(--primary-color); text-decoration: underline;">楽天ウェブサービス</a> から行えます。
-                            </p>
-                        </div>
-
-                        <div class="form-group" style="margin-top: 16px;">
-                            <label for="settingsGeminiApiKey">Gemini API キー (オプション)</label>
-                            <input type="text" id="settingsGeminiApiKey" class="form-input" placeholder="（省略時は内蔵キーを使用します）" oninput="updateSettingsFromUI()">
-                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; line-height: 1.6;">
-                                ※ 標準キーが最初から内蔵されているため、通常は入力不要です。独自のキーを使用したい場合のみ入力してください。<br>
-                                <strong style="color: var(--primary-color);">取得方法:</strong><br>
-                                ① <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--primary-color); text-decoration: underline;">Google AI Studio</a> を開く<br>
-                                ② 「Create API key」をクリック<br>
-                                ③ 表示されたキー（<code style="background: rgba(0,0,0,0.15); padding: 1px 4px; border-radius: 3px;">AIzaSy...</code> または <code style="background: rgba(0,0,0,0.15); padding: 1px 4px; border-radius: 3px;">AQ.Ab8...</code>）を貼り付け
-                            </p>
-                        </div>
+                        <details class="advanced-settings-accordion" style="margin-top: 16px; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--bg-color);">
+                            <summary class="advanced-settings-summary" style="padding: 14px 16px; cursor: pointer; font-weight: 700; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; color: var(--text-color); user-select: none;">
+                                <span>上級者向け設定（任意）</span>
+                                <span class="material-icons chevron-icon" style="font-size: 1.2rem; transition: transform var(--transition-speed);">expand_more</span>
+                            </summary>
+                            <div class="advanced-settings-content" style="padding: 16px; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 16px;">
+                                <p class="settings-hint-top" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; line-height: 1.4; margin: 0;">
+                                    ※ 標準キーが内蔵されているため通常は入力不要です。
+                                </p>
+                                <div class="form-group">
+                                    <label for="settingsRakutenAppId" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">楽天トラベル API アプリID (デベロッパーID)</label>
+                                    <input type="password" id="settingsRakutenAppId" class="form-input" placeholder="例: 1012345678901234567" oninput="updateSettingsFromUI()">
+                                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; line-height: 1.4;">
+                                        登録は <a href="https://webservice.rakuten.co.jp/" target="_blank" style="color: var(--primary-color); text-decoration: underline;">楽天ウェブサービス</a> から行えます。
+                                    </p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="settingsGeminiApiKey" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">Gemini API キー (オプション)</label>
+                                    <input type="text" id="settingsGeminiApiKey" class="form-input" placeholder="（省略時は内蔵キーを使用します）" oninput="updateSettingsFromUI()">
+                                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; line-height: 1.6;">
+                                        独自のキーを使用したい場合のみ入力してください。<br>
+                                        <strong style="color: var(--primary-color);">取得方法:</strong><br>
+                                        ① <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--primary-color); text-decoration: underline;">Google AI Studio</a> を開く<br>
+                                        ② 「Create API key」をクリックし、キーをコピーして貼り付けてください。
+                                    </p>
+                                </div>
+                            </div>
+                        </details>
                     </div>
                 </div>
             </div>
