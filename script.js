@@ -39,7 +39,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=500&auto=format&fit=crop",
         tags: ["歴史", "観光", "リラックス"],
         lat: 34.9949,
-        lon: 135.7850
+        lon: 135.7850,
+        companion: ["一人旅", "カップル", "友人グループ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
     },
     {
         id: 1,
@@ -51,7 +55,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=500&auto=format&fit=crop",
         tags: ["癒やし", "リラックス", "グルメ"],
         lat: 34.7962,
-        lon: 135.2474
+        lon: 135.2474,
+        companion: ["カップル", "一人旅", "子連れ"],
+        budget: "ラグジュアリー",
+        transport: "公共交通機関",
+        purpose: "リフレッシュ"
     },
     {
         id: 2,
@@ -63,7 +71,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=500&auto=format&fit=crop",
         tags: ["グルメ", "アクティブ", "都市"],
         lat: 34.6687,
-        lon: 135.5013
+        lon: 135.5013,
+        companion: ["友人グループ", "カップル", "子連れ"],
+        budget: "低予算",
+        transport: "徒歩",
+        purpose: "グルメ"
     },
     {
         id: 3,
@@ -75,7 +87,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1576675784201-0e142b423952?w=500&auto=format&fit=crop",
         tags: ["自然", "観光", "リラックス"],
         lat: 34.6851,
-        lon: 135.8430
+        lon: 135.8430,
+        companion: ["子連れ", "カップル", "一人旅"],
+        budget: "低予算",
+        transport: "公共交通機関",
+        purpose: "リフレッシュ"
     },
     {
         id: 4,
@@ -87,7 +103,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=500&auto=format&fit=crop",
         tags: ["自然", "リラックス", "アクティブ"],
         lat: 35.4795,
-        lon: 136.0157
+        lon: 136.0157,
+        companion: ["カップル", "友人グループ"],
+        budget: "低予算",
+        transport: "自家用車",
+        purpose: "アクティビティ"
     },
     {
         id: 5,
@@ -99,7 +119,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=500&auto=format&fit=crop",
         tags: ["自然", "歴史", "リラックス"],
         lat: 33.6751,
-        lon: 135.8878
+        lon: 135.8878,
+        companion: ["一人旅", "カップル"],
+        budget: "スタンダード",
+        transport: "自家用車",
+        purpose: "リフレッシュ"
     },
     {
         id: 6,
@@ -111,7 +135,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1533050487297-09b450131914?w=500&auto=format&fit=crop",
         tags: ["歴史", "観光", "アクティブ"],
         lat: 34.8394,
-        lon: 134.6939
+        lon: 134.6939,
+        companion: ["一人旅", "友人グループ", "子連れ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
     },
     {
         id: 7,
@@ -123,7 +151,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=500&auto=format&fit=crop",
         tags: ["自然", "リラックス", "観光"],
         lat: 35.0156,
-        lon: 135.6721
+        lon: 135.6721,
+        companion: ["カップル", "一人旅"],
+        budget: "低予算",
+        transport: "徒歩",
+        purpose: "リフレッシュ"
     },
     {
         id: 8,
@@ -135,7 +167,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&auto=format&fit=crop",
         tags: ["自然", "リラックス", "アクティブ"],
         lat: 33.6822,
-        lon: 135.3435
+        lon: 135.3435,
+        companion: ["友人グループ", "カップル", "子連れ"],
+        budget: "スタンダード",
+        transport: "自家用車",
+        purpose: "アクティビティ"
     },
     {
         id: 9,
@@ -147,7 +183,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1549692520-acc6669e2f0c?w=500&auto=format&fit=crop",
         tags: ["歴史", "自然", "リラックス"],
         lat: 35.0705,
-        lon: 135.8410
+        lon: 135.8410,
+        companion: ["一人旅", "カップル"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
     },
     {
         id: 10,
@@ -159,7 +199,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1534482421-64566f976cfa?w=500&auto=format&fit=crop",
         tags: ["グルメ", "都市", "観光"],
         lat: 34.6657,
-        lon: 135.5068
+        lon: 135.5068,
+        companion: ["友人グループ", "カップル"],
+        budget: "スタンダード",
+        transport: "徒歩",
+        purpose: "グルメ"
     },
     {
         id: 11,
@@ -171,7 +215,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?w=500&auto=format&fit=crop",
         tags: ["歴史", "観光", "アクティブ"],
         lat: 34.9671,
-        lon: 135.7727
+        lon: 135.7727,
+        companion: ["一人旅", "カップル", "友人グループ"],
+        budget: "低予算",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
     },
     {
         id: 12,
@@ -183,7 +231,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=500&auto=format&fit=crop",
         tags: ["歴史", "自然", "アクティブ"],
         lat: 35.3002,
-        lon: 134.8292
+        lon: 134.8292,
+        companion: ["カップル", "一人旅"],
+        budget: "スタンダード",
+        transport: "自家用車",
+        purpose: "アクティビティ"
     },
     {
         id: 13,
@@ -195,7 +247,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=500&auto=format&fit=crop",
         tags: ["自然", "歴史", "リラックス"],
         lat: 34.3575,
-        lon: 135.8705
+        lon: 135.8705,
+        companion: ["カップル", "一人旅", "友人グループ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "リフレッシュ"
     },
     {
         id: 14,
@@ -207,7 +263,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=500&auto=format&fit=crop",
         tags: ["歴史", "自然", "癒やし"],
         lat: 34.2142,
-        lon: 135.5847
+        lon: 135.5847,
+        companion: ["一人旅", "カップル"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
     },
     {
         id: 15,
@@ -219,7 +279,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=500&auto=format&fit=crop",
         tags: ["癒やし", "歴史", "リラックス"],
         lat: 35.1408,
-        lon: 136.1044
+        lon: 136.1044,
+        companion: ["カップル", "一人旅", "子連れ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "リフレッシュ"
     },
     {
         id: 16,
@@ -231,7 +295,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=500&auto=format&fit=crop",
         tags: ["自然", "観光", "リラックス"],
         lat: 35.5699,
-        lon: 135.1917
+        lon: 135.1917,
+        companion: ["カップル", "子連れ", "友人グループ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "リフレッシュ"
     },
     {
         id: 17,
@@ -243,7 +311,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=500&auto=format&fit=crop",
         tags: ["歴史", "観光", "リラックス"],
         lat: 35.2764,
-        lon: 136.2518
+        lon: 136.2518,
+        companion: ["一人旅", "子連れ", "友人グループ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
     },
     {
         id: 18,
@@ -255,7 +327,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&auto=format&fit=crop",
         tags: ["自然", "アクティブ", "観光"],
         lat: 33.6644,
-        lon: 135.3769
+        lon: 135.3769,
+        companion: ["子連れ", "カップル", "友人グループ"],
+        budget: "ラグジュアリー",
+        transport: "自家用車",
+        purpose: "アクティビティ"
     },
     {
         id: 19,
@@ -267,7 +343,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=500&auto=format&fit=crop",
         tags: ["歴史", "自然", "癒やし"],
         lat: 33.6698,
-        lon: 135.8841
+        lon: 135.8841,
+        companion: ["一人旅", "友人グループ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "アクティビティ"
     },
     {
         id: 20,
@@ -279,7 +359,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1590559899731-a382839e5549?w=500&auto=format&fit=crop",
         tags: ["歴史", "観光", "リラックス"],
         lat: 34.6873,
-        lon: 135.5262
+        lon: 135.5262,
+        companion: ["子連れ", "カップル", "一人旅"],
+        budget: "低予算",
+        transport: "徒歩",
+        purpose: "リフレッシュ"
     },
     {
         id: 21,
@@ -287,11 +371,15 @@ const kinkiPlaces = [
         prefecture: "奈良",
         season: "秋",
         category: "history",
-        description: "世界最古の木造建築群を有する世界遺産。聖徳太子ゆかり of 寺で、五重塔をはじめ数々の国宝や仏教美術が安置されています。",
+        description: "世界最古の木造建築群を有する世界遺産。聖徳太子ゆかりの寺で、五重塔をはじめ数々の国宝や仏教美術が安置されています。",
         img: "https://images.unsplash.com/photo-1578436127897-769e1b3f0f36?w=500&auto=format&fit=crop",
         tags: ["歴史", "観光", "リラックス"],
         lat: 34.6141,
-        lon: 135.7356
+        lon: 135.7356,
+        companion: ["一人旅", "カップル"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
     },
     {
         id: 22,
@@ -303,7 +391,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1549692520-acc6669e2f0c?w=500&auto=format&fit=crop",
         tags: ["癒やし", "リラックス", "グルメ"],
         lat: 35.6262,
-        lon: 134.8109
+        lon: 134.8109,
+        companion: ["カップル", "一人旅", "友人グループ"],
+        budget: "ラグジュアリー",
+        transport: "公共交通機関",
+        purpose: "リフレッシュ"
     },
     {
         id: 23,
@@ -315,7 +407,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=500&auto=format&fit=crop",
         tags: ["歴史", "自然", "リラックス"],
         lat: 35.0158,
-        lon: 135.6776
+        lon: 135.6776,
+        companion: ["一人旅", "カップル"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
     },
     {
         id: 24,
@@ -327,7 +423,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=500&auto=format&fit=crop",
         tags: ["自然", "アクティブ", "観光"],
         lat: 35.2084,
-        lon: 135.8953
+        lon: 135.8953,
+        companion: ["カップル", "友人グループ", "子連れ"],
+        budget: "ラグジュアリー",
+        transport: "自家用車",
+        purpose: "アクティビティ"
     },
     {
         id: 25,
@@ -339,7 +439,11 @@ const kinkiPlaces = [
         img: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=500&auto=format&fit=crop",
         tags: ["自然", "観光", "都市"],
         lat: 34.7745,
-        lon: 135.2631
+        lon: 135.2631,
+        companion: ["カップル", "友人グループ"],
+        budget: "スタンダード",
+        transport: "自家用車",
+        purpose: "リフレッシュ"
     }
 ];
 
@@ -380,6 +484,14 @@ let likes = JSON.parse(localStorage.getItem("kw_likes")) || [];
 let anmaris = JSON.parse(localStorage.getItem("kw_anmaris")) || [];
 let favorites = JSON.parse(localStorage.getItem("kw_favorites")) || [];
 let plans = JSON.parse(localStorage.getItem("kw_plans")) || [];
+let detailedPrefs = {
+    companion: { "一人旅": 25, "カップル": 25, "友人グループ": 25, "子連れ": 25 },
+    budget: { "低予算": 33, "スタンダード": 34, "ラグジュアリー": 33 },
+    transport: { "自家用車": 33, "公共交通機関": 34, "徒歩": 33 },
+    purpose: { "リフレッシュ": 25, "アクティビティ": 25, "グルメ": 25, "歴史探訪": 25 }
+};
+let dismissedSuggestions = [];
+let currentSuggestions = [];
 
 const defaultSharedPlans = [
     {
@@ -722,6 +834,18 @@ window.switchView = function (viewId, element) {
     }
     if (viewId === "plan") {
         renderLikedList();
+        renderProactiveSuggestions();
+
+        const proactiveView = document.getElementById("aiProactiveView");
+        if (proactiveView) proactiveView.classList.remove("hidden");
+        const form = document.getElementById("planForm");
+        if (form) form.classList.add("hidden");
+        const results = document.getElementById("planResults");
+        if (results) results.classList.add("hidden");
+        const loading = document.getElementById("planLoading");
+        if (loading) loading.classList.add("hidden");
+        const err = document.getElementById("planError");
+        if (err) err.classList.add("hidden");
     }
 
     // モバイル用サイドバーを閉じる
@@ -779,6 +903,14 @@ window.applyFilters = function () {
 
         return matchSeason && matchCat && !isAlreadySelected && matchRecommendation;
     });
+
+    if (recommendationMode) {
+        // AI推奨モードの場合、マッチ度順にソート
+        currentCardPool.forEach(place => {
+            place.tempCompatibilityScore = calculateCompatibilityScore(place);
+        });
+        currentCardPool.sort((a, b) => b.tempCompatibilityScore - a.tempCompatibilityScore);
+    }
 
     nextPoolIndex = 0;
     renderStack();
@@ -870,6 +1002,39 @@ function prefetchNextImages() {
     }
 }
 
+function calculateCompatibilityScore(place) {
+    let score = 0;
+    
+    // 1. 同行者
+    if (place.companion) {
+        let maxCompPref = 0;
+        place.companion.forEach(c => {
+            if (detailedPrefs.companion[c] > maxCompPref) {
+                maxCompPref = detailedPrefs.companion[c];
+            }
+        });
+        score += maxCompPref;
+    }
+    
+    // 2. 予算
+    if (place.budget && detailedPrefs.budget[place.budget]) {
+        score += detailedPrefs.budget[place.budget];
+    }
+    
+    // 3. 移動手段
+    if (place.transport && detailedPrefs.transport[place.transport]) {
+        score += detailedPrefs.transport[place.transport];
+    }
+    
+    // 4. 目的
+    if (place.purpose && detailedPrefs.purpose[place.purpose]) {
+        score += detailedPrefs.purpose[place.purpose];
+    }
+    
+    let avgScore = Math.round(score / 4);
+    return Math.max(30, Math.min(99, avgScore));
+}
+
 function createCardElement(data, isTopCard) {
     const card = document.createElement("div");
     card.className = "swipe-card";
@@ -881,18 +1046,27 @@ function createCardElement(data, isTopCard) {
     }
 
     const isStarred = favorites.some(f => f.id === data.id);
+    const isRecommended = recommendationMode;
+    const matchScore = calculateCompatibilityScore(data);
 
     card.innerHTML = `
         <div class="card-img-container">
             <img src="${data.img}" class="card-img" alt="${data.name}">
             <span class="card-prefecture-badge">📍 ${data.prefecture}</span>
             <span class="card-season-badge">🍂 ${data.season}おすすめ</span>
+            ${isRecommended ? `<span class="card-match-badge"><span class="material-icons" style="font-size: 0.95rem; vertical-align: middle;">bolt</span>AIマッチ度 ${matchScore}%</span>` : ''}
             <div class="swipe-stamp stamp-like">いいね</div>
             <div class="swipe-stamp stamp-anmari">興味なし</div>
         </div>
         <button class="card-star-btn ${isStarred ? 'starred' : ''}" onclick="toggleFavorite(this, event, ${data.id})"><span class="material-icons-outlined star-icon">${isStarred ? 'star' : 'star_border'}</span></button>
         <div class="card-info">
             <h3>${data.name}</h3>
+            <div class="card-tags-container">
+                <span class="tag-pill"><span class="material-icons">people</span>${data.companion ? data.companion.join('・') : ''}</span>
+                <span class="tag-pill"><span class="material-icons">payments</span>${data.budget || 'スタンダード'}</span>
+                <span class="tag-pill"><span class="material-icons">commute</span>${data.transport || '公共交通機関'}</span>
+                <span class="tag-pill"><span class="material-icons">explore</span>${data.purpose || '観光'}</span>
+            </div>
             <p>${data.description}</p>
         </div>
     `;
@@ -1104,9 +1278,11 @@ function selectPlanTarget(item, element) {
         }
     });
 
-    // プレースホルダーを非表示にし、フォームを表示する
+    // プレースホルダーと先回り自動提案ビューを非表示にし、フォームを表示する
     const placeholder = document.getElementById("planFormPlaceholder");
     if (placeholder) placeholder.classList.add("hidden");
+    const proactiveView = document.getElementById("aiProactiveView");
+    if (proactiveView) proactiveView.classList.add("hidden");
     const results = document.getElementById("planResults");
     if (results) results.classList.add("hidden");
     const errorCard = document.getElementById("planError");
@@ -1223,6 +1399,10 @@ ${excludeStr}
     "category": "カテゴリ名（history, nature, food, healing のいずれか）",
     "description": "観光地の魅力を伝える魅力的な紹介文（2〜3文程度、100文字以内で、思わず行きたくなるような文章）",
     "tags": ["タグ1", "タグ2", "タグ3"] ※ 観光地に関連する「自然」「グルメ」「歴史」「観光」「リラックス」「アクティブ」「癒やし」などのタグを3つ設定してください,
+    "companion": ["同行者タグ1", "同行者タグ2"] ※ "一人旅", "カップル", "友人グループ", "子連れ" から適したものを複数選択して配列で設定してください,
+    "budget": "予算目安" ※ "低予算", "スタンダード", "ラグジュアリー" のいずれか1つを設定してください,
+    "transport": "移動手段" ※ "自家用車", "公共交通機関", "徒歩" のいずれか1つを設定してください,
+    "purpose": "目的" ※ "リフレッシュ", "アクティビティ", "グルメ", "歴史探訪" のいずれか1つを設定してください,
     "lat": 観光地の緯度（実在する大体の座標の数値）,
     "lon": 観光地の経度（実在する大体の座標の数値）
   }
@@ -1289,6 +1469,10 @@ ${excludeStr}
             category: place.category,
             description: place.description,
             tags: place.tags || ["観光"],
+            companion: place.companion || ["カップル"],
+            budget: place.budget || "スタンダード",
+            transport: place.transport || "公共交通機関",
+            purpose: place.purpose || "リフレッシュ",
             lat: place.lat,
             lon: place.lon,
             img: `https://loremflickr.com/500/350/japan,sightseeing,${encodeURIComponent(place.name)}`
@@ -1866,6 +2050,70 @@ function calculateStandStats() {
         Math.min(100, Math.max(10, urban))
     ];
 
+    // 新属性タグ（同行者, 予算レンジ, 移動手段, 目的・シーン）の重み計算
+    let companions = { "一人旅": 0, "カップル": 0, "友人グループ": 0, "子連れ": 0 };
+    let budgets = { "低予算": 0, "スタンダード": 0, "ラグジュアリー": 0 };
+    let transports = { "自家用車": 0, "公共交通機関": 0, "徒歩": 0 };
+    let purposes = { "リフレッシュ": 0, "アクティビティ": 0, "グルメ": 0, "歴史探訪": 0 };
+
+    let totalCompanions = 0;
+    let totalBudgets = 0;
+    let totalTransports = 0;
+    let totalPurposes = 0;
+
+    function addDetailedWeights(spot, factor) {
+        if (spot.companion) {
+            spot.companion.forEach(c => {
+                companions[c] = (companions[c] || 0) + factor;
+                totalCompanions += factor;
+            });
+        }
+        if (spot.budget) {
+            budgets[spot.budget] = (budgets[spot.budget] || 0) + factor;
+            totalBudgets += factor;
+        }
+        if (spot.transport) {
+            transports[spot.transport] = (transports[spot.transport] || 0) + factor;
+            totalTransports += factor;
+        }
+        if (spot.purpose) {
+            purposes[spot.purpose] = (purposes[spot.purpose] || 0) + factor;
+            totalPurposes += factor;
+        }
+    }
+
+    likes.forEach(item => {
+        let isFav = favorites.some(f => f.id === item.id);
+        addDetailedWeights(item, isFav ? 3 : 1);
+    });
+
+    // 割合（％）に変換
+    if (totalCompanions > 0) {
+        for (let k in companions) companions[k] = Math.round((companions[k] / totalCompanions) * 100);
+    } else {
+        companions = { "一人旅": 25, "カップル": 25, "友人グループ": 25, "子連れ": 25 };
+    }
+
+    if (totalBudgets > 0) {
+        for (let k in budgets) budgets[k] = Math.round((budgets[k] / totalBudgets) * 100);
+    } else {
+        budgets = { "低予算": 33, "スタンダード": 34, "ラグジュアリー": 33 };
+    }
+
+    if (totalTransports > 0) {
+        for (let k in transports) transports[k] = Math.round((transports[k] / totalTransports) * 100);
+    } else {
+        transports = { "自家用車": 33, "公共交通機関": 34, "徒歩": 33 };
+    }
+
+    if (totalPurposes > 0) {
+        for (let k in purposes) purposes[k] = Math.round((purposes[k] / totalPurposes) * 100);
+    } else {
+        purposes = { "リフレッシュ": 25, "アクティビティ": 25, "グルメ": 25, "歴史探訪": 25 };
+    }
+
+    detailedPrefs = { companion: companions, budget: budgets, transport: transports, purpose: purposes };
+
     saveToStorage();
     updateStandProfile();
 }
@@ -1956,6 +2204,36 @@ function updateChart() {
             }
         }
     });
+
+    renderDetailedPrefBars();
+}
+
+function renderDetailedPrefBars() {
+    const companionContainer = document.getElementById("companionPrefBars");
+    const budgetContainer = document.getElementById("budgetPrefBars");
+    const transportContainer = document.getElementById("transportPrefBars");
+    const purposeContainer = document.getElementById("purposePrefBars");
+
+    if (!companionContainer || !budgetContainer || !transportContainer || !purposeContainer) return;
+
+    function buildBarsHTML(obj) {
+        // 値の大きい順にソート
+        const sorted = Object.entries(obj).sort((a, b) => b[1] - a[1]);
+        return sorted.map(([key, val]) => `
+            <div class="pref-bar-row" style="display: flex; align-items: center; gap: 8px; font-size: 0.75rem; margin-bottom: 6px;">
+                <span style="width: 85px; text-align: left; font-weight: 600; color: var(--text-color);">${key}</span>
+                <div style="flex: 1; height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; border: 1px solid var(--border-color); position: relative;">
+                    <div style="width: ${val}%; height: 100%; background: linear-gradient(90deg, var(--primary-color), #3b82f6); border-radius: 4px; transition: width 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);"></div>
+                </div>
+                <span style="width: 35px; text-align: right; color: var(--text-muted); font-weight: 600;">${val}%</span>
+            </div>
+        `).join("");
+    }
+
+    companionContainer.innerHTML = buildBarsHTML(detailedPrefs.companion);
+    budgetContainer.innerHTML = buildBarsHTML(detailedPrefs.budget);
+    transportContainer.innerHTML = buildBarsHTML(detailedPrefs.transport);
+    purposeContainer.innerHTML = buildBarsHTML(detailedPrefs.purpose);
 }
 
 // ==========================================
@@ -2817,4 +3095,334 @@ window.handleHomeCta = function () {
             switchView("swipe");
         }
     }
+};
+
+// ==========================================
+// AI 先回り自動提案機能の実装
+// ==========================================
+function generateProactiveItineraryText(title, spots, companion, transport, budget) {
+    const dates = new Date();
+    dates.setDate(dates.getDate() + 7); // デフォルトで来週
+    const dateStr = dates.toISOString().split('T')[0];
+    
+    let text = `【AI先回り提案】${title}\n`;
+    text += `📅 日程: ${dateStr} 〜 | 👥 人数: 2名様 | 💰 予算目安: ${budget}\n`;
+    text += `🚗 移動手段: ${transport}\n\n`;
+    text += `--- 🗺️ 行程スケジュール提案 ---\n`;
+    
+    if (spots.length === 1) {
+        const s = spots[0];
+        text += `■ 1日目 (日帰り):\n`;
+        text += `  ・10:00: 各地より出発、${transport === "自家用車" ? "お車にて" : "公共交通機関を乗り継ぎ"}「${s.name}」へ移動。\n`;
+        text += `  ・11:30: 「${s.name}」に到着。周辺の歴史ある景色を歩いて満喫します。\n`;
+        text += `  ・13:00: 地元の名店にて特製の郷土料理ランチ。\n`;
+        text += `  ・15:00: 周辺をお土産購入や散策でのんびり堪能。\n`;
+        text += `  ・17:00: 帰路へ。お疲れ様でした！`;
+    } else {
+        const s1 = spots[0];
+        const s2 = spots[1];
+        text += `■ 1日目 (日帰り):\n`;
+        text += `  ・09:30: 各地より出発。「${s1.name}」に向けて出発。\n`;
+        text += `  ・10:30: 「${s1.name}」にて自然豊かなスポットを散策。\n`;
+        text += `  ・12:00: ${s1.prefecture}の郷土料理や話題のランチを堪能。\n`;
+        text += `  ・13:30: ${transport === "自家用車" ? "お車にて快適なドライブ" : "公共交通機関"}にて「${s2.name}」へ移動。\n`;
+        text += `  ・14:30: 「${s2.name}」に到着し、美しい景色や体験を楽しみます。\n`;
+        text += `  ・17:00: お土産を購入して思い出を語り合いながら帰路へ。`;
+    }
+    return text;
+}
+
+window.renderProactiveSuggestions = function () {
+    const container = document.getElementById("proactiveSuggestionsList");
+    if (!container) return;
+    container.innerHTML = "";
+
+    currentSuggestions = [];
+
+    // 1. いいねリストのチェック
+    let candidates = [];
+    if (likes.length > 0) {
+        let unusedLikes = likes.filter(l => !dismissedSuggestions.includes(l.name));
+        
+        if (unusedLikes.length > 0) {
+            // 府県でグルーピング
+            let byPref = {};
+            unusedLikes.forEach(l => {
+                if (!byPref[l.prefecture]) byPref[l.prefecture] = [];
+                byPref[l.prefecture].push(l);
+            });
+
+            // 府県別のルート提案
+            Object.entries(byPref).forEach(([pref, spots]) => {
+                if (spots.length >= 2) {
+                    candidates.push({
+                        title: `${pref}の絶景と魅力をめぐる1日満喫旅`,
+                        spots: [spots[0], spots[1]],
+                        prefecture: pref,
+                        season: spots[0].season,
+                        companion: detailedPrefs.companion ? Object.entries(detailedPrefs.companion).sort((a,b)=>b[1]-a[1])[0][0] : "カップル",
+                        budget: detailedPrefs.budget ? Object.entries(detailedPrefs.budget).sort((a,b)=>b[1]-a[1])[0][0] : "スタンダード",
+                        transport: detailedPrefs.transport ? Object.entries(detailedPrefs.transport).sort((a,b)=>b[1]-a[1])[0][0] : "公共交通機関",
+                        purpose: detailedPrefs.purpose ? Object.entries(detailedPrefs.purpose).sort((a,b)=>b[1]-a[1])[0][0] : "リフレッシュ"
+                    });
+                } else if (spots.length === 1) {
+                    // 同府県の他スポットを探す
+                    let otherSpot = kinkiPlaces.find(p => p.prefecture === pref && p.id !== spots[0].id && !dismissedSuggestions.includes(p.name));
+                    if (otherSpot) {
+                        candidates.push({
+                            title: `${spots[0].name}と${otherSpot.name}を巡る ${pref}満喫プラン`,
+                            spots: [spots[0], otherSpot],
+                            prefecture: pref,
+                            season: spots[0].season,
+                            companion: detailedPrefs.companion ? Object.entries(detailedPrefs.companion).sort((a,b)=>b[1]-a[1])[0][0] : "カップル",
+                            budget: detailedPrefs.budget ? Object.entries(detailedPrefs.budget).sort((a,b)=>b[1]-a[1])[0][0] : "スタンダード",
+                            transport: detailedPrefs.transport ? Object.entries(detailedPrefs.transport).sort((a,b)=>b[1]-a[1])[0][0] : "公共交通機関",
+                            purpose: detailedPrefs.purpose ? Object.entries(detailedPrefs.purpose).sort((a,b)=>b[1]-a[1])[0][0] : "リフレッシュ"
+                        });
+                    } else {
+                        // 単一スポットでの提案
+                        candidates.push({
+                            title: `ゆっくり巡る ${spots[0].name}日帰りリフレッシュ旅`,
+                            spots: [spots[0]],
+                            prefecture: pref,
+                            season: spots[0].season,
+                            companion: detailedPrefs.companion ? Object.entries(detailedPrefs.companion).sort((a,b)=>b[1]-a[1])[0][0] : "一人旅",
+                            budget: detailedPrefs.budget ? Object.entries(detailedPrefs.budget).sort((a,b)=>b[1]-a[1])[0][0] : "スタンダード",
+                            transport: detailedPrefs.transport ? Object.entries(detailedPrefs.transport).sort((a,b)=>b[1]-a[1])[0][0] : "公共交通機関",
+                            purpose: detailedPrefs.purpose ? Object.entries(detailedPrefs.purpose).sort((a,b)=>b[1]-a[1])[0][0] : "リフレッシュ"
+                        });
+                    }
+                }
+            });
+        }
+    }
+
+    // 候補が足りない（またはいいねが無い）場合、デフォルトの人気提案を追加
+    if (candidates.length < 2) {
+        let defaultPairs = [
+            {
+                title: "【AI推奨】秋の京都歴史・自然巡り周遊ルート",
+                spots: [kinkiPlaces[0], kinkiPlaces[11]], // 清水寺 & 伏見稲荷
+                prefecture: "京都",
+                season: "秋",
+                companion: "カップル",
+                budget: "スタンダード",
+                transport: "公共交通機関",
+                purpose: "歴史探訪"
+            },
+            {
+                title: "【AI推奨】有馬温泉と六甲山絶景ドライブ",
+                spots: [kinkiPlaces[1], kinkiPlaces[25]], // 有馬温泉 & 六甲山テラス
+                prefecture: "兵庫",
+                season: "冬",
+                companion: "カップル",
+                budget: "スタンダード",
+                transport: "自家用車",
+                purpose: "リフレッシュ"
+            }
+        ];
+        
+        defaultPairs.forEach(p => {
+            const keyName = p.spots.map(s => s.name).join("-");
+            if (!dismissedSuggestions.includes(keyName) && candidates.length < 2) {
+                candidates.push(p);
+            }
+        });
+    }
+
+    // 候補の表示 (最大2件)
+    let displayList = candidates.slice(0, 2);
+    if (displayList.length === 0) {
+        container.innerHTML = `<div class="modal-empty">現在、ご提案できる自動提案ルートがありません。</div>`;
+        return;
+    }
+
+    displayList.forEach((sug, index) => {
+        const sugId = index + 1;
+        sug.id = sugId;
+        currentSuggestions.push(sug);
+
+        // タイムライン
+        let timelineHTML = "";
+        if (sug.spots.length === 1) {
+            const s = sug.spots[0];
+            timelineHTML = `
+                ・10:00 - 出発して「${s.name}」へ移動<br>
+                ・11:30 - 「${s.name}」到着＆観光<br>
+                ・13:00 - 周辺の特産ランチ＆カフェ散策
+            `;
+        } else {
+            const s1 = sug.spots[0];
+            const s2 = sug.spots[1];
+            timelineHTML = `
+                ・09:30 - 出発して「${s1.name}」を観光<br>
+                ・12:00 - 地元の名物ランチを堪能<br>
+                ・13:30 - 「${s2.name}」へ移動＆散策
+            `;
+        }
+
+        const isDefault = likes.length === 0;
+
+        const card = document.createElement("div");
+        card.className = "proactive-suggestion-card";
+        card.setAttribute("id", `proactive-sug-${sugId}`);
+        card.innerHTML = `
+            <div class="sug-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span class="sug-tag-badge" style="background: rgba(var(--primary-color-rgb), 0.1); color: var(--primary-color); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">✨ AI先回り自動提案</span>
+                <span class="sug-season-badge" style="background: rgba(249, 115, 22, 0.1); color: #f97316; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">🍂 ${sug.season}時期に最適</span>
+            </div>
+            
+            <h4 class="sug-title" style="font-size: 1.05rem; font-weight: 800; margin-bottom: 12px; color: var(--text-color);">${sug.title}</h4>
+            
+            <div class="sug-spots" style="display: flex; align-items: center; gap: 8px; background: var(--item-bg); padding: 10px; border-radius: 12px; margin-bottom: 10px;">
+                ${sug.spots.map((spot, idx) => `
+                    ${idx > 0 ? '<span class="sug-arrow" style="color: var(--text-muted); font-weight: bold;">➔</span>' : ''}
+                    <div class="sug-spot-item" style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; color: var(--text-color);">
+                        <img src="${spot.img}" class="sug-thumb" style="width: 32px; height: 32px; border-radius: 6px; object-fit: cover;">
+                        <span>${spot.name}</span>
+                    </div>
+                `).join("")}
+            </div>
+
+            <div class="sug-meta" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+                <span style="font-size: 0.7rem; background: rgba(0,0,0,0.04); color: var(--text-muted); padding: 2px 8px; border-radius: 6px; font-weight: 600;">👥 ${sug.companion}</span>
+                <span style="font-size: 0.7rem; background: rgba(0,0,0,0.04); color: var(--text-muted); padding: 2px 8px; border-radius: 6px; font-weight: 600;">🚗 ${sug.transport}</span>
+                <span style="font-size: 0.7rem; background: rgba(0,0,0,0.04); color: var(--text-muted); padding: 2px 8px; border-radius: 6px; font-weight: 600;">💰 ${sug.budget}</span>
+            </div>
+
+            <div class="sug-itinerary-preview" style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; border-left: 3px solid var(--border-color); padding-left: 8px; margin-bottom: 14px;">
+                <strong>【行程のタイムライン案】</strong><br>
+                ${timelineHTML}
+            </div>
+
+            ${isDefault ? `<div style="font-size: 0.7rem; color: var(--accent-anmari); margin-bottom: 10px; font-weight: bold;">※ いいねしたスポットが空のため、人気の組み合わせを表示しています。</div>` : ""}
+
+            <div class="sug-actions" style="display: flex; gap: 8px;">
+                <button class="btn-sug btn-adopt" onclick="adoptProactiveSuggestion(${sugId})" style="flex: 1.2; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 12px; border-radius: 20px; border: none; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s; background: var(--primary-color); color: white;">
+                    <span class="material-icons" style="font-size: 0.95rem;">thumb_up</span> 採用する
+                </button>
+                <button class="btn-sug btn-edit" onclick="editProactiveSuggestion(${sugId})" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 12px; border-radius: 20px; border: 1px solid var(--border-color); font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s; background: var(--bg-color); color: var(--text-color);">
+                    <span class="material-icons" style="font-size: 0.95rem;">edit</span> 編集
+                </button>
+                <button class="btn-sug btn-reject" onclick="rejectProactiveSuggestion(${sugId})" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 12px; border-radius: 20px; border: none; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s; background: rgba(239, 68, 68, 0.08); color: var(--accent-error);">
+                    <span class="material-icons" style="font-size: 0.95rem;">close</span> 却下
+                </button>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+};
+
+window.adoptProactiveSuggestion = function (sugId) {
+    const sug = currentSuggestions.find(s => s.id === sugId);
+    if (!sug) return;
+
+    const itineraryText = generateProactiveItineraryText(sug.title, sug.spots, sug.companion, sug.transport, sug.budget);
+    
+    const dates = new Date();
+    dates.setDate(dates.getDate() + 7);
+    const dateStr = dates.toISOString().split('T')[0];
+
+    const budgetVal = sug.budget === "低予算" ? 30000 : sug.budget === "ラグジュアリー" ? 100000 : 50000;
+
+    const planObj = {
+        id: Date.now(),
+        destination: sug.spots[0].name,
+        prefecture: sug.prefecture,
+        date: dateStr,
+        nights: 1,
+        people: 2,
+        budget: budgetVal,
+        lat: sug.spots[0].lat,
+        lon: sug.spots[0].lon,
+        itineraryText: itineraryText
+    };
+
+    plans.push(planObj);
+    saveToStorage();
+
+    showToast(`📅 プラン「${sug.title}」を予定に追加しました！`);
+    
+    updateCountdown();
+    updateGridCounts();
+    calculateStandStats();
+
+    setTimeout(() => {
+        switchView("home");
+    }, 500);
+};
+
+window.editProactiveSuggestion = function (sugId) {
+    const sug = currentSuggestions.find(s => s.id === sugId);
+    if (!sug) return;
+
+    const spot = sug.spots[0];
+    activePlanTarget = spot;
+
+    // いいねリストで選択
+    document.querySelectorAll(".liked-item").forEach(i => {
+        if (i.getAttribute("data-id") == spot.id) {
+            i.classList.add("selected");
+        } else {
+            i.classList.remove("selected");
+        }
+    });
+
+    const proactiveView = document.getElementById("aiProactiveView");
+    if (proactiveView) proactiveView.classList.add("hidden");
+    const form = document.getElementById("planForm");
+    if (form) form.classList.remove("hidden");
+
+    const dates = new Date();
+    dates.setDate(dates.getDate() + 7);
+    const dateStr = dates.toISOString().split('T')[0];
+    
+    document.getElementById("planDate").value = dateStr;
+    document.getElementById("planNights").value = "1";
+    document.getElementById("planPeople").value = "2";
+    
+    const budgetVal = sug.budget === "低予算" ? "30000" : sug.budget === "ラグジュアリー" ? "100000" : "50000";
+    document.getElementById("planBudget").value = budgetVal;
+
+    document.getElementById("planTargetName").innerHTML = `<span class="material-icons" style="vertical-align: middle; color: var(--primary-color);">location_on</span> ${spot.name} 行き旅行プラン設定`;
+    document.getElementById("planOthers").value = "AI先回り提案をカスタマイズ中";
+
+    document.querySelectorAll("#priorityPills .priority-pill").forEach(p => {
+        p.classList.remove("active");
+    });
+    const firstPill = document.querySelector(`#priorityPills .priority-pill[data-val="自然・癒やし"]`);
+    if (firstPill) firstPill.classList.add("active");
+    
+    currentPriority = ["自然・癒やし"];
+
+    showToast("✏️ 提案ルートの編集設定をプリセットしました。");
+};
+
+window.rejectProactiveSuggestion = function (sugId) {
+    const sug = currentSuggestions.find(s => s.id === sugId);
+    if (!sug) return;
+
+    if (likes.length > 0) {
+        sug.spots.forEach(s => {
+            dismissedSuggestions.push(s.name);
+        });
+    } else {
+        const keyName = sug.spots.map(s => s.name).join("-");
+        dismissedSuggestions.push(keyName);
+    }
+
+    const cardEl = document.getElementById(`proactive-sug-${sugId}`);
+    if (cardEl) {
+        cardEl.style.transition = "transform 0.3s ease, opacity 0.3s ease";
+        cardEl.style.transform = "scale(0.9) translateY(10px)";
+        cardEl.style.opacity = "0";
+        setTimeout(() => {
+            cardEl.remove();
+            renderProactiveSuggestions();
+        }, 300);
+    } else {
+        renderProactiveSuggestions();
+    }
+
+    showToast("😐 提案ルートを却下しました。");
 };

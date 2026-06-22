@@ -3215,3 +3215,136 @@ body {
         transform: translateY(-6px);
     }
 }
+
+/* ========================================== */
+/* 追加: 属性タグ・診断・先回り提案のスタイル */
+/* ========================================== */
+
+/* 1. カードバッジ & タグ */
+.card-match-badge {
+    position: absolute;
+    top: 16px;
+    left: 95px; /* Prefecture badgeの横に配置 */
+    background: linear-gradient(135deg, #ec4899, #8b5cf6);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+    padding: 5px 12px;
+    border-radius: 30px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    z-index: 7;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+
+.card-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 8px 0;
+}
+
+.tag-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: var(--item-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.tag-pill .material-icons {
+    font-size: 0.85rem;
+}
+
+/* 2. マイページ：詳細トラベルプロフィール分析 */
+.pref-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    width: 100%;
+}
+
+@media (max-width: 600px) {
+    .pref-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.pref-group {
+    background: rgba(var(--primary-color-rgb), 0.02);
+    padding: 14px;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pref-group-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-bottom: 1px dashed var(--border-color);
+    padding-bottom: 6px;
+}
+
+.pref-bars-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* 3. 予定画面：先回り自動提案 */
+.ai-proactive-view {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    animation: fadeIn 0.4s ease;
+}
+
+.proactive-suggestions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 10px;
+}
+
+.proactive-suggestion-card {
+    background-color: var(--card-bg);
+    border: 1.5px solid var(--border-color);
+    border-radius: 20px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.01);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    text-align: left;
+}
+
+.proactive-suggestion-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 10px 30px rgba(var(--primary-color-rgb), 0.08);
+    transform: translateY(-2px);
+}
+
+.proactive-suggestion-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(to bottom, var(--primary-color), #3b82f6);
+}

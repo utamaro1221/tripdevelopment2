@@ -217,10 +217,25 @@
 
                         <!-- Right: Form and Proposals -->
                         <div class="planning-panel" id="planningPanel">
-                            <!-- State 1: Select a place -->
-                            <div class="modal-empty" id="planFormPlaceholder">
-                                <span class="material-icons" style="font-size: 3rem; opacity: 0.3;">arrow_back</span>
-                                <p style="margin-top: 12px;">左のいいねリストからスポットを選択してください。</p>
+                            <!-- State 1: Proactive AI Route Suggestions -->
+                            <div class="ai-proactive-view" id="aiProactiveView">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                                    <span class="material-icons" style="color: var(--primary-color);">auto_awesome</span>
+                                    <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800;">AIの先回り自動提案</h3>
+                                </div>
+                                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                                    あなたの「いいね」履歴と診断プロフィールを分析して、最適なルートを先回りして作成しました。
+                                </p>
+                                <div id="proactiveSuggestionsList" class="proactive-suggestions-list">
+                                    <!-- Suggestions will be dynamically inserted here -->
+                                </div>
+                                
+                                <div style="margin-top: 24px; text-align: center; border-top: 1px dashed var(--border-color); padding-top: 16px;">
+                                    <p style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                        <span class="material-icons" style="font-size: 1rem;">info</span>
+                                        <span>左のリストから特定のスポットを選んで手動でプランを作ることもできます。</span>
+                                    </p>
+                                </div>
                             </div>
 
                             <!-- State 2: Fill Form -->
@@ -434,7 +449,50 @@
                         <div class="chart-container">
                             <canvas id="standChart"></canvas>
                         </div>
-                        <div style="margin-top: 16px; text-align: center; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+                        
+                        <!-- Detailed Preferences Section -->
+                        <div class="detailed-preferences" id="detailedPreferences" style="margin-top: 24px; border-top: 1px dashed var(--border-color); padding-top: 20px; width: 100%; text-align: left;">
+                            <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: var(--primary-color); display: flex; align-items: center; gap: 6px;">
+                                <span class="material-icons" style="font-size: 1.2rem;">analytics</span>
+                                <span>詳細トラベルプロフィール分析</span>
+                            </h4>
+                            
+                            <div class="pref-grid">
+                                <div class="pref-group">
+                                    <div class="pref-group-title">
+                                        <span class="material-icons" style="font-size: 1rem; color: var(--primary-color);">people</span>
+                                        <span>👥 同行者属性</span>
+                                    </div>
+                                    <div id="companionPrefBars" class="pref-bars-list"></div>
+                                </div>
+                                
+                                <div class="pref-group">
+                                    <div class="pref-group-title">
+                                        <span class="material-icons" style="font-size: 1rem; color: #fbbf24;">payments</span>
+                                        <span>💰 予算レンジ</span>
+                                    </div>
+                                    <div id="budgetPrefBars" class="pref-bars-list"></div>
+                                </div>
+                                
+                                <div class="pref-group">
+                                    <div class="pref-group-title">
+                                        <span class="material-icons" style="font-size: 1rem; color: #10b981;">commute</span>
+                                        <span>🚗 移動手段</span>
+                                    </div>
+                                    <div id="transportPrefBars" class="pref-bars-list"></div>
+                                </div>
+                                
+                                <div class="pref-group">
+                                    <div class="pref-group-title">
+                                        <span class="material-icons" style="font-size: 1rem; color: #f43f5e;">explore</span>
+                                        <span>🎯 目的・シーン</span>
+                                    </div>
+                                    <div id="purposePrefBars" class="pref-bars-list"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 20px; text-align: center; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
                             <button class="btn-primary" onclick="startPersonalizedSearch()">
                                 <span class="material-icons" style="font-size: 1.1rem; vertical-align: middle; margin-right: 6px;">star</span>
                                 嗜好特化レコメンド検索を開始
