@@ -1311,22 +1311,54 @@ window.backToPlanForm = function () {
     document.getElementById("planForm").classList.remove("hidden");
 };
 
+// Base URL for API calls. If page is hosted on a different port (like Live Server at 5500),
+// route API requests to the proxy server at http://localhost:3000.
+function getApiUrl(path) {
+    const base = (window.location.port && window.location.port !== "3000")
+        ? "http://localhost:3000"
+        : window.location.origin;
+    return `${base}${path}`;
+}
+
+// Safely fetch and parse JSON, checking response.ok first to avoid JSON parsing errors on HTML/text errors.
+async function safeFetchJson(url, options = {}) {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+        let errMsg = `HTTP ${response.status}`;
+        try {
+            const errData = await response.json();
+            errMsg = errData.error || errMsg;
+        } catch (e) {
+            try {
+                const textData = await response.text();
+                if (textData && textData.length < 200) {
+                    errMsg = textData;
+                }
+            } catch (textErr) {}
+        }
+        throw new Error(errMsg);
+    }
+    return await response.json();
+}
+
 // 実際の楽天トラベルAPIを中継サーバー経由で呼び出す関数
 async function fetchRakutenHotels(lat, lon) {
-    const url = new URL("/api/travel/hotels", window.location.origin);
+    const cacheKey = `rakuten_hotels_${lat}_${lon}`;
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+        console.log("[Rakuten API] Returning cached hotel data");
+        return JSON.parse(cached);
+    }
+
+    const url = new URL(getApiUrl("/api/travel/hotels"));
     url.searchParams.append("latitude", lat);
     url.searchParams.append("longitude", lon);
 
     try {
-        const response = await fetch(url.toString());
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.error || `HTTPエラー! ステータス: ${response.status}`);
-        }
+        const data = await safeFetchJson(url.toString());
         
         if (data.hotels && data.hotels.length > 0) {
-            return data.hotels.map(h => {
+            const hotelsList = data.hotels.map(h => {
                 const basicInfo = h.hotel[0].hotelBasicInfo;
                 return {
                     name: basicInfo.hotelName,
@@ -1337,6 +1369,8 @@ async function fetchRakutenHotels(lat, lon) {
                     img: basicInfo.hotelImageUrl || ""
                 };
             });
+            sessionStorage.setItem(cacheKey, JSON.stringify(hotelsList));
+            return hotelsList;
         }
         return [];
     } catch (error) {
@@ -1347,7 +1381,7 @@ async function fetchRakutenHotels(lat, lon) {
 
 // Gemini APIを中継サーバー経由で呼び出し、AIを用いて新しい観光地を生成する関数
 async function fetchGeminiPlaces(excludeNames) {
-    const url = new URL("/api/travel/generate", window.location.origin);
+    const url = getApiUrl("/api/travel/generate");
     const excludeStr = excludeNames.length > 0 ? `ただし、以下の観光地はすでに登録済みまたはスワイプ済みであるため、絶対に含めないでください: ${excludeNames.join(", ")}` : "";
 
     const promptText = `
@@ -1385,43 +1419,41 @@ ${excludeStr}
         }
     };
 
-    const response = await fetch(url.toString(), {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(requestBody)
-    });
+    try {
+        const resData = await safeFetchJson(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(requestBody)
+        });
 
-    const resData = await response.json();
-
-    if (!response.ok) {
-        let errMsg = resData.error || `Gemini APIエラー: ${response.status}`;
-        throw new Error(errMsg);
+        const jsonText = resData.candidates[0].content.parts[0].text;
+        const newPlaces = JSON.parse(jsonText);
+        
+        const baseId = Date.now();
+        return newPlaces.map((place, idx) => {
+            return {
+                id: baseId + idx,
+                name: place.name,
+                prefecture: place.prefecture,
+                season: place.season,
+                category: place.category,
+                description: place.description,
+                tags: place.tags || ["観光"],
+                companion: place.companion || ["カップル"],
+                budget: place.budget || "スタンダード",
+                transport: place.transport || "公共交通機関",
+                purpose: place.purpose || "リフレッシュ",
+                lat: place.lat,
+                lon: place.lon,
+                img: `https://loremflickr.com/500/350/japan,sightseeing,${encodeURIComponent(place.name)}`
+            };
+        });
+    } catch (error) {
+        console.error("Gemini APIでの観光地取得に失敗しました:", error);
+        throw error;
     }
-
-    const jsonText = resData.candidates[0].content.parts[0].text;
-    const newPlaces = JSON.parse(jsonText);
-    
-    const baseId = Date.now();
-    return newPlaces.map((place, idx) => {
-        return {
-            id: baseId + idx,
-            name: place.name,
-            prefecture: place.prefecture,
-            season: place.season,
-            category: place.category,
-            description: place.description,
-            tags: place.tags || ["観光"],
-            companion: place.companion || ["カップル"],
-            budget: place.budget || "スタンダード",
-            transport: place.transport || "公共交通機関",
-            purpose: place.purpose || "リフレッシュ",
-            lat: place.lat,
-            lon: place.lon,
-            img: `https://loremflickr.com/500/350/japan,sightseeing,${encodeURIComponent(place.name)}`
-        };
-    });
 }
 
 // AIでの観光地追加ボタンのアクション
@@ -1535,6 +1567,54 @@ const transitAccessRoutes = {
     "六甲山テラス": "阪急神戸線「御影駅」から神戸市バス16系統で「六甲ケーブル下駅」へ。六甲ケーブルで山頂へ登り、六甲山上バスで「六甲ガーデンテラス」下車。"
 };
 
+// Gemini APIを中継サーバー経由で呼び出して旅行プラン（行程テキスト）を生成する関数
+async function fetchGeminiItinerary(name, pref, date, nightsText, people, budget, priorities, others) {
+    const url = getApiUrl("/api/travel/generate");
+    const standName = document.getElementById("standName")?.textContent || "トラベラー・スター";
+    const standRank = document.getElementById("standRank")?.textContent || "";
+
+    const promptText = `
+あなたは旅行プランナーです。ユーザーの「旅行スタンド（Travel Stand）」の特性を最大限に活かした、近畿地方の魅力的で具体的な旅行プランを作成してください。
+
+【旅行情報】
+目的地: ${name} (${pref})
+日付: ${date} 〜
+期間: ${nightsText}
+人数: ${people}名
+予算目安: ${budget.toLocaleString()}円程度
+重視ポイント: ${priorities.join(", ")}
+ユーザーの旅行スタンド: ${standName} (${standRank})
+その他要望: ${others}
+
+【回答ルール】
+1. タイトルは「【${name}を巡る ${nightsText} 旅行プラン】」から始めてください。
+2. スケジュール提案は「■ 1日目:」「■ 2日目:」「■ 最終日:」などの形式で、具体的かつ時間（例: 午前、昼食、午後、夜間）を分けて記載してください。
+3. ユーザーの旅行スタンド（例: 温泉の守護神、美食の支配者など）のコンセプトや特性に寄り添った、オリジナリティあふれる特別な体験・店舗・アクティビティ（実在または近畿ならではの魅力的な提案）を必ず1箇位置くなどして、旅行スタンドに言及した上で含めてください。
+4. 口調は丁寧で、旅のワクワク感を高めるような魅力的な表現にしてください。
+5. 出力はプレーンテキスト形式で記述し、マークダウンの装飾記号（** や *）は一切含めず、純粋な日本語のテキスト（改行と通常の記号「・」「■」のみ）で出力してください。
+`;
+
+    const requestBody = {
+        contents: [{
+            parts: [{ text: promptText }]
+        }]
+    };
+
+    try {
+        const resData = await safeFetchJson(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(requestBody)
+        });
+        return resData.candidates[0].content.parts[0].text;
+    } catch (error) {
+        console.error("Gemini APIでの旅行プラン生成に失敗しました:", error);
+        throw error;
+    }
+}
+
 // 旅行プランの生成 (※APIを中で await するため async 関数に変更)
 window.generateTravelPlan = async function (event) {
     event.preventDefault();
@@ -1584,12 +1664,21 @@ window.generateTravelPlan = async function (event) {
         const selectedNightsText = `${nightsVal}泊${nightsVal + 1}日`;
 
         // AI提案テキストの生成
-        const itinerary = generateItineraryText(activePlanTarget.name, targetPref, dateVal, selectedNightsText, peopleVal, budgetVal, currentPriority, othersVal);
+        let itinerary = "";
+        try {
+            itinerary = await fetchGeminiItinerary(activePlanTarget.name, targetPref, dateVal, selectedNightsText, peopleVal, budgetVal, currentPriority, othersVal);
+            showToast("✨ AIがあなたの旅行スタンドに合わせた特製プランを生成しました！");
+        } catch (apiErr) {
+            console.warn("AIプラン生成に失敗したため、推奨テンプレートを表示します:", apiErr);
+            itinerary = generateItineraryText(activePlanTarget.name, targetPref, dateVal, selectedNightsText, peopleVal, budgetVal, currentPriority, othersVal);
+            showToast("⚠️ AI生成制限のため、推奨テンプレートでプランを作成しました。");
+        }
 
         // =================================================================
         // 【ここから楽天トラベルAPI連携の分岐処理】
         // =================================================================
         let hotels = [];
+        let isHotelFallback = false;
         try {
             // 選択された観光地(activePlanTarget)の緯度(lat)・経度(lon)を中継サーバーに渡してホテルを検索します
             hotels = await fetchRakutenHotels(activePlanTarget.lat, activePlanTarget.lon);
@@ -1598,6 +1687,7 @@ window.generateTravelPlan = async function (event) {
             // API呼び出しでエラーが起きた場合は、従来のモックデータにフォールバック（自動切り替え）
             console.warn("ホテル情報の取得に失敗したため、モックデータにフォールバックします。", err);
             hotels = mockHotels[targetPref] || [];
+            isHotelFallback = true;
             if (err.message && err.message.includes("429")) {
                 showToast("⚠️ 本日のホテル検索制限に達したため、モックホテルを表示します。");
             } else {
@@ -1610,8 +1700,23 @@ window.generateTravelPlan = async function (event) {
         const hotelList = document.getElementById("hotelList");
         hotelList.innerHTML = "";
 
+        if (isHotelFallback) {
+            const notice = document.createElement("div");
+            notice.className = "fallback-notice-banner";
+            notice.innerHTML = `
+                <span class="material-icons-outlined" style="font-size: 1.1rem; vertical-align: middle; margin-right: 6px; color: var(--accent-anmari);">cloud_off</span>
+                <span style="font-size: 0.8rem; font-weight: 700; color: var(--accent-anmari);">
+                    API制限または接続エラーのため、推奨ホテル（オフライン表示）を案内しています。
+                </span>
+            `;
+            hotelList.appendChild(notice);
+        }
+
         if (hotels.length === 0) {
-            hotelList.innerHTML = `<div class="modal-empty">周辺にホテルが見つかりませんでした。</div>`;
+            const emptyDiv = document.createElement("div");
+            emptyDiv.className = "modal-empty";
+            emptyDiv.textContent = "周辺にホテルが見つかりませんでした。";
+            hotelList.appendChild(emptyDiv);
         } else {
             hotels.forEach(h => {
                 const card = document.createElement("div");
@@ -1854,21 +1959,38 @@ async function simulateWeather() {
     if (sortedPlans.length === 0) return;
     const next = sortedPlans[0];
 
+    const lat = next.lat || 34.6937;
+    const lon = next.lon || 135.5023;
+    const cacheKey = `weather_${lat}_${lon}`;
+    const cached = sessionStorage.getItem(cacheKey);
+
+    if (cached) {
+        console.log("[Weather API] Returning cached weather data");
+        const cachedData = JSON.parse(cached);
+        if (weatherIcon) weatherIcon.textContent = cachedData.emoji;
+        if (weatherTemp) weatherTemp.textContent = cachedData.temp;
+        if (weatherDesc) weatherDesc.textContent = cachedData.desc;
+        if (weatherLocation) weatherLocation.textContent = `📍 ${next.destination} (${next.prefecture})の天気`;
+        return;
+    }
+
     try {
-        const url = new URL("/api/travel/weather", window.location.origin);
-        url.searchParams.append("latitude", next.lat || 34.6937);
-        url.searchParams.append("longitude", next.lon || 135.5023);
+        const url = new URL(getApiUrl("/api/travel/weather"));
+        url.searchParams.append("latitude", lat);
+        url.searchParams.append("longitude", lon);
 
-        const response = await fetch(url.toString());
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || `HTTP ${response.status}`);
-        }
+        const data = await safeFetchJson(url.toString());
 
         const tempVal = Math.round(data.main.temp) + "°C";
         const descVal = data.weather[0].description;
         const emoji = getWeatherIconEmoji(data.weather[0].icon);
+
+        const weatherResult = {
+            temp: tempVal,
+            desc: descVal,
+            emoji: emoji
+        };
+        sessionStorage.setItem(cacheKey, JSON.stringify(weatherResult));
 
         if (weatherIcon) weatherIcon.textContent = emoji;
         if (weatherTemp) weatherTemp.textContent = tempVal;
@@ -2535,6 +2657,8 @@ window.renderShareView = function () {
     } else {
         sharedPlans.forEach(sp => {
             const nightsText = `${sp.nights}泊${sp.nights + 1}日`;
+            const reactions = sp.reactions || { like: 0, heart: 0, fire: 0, wow: 0 };
+            const standStatsArr = sp.standStats ? JSON.stringify(sp.standStats) : "null";
             const div = document.createElement("div");
             div.className = "shared-plan-card";
             div.innerHTML = `
@@ -2555,6 +2679,30 @@ window.renderShareView = function () {
                         <div class="preview-text">${sp.itineraryText}</div>
                         <div class="preview-fade"></div>
                         <div class="preview-toggle-btn">行程をすべて表示</div>
+                    </div>
+
+                    <!-- 旅スタンド相性診断 UI -->
+                    <div class="compatibility-container" id="compat-container-${sp.id}">
+                        <button class="btn-compatibility" onclick="checkStandCompatibility(${sp.id}, ${standStatsArr})">
+                            <span class="material-icons" style="font-size: 1.1rem; vertical-align: middle; margin-right: 4px;">bolt</span>
+                            旅スタンド相性診断を行う
+                        </button>
+                    </div>
+
+                    <!-- リアクションエリア -->
+                    <div class="reactions-bar">
+                        <button class="reaction-btn" onclick="reactToPlan(${sp.id}, 'like')">
+                            <span>👍</span> <span class="react-count">${reactions.like}</span>
+                        </button>
+                        <button class="reaction-btn" onclick="reactToPlan(${sp.id}, 'heart')">
+                            <span>❤️</span> <span class="react-count">${reactions.heart}</span>
+                        </button>
+                        <button class="reaction-btn" onclick="reactToPlan(${sp.id}, 'fire')">
+                            <span>🔥</span> <span class="react-count">${reactions.fire}</span>
+                        </button>
+                        <button class="reaction-btn" onclick="reactToPlan(${sp.id}, 'wow')">
+                            <span>😮</span> <span class="react-count">${reactions.wow}</span>
+                        </button>
                     </div>
                 </div>
                 <div class="shared-card-footer">
@@ -2591,6 +2739,65 @@ window.renderShareView = function () {
     }
 };
 
+window.checkStandCompatibility = function (id, targetStats) {
+    if (!targetStats) {
+        targetStats = [60, 50, 70, 60, 50, 40];
+    }
+    
+    let sumDiff = 0;
+    for (let i = 0; i < 6; i++) {
+        sumDiff += Math.abs(standStats[i] - targetStats[i]);
+    }
+    const score = Math.max(30, Math.min(100, Math.round(100 - (sumDiff / 6))));
+    
+    let description = "ユニーク！新しい発見がある旅の組み合わせです。";
+    let icon = "explore";
+    let colorClass = "compat-unique";
+    
+    if (score >= 85) {
+        description = "相性抜群！旅行の価値観が完全に一致しています。";
+        icon = "verified";
+        colorClass = "compat-perfect";
+    } else if (score >= 70) {
+        description = "高相性！とても楽しい旅になりそうです。";
+        icon = "thumb_up";
+        colorClass = "compat-high";
+    } else if (score >= 50) {
+        description = "標準的。お互いのこだわりを尊重し合える関係です。";
+        icon = "handshake";
+        colorClass = "compat-standard";
+    }
+
+    const container = document.getElementById(`compat-container-${id}`);
+    if (container) {
+        container.innerHTML = `
+            <div class="compatibility-result-card ${colorClass}">
+                <div class="compat-score-wrapper">
+                    <span class="material-icons compat-icon">${icon}</span>
+                    <span class="compat-percent">あなたとの相性: <strong>${score}%</strong></span>
+                </div>
+                <div class="compat-desc">${description}</div>
+            </div>
+        `;
+        showToast(`⚡ スタンド相性診断結果: ${score}%！`);
+    }
+};
+
+window.reactToPlan = function (id, reactionType) {
+    const planIndex = sharedPlans.findIndex(s => s.id === id);
+    if (planIndex === -1) return;
+
+    if (!sharedPlans[planIndex].reactions) {
+        sharedPlans[planIndex].reactions = { like: 0, heart: 0, fire: 0, wow: 0 };
+    }
+
+    sharedPlans[planIndex].reactions[reactionType]++;
+    localStorage.setItem("kw_shared_plans", JSON.stringify(sharedPlans));
+
+    renderShareView();
+    showToast("リアクションを送信しました！");
+};
+
 window.toggleSharedItinerary = function (element) {
     element.classList.toggle("expanded");
     const btn = element.querySelector(".preview-toggle-btn");
@@ -2622,7 +2829,9 @@ window.sharePlan = function (planId) {
         nights: plan.nights,
         people: plan.people,
         budget: plan.budget,
-        itineraryText: plan.itineraryText
+        itineraryText: plan.itineraryText,
+        reactions: { like: 0, heart: 0, fire: 0, wow: 0 },
+        standStats: [...standStats]
     };
 
     sharedPlans.unshift(newShared);
@@ -2817,20 +3026,24 @@ window.handleSendChatMessage = async function (event) {
         const labels = ["温泉・癒やし", "自然・景観", "歴史・文化", "グルメ", "アクティビティ", "都市・ショッピング"];
         const prefStatsStr = standStats.map((val, idx) => `${labels[idx]}: ${val}%`).join(", ");
         
+        const standName = document.getElementById("standName")?.textContent || "トラベラー・スター";
+        const standRank = document.getElementById("standRank")?.textContent || "";
         const systemPrompt = `ユーザー名: ${userName}
 旅行の好みパラメータ: ${prefStatsStr}
+旅行スタンド: ${standName} (${standRank})
 
-あなたは旅行プランナーのAI相談員です。回答を行う際は、ユーザーの興味関心が高いパラメータ（特に値が大きい項目）を優先的に考慮した提案・目的地選定やアドバイスを行ってください。
+あなたは旅行プランナーのAI相談員（ユーザーの「旅行スタンド」の案内役）です。回答を行う際は、ユーザーの旅行スタンド（例: 温泉の守護神、美食の支配者など）の属性や、興味関心が高いパラメータ（特に値が大きい項目）を優先的に考慮した提案・目的地選定やアドバイスを行ってください。
 【重要・最優先ルール】
 - 提案やアドバイスを行う目的地は、必ず近畿地方（大阪府、京都府、兵庫県、奈良県、滋賀県、和歌山県）のスポットに限定してください。東京や北海道、沖縄など、近畿地方以外の地域は絶対に提案しないでください。
+- 会話の中で「あなたの旅行スタンド【${standName}】の特性から見ると…」など、旅行スタンドのコンセプトに言及して親しみやすく回答してください。
 - 回答は極めて簡潔に、短く要点をまとめて答えてください。
 - 長文は厳禁とし、最大でも「100〜150文字程度」または「3行以内」で簡潔に答えてください。
 - 箇条書きを活用して読みやすくしてください。`;
 
-        const chatUrl = new URL("/api/travel/generate", window.location.origin);
+        const chatUrl = getApiUrl("/api/travel/generate");
         const chatHeaders = { "Content-Type": "application/json" };
 
-        const response = await fetch(chatUrl.toString(), {
+        const data = await safeFetchJson(chatUrl, {
             method: "POST",
             headers: chatHeaders,
             body: JSON.stringify({
@@ -2847,16 +3060,6 @@ window.handleSendChatMessage = async function (event) {
             })
         });
         
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            let errMsg = errData.error || `HTTP ${response.status}`;
-            if (response.status === 429) {
-                errMsg = "本日のAIチャット利用上限に達しました。明日またご相談ください。";
-            }
-            throw new Error(errMsg);
-        }
-        
-        const data = await response.json();
         const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || "申し訳ありません、お答えを生成できませんでした。";
         
         // 入力中を消す
@@ -2868,7 +3071,13 @@ window.handleSendChatMessage = async function (event) {
     } catch (error) {
         console.error("Gemini API Error:", error);
         removeTypingIndicator(typingId);
-        appendChatBubble("ai", `⚠️ メッセージの送信に失敗しました。接続状況や設定をご確認ください。`);
+        let errorMsgToShow = "⚠️ メッセージの送信に失敗しました。接続状況や設定をご確認ください。";
+        if (error.message && error.message.includes("429")) {
+            errorMsgToShow = "⚠️ 本日のAIチャット利用上限に達しました。明日またご相談ください。";
+        } else if (error.message) {
+            errorMsgToShow = `⚠️ エラー: ${error.message}`;
+        }
+        appendChatBubble("ai", errorMsgToShow);
     }
 };
 
