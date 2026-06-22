@@ -654,29 +654,20 @@
 
                         <details class="advanced-settings-accordion" style="margin-top: 16px; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--bg-color);">
                             <summary class="advanced-settings-summary" style="padding: 14px 16px; cursor: pointer; font-weight: 700; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; color: var(--text-color); user-select: none;">
-                                <span>上級者向け設定（任意）</span>
+                                <span>API 接続設定（サーバー管理）</span>
                                 <span class="material-icons chevron-icon" style="font-size: 1.2rem; transition: transform var(--transition-speed);">expand_more</span>
                             </summary>
                             <div class="advanced-settings-content" style="padding: 16px; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 16px;">
-                                <p class="settings-hint-top" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; line-height: 1.4; margin: 0;">
-                                    ※ 標準キーが内蔵されているため通常は入力不要です。
+                                <p class="settings-hint-top" style="font-size: 0.8rem; color: var(--primary-color); font-weight: 700; line-height: 1.4; margin: 0;">
+                                    🔒 現在はサーバーで一括管理・制限されたAPIキーを使用しています。個人用のAPIキーを入力する必要はありません。
                                 </p>
                                 <div class="form-group">
-                                    <label for="settingsRakutenAppId" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">楽天トラベル API アプリID (デベロッパーID)</label>
-                                    <input type="password" id="settingsRakutenAppId" class="form-input" placeholder="例: 1012345678901234567" oninput="updateSettingsFromUI()">
-                                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; line-height: 1.4;">
-                                        登録は <a href="https://webservice.rakuten.co.jp/" target="_blank" style="color: var(--primary-color); text-decoration: underline;">楽天ウェブサービス</a> から行えます。
-                                    </p>
+                                    <label for="settingsRakutenAppId" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">楽天トラベル API アプリID</label>
+                                    <input type="password" id="settingsRakutenAppId" class="form-input" value="••••••••••••••••" disabled style="opacity: 0.6; cursor: not-allowed;">
                                 </div>
                                 <div class="form-group">
-                                    <label for="settingsGeminiApiKey" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">Gemini API キー (オプション)</label>
-                                    <input type="text" id="settingsGeminiApiKey" class="form-input" placeholder="（省略時は内蔵キーを使用します）" oninput="updateSettingsFromUI()">
-                                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; line-height: 1.6;">
-                                        独自のキーを使用したい場合のみ入力してください。<br>
-                                        <strong style="color: var(--primary-color);">取得方法:</strong><br>
-                                        ① <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--primary-color); text-decoration: underline;">Google AI Studio</a> を開く<br>
-                                        ② 「Create API key」をクリックし、キーをコピーして貼り付けてください。
-                                    </p>
+                                    <label for="settingsGeminiApiKey" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">Gemini API キー</label>
+                                    <input type="password" id="settingsGeminiApiKey" class="form-input" value="••••••••••••••••" disabled style="opacity: 0.6; cursor: not-allowed;">
                                 </div>
                             </div>
                         </details>

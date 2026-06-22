@@ -1312,50 +1312,19 @@ window.backToPlanForm = function () {
     document.getElementById("planForm").classList.remove("hidden");
 };
 
-// =================================================================
-// JSONP通信を行う簡易ユーティリティ関数（CORS回避用）
-function fetchJsonp(url) {
-    return new Promise((resolve, reject) => {
-        const callbackName = "rakuten_callback_" + Math.random().toString(36).substring(2, 15);
-        url.searchParams.append("callback", callbackName);
-
-        const script = document.createElement("script");
-        script.src = url.toString();
-
-        window[callbackName] = (data) => {
-            resolve(data);
-            cleanup();
-        };
-
-        script.onerror = () => {
-            reject(new Error("JSONP request failed"));
-            cleanup();
-        };
-
-        function cleanup() {
-            delete window[callbackName];
-            script.remove();
-        }
-
-        document.body.appendChild(script);
-    });
-}
-
-// 実際の楽天トラベルAPI（SimpleHotelSearch）を呼び出す関数（CORS回避版）
-async function fetchRakutenHotels(lat, lon, appId) {
-    const url = new URL("https://app.rakuten.co.jp/services/api/Travel/SimpleHotelSearch/20170426");
-    
-    url.searchParams.append("format", "json");
-    url.searchParams.append("applicationId", appId);
+// 実際の楽天トラベルAPIを中継サーバー経由で呼び出す関数
+async function fetchRakutenHotels(lat, lon) {
+    const url = new URL("/api/travel/hotels", window.location.origin);
     url.searchParams.append("latitude", lat);
     url.searchParams.append("longitude", lon);
-    url.searchParams.append("searchRadius", "3");
-    url.searchParams.append("datumType", "1");
-    url.searchParams.append("hits", "5");
 
     try {
-        // CORS回避のためfetchの代わりにJSONP通信を使用します
-        const data = await fetchJsonp(url);
+        const response = await fetch(url.toString());
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || `HTTPエラー! ステータス: ${response.status}`);
+        }
         
         if (data.hotels && data.hotels.length > 0) {
             return data.hotels.map(h => {
@@ -1377,12 +1346,9 @@ async function fetchRakutenHotels(lat, lon, appId) {
     }
 }
 
-// Gemini APIを用いて新しい観光地を生成する関数
-async function fetchGeminiPlaces(apiKey, excludeNames) {
-    const isOAuthToken = apiKey.startsWith("ya29.");
-    const url = isOAuthToken
-        ? `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`
-        : `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+// Gemini APIを中継サーバー経由で呼び出し、AIを用いて新しい観光地を生成する関数
+async function fetchGeminiPlaces(excludeNames) {
+    const url = new URL("/api/travel/generate", window.location.origin);
     const excludeStr = excludeNames.length > 0 ? `ただし、以下の観光地はすでに登録済みまたはスワイプ済みであるため、絶対に含めないでください: ${excludeNames.join(", ")}` : "";
 
     const promptText = `
@@ -1420,42 +1386,21 @@ ${excludeStr}
         }
     };
 
-    const headers = { "Content-Type": "application/json" };
-    if (isOAuthToken) headers["Authorization"] = `Bearer ${apiKey}`;
-
-    const response = await fetch(url, {
+    const response = await fetch(url.toString(), {
         method: "POST",
-        headers,
+        headers: {
+            "Content-Type": "application/json"
+        },
         body: JSON.stringify(requestBody)
     });
 
+    const resData = await response.json();
+
     if (!response.ok) {
-        let errMsg = `Gemini APIエラー: ${response.status}`;
-        try {
-            const errJson = await response.json();
-            if (errJson.error && errJson.error.message) {
-                errMsg += ` (${errJson.error.message})`;
-            }
-        } catch (e) {}
-        
-        if (response.status === 404) {
-            try {
-                const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-                const listRes = await fetch(listUrl);
-                if (listRes.ok) {
-                    const listData = await listRes.json();
-                    const modelNames = listData.models.map(m => m.name.replace("models/", ""));
-                    console.log("利用可能なモデル:", modelNames);
-                    errMsg += ` | 利用可能モデル: ${modelNames.join(", ")}`;
-                }
-            } catch (e) {
-                console.error("モデル一覧の取得失敗:", e);
-            }
-        }
+        let errMsg = resData.error || `Gemini APIエラー: ${response.status}`;
         throw new Error(errMsg);
     }
 
-    const resData = await response.json();
     const jsonText = resData.candidates[0].content.parts[0].text;
     const newPlaces = JSON.parse(jsonText);
     
@@ -1482,15 +1427,6 @@ ${excludeStr}
 
 // AIでの観光地追加ボタンのアクション
 window.generatePlacesWithAI = async function() {
-    const apiKey = geminiApiKey || DEFAULT_GEMINI_API_KEY;
-    if (!apiKey) {
-        showToast("⚠️ 設定画面で Gemini API キーを設定してください。");
-        setTimeout(() => {
-            switchView("settings");
-        }, 1500);
-        return;
-    }
-
     const stack = document.getElementById("card-stack");
     const container = document.getElementById("swipeActionsContainer");
     if (container) container.classList.add("hidden");
@@ -1533,7 +1469,7 @@ window.generatePlacesWithAI = async function() {
 
     try {
         const existingNames = kinkiPlaces.map(p => p.name);
-        const newPlaces = await fetchGeminiPlaces(apiKey, existingNames);
+        const newPlaces = await fetchGeminiPlaces(existingNames);
         
         clearInterval(progressInterval);
         if (fill) fill.style.width = "100%";
@@ -1543,7 +1479,7 @@ window.generatePlacesWithAI = async function() {
         
         if (newPlaces && newPlaces.length > 0) {
             kinkiPlaces.unshift(...newPlaces);
-            showToast(`✨ AIが新しい観光スポットを ${newPlaces.length} 件追加しました！`);
+            showToast("✨ AIが新しい観光スポットを " + newPlaces.length + " 件追加しました！");
             applyFilters();
         } else {
             throw new Error("Empty list returned");
@@ -1551,13 +1487,17 @@ window.generatePlacesWithAI = async function() {
     } catch (err) {
         clearInterval(progressInterval);
         console.error(err);
-        showToast(`⚠️ 自動生成に失敗しました: ${err.message}`);
+        let errorMsgToShow = err.message;
+        if (err.message.includes("429")) {
+            errorMsgToShow = "本日のAI生成上限に達しました。明日またお試しください。";
+        }
+        showToast("⚠️ 自動生成に失敗しました: " + errorMsgToShow);
         stack.innerHTML = `
             <div class="empty-stack-view">
                 <span class="material-icons empty-icon">error_outline</span>
                 <h3>生成エラーが発生しました</h3>
-                <p style="color: var(--accent-error); font-weight: 600;">エラー詳細: ${err.message}</p>
-                <p>Gemini APIキーが無効であるか、モデルの制限・ネットワーク接続に問題があります。</p>
+                <p style="color: var(--accent-error); font-weight: 600;">エラー詳細: ${errorMsgToShow}</p>
+                <p>本日の利用上限に達したか、サーバー側の設定に問題があります。</p>
                 <div class="empty-stack-view-actions">
                     <button class="btn-primary" onclick="generatePlacesWithAI()">🔄 再試行する</button>
                     <button class="btn-primary" style="background-color: var(--text-muted); opacity: 0.8;" onclick="resetSwipeHistory()">履歴をリセットしてやり直す</button>
@@ -1651,23 +1591,19 @@ window.generateTravelPlan = async function (event) {
         // 【ここから楽天トラベルAPI連携の分岐処理】
         // =================================================================
         let hotels = [];
-        if (rakutenAppId) {
-            // ① アプリIDが設定されている場合は、本物のAPIを叩いて周辺のホテルを検索
-            try {
-                // 選択された観光地(activePlanTarget)の緯度(lat)・経度(lon)をAPIに渡します
-                hotels = await fetchRakutenHotels(activePlanTarget.lat, activePlanTarget.lon, rakutenAppId);
-                showToast("✨ 楽天トラベルAPIから周辺のホテル情報を取得しました！");
-            } catch (err) {
-                // API呼び出しでエラーが起きた場合は、従来のモックデータにフォールバック（自動切り替え）
-                console.warn("楽天APIの取得に失敗したため、モックデータにフォールバックします。", err);
-                hotels = mockHotels[targetPref] || [];
+        try {
+            // 選択された観光地(activePlanTarget)の緯度(lat)・経度(lon)を中継サーバーに渡してホテルを検索します
+            hotels = await fetchRakutenHotels(activePlanTarget.lat, activePlanTarget.lon);
+            showToast("✨ 楽天トラベルAPIから周辺のホテル情報を取得しました！");
+        } catch (err) {
+            // API呼び出しでエラーが起きた場合は、従来のモックデータにフォールバック（自動切り替え）
+            console.warn("ホテル情報の取得に失敗したため、モックデータにフォールバックします。", err);
+            hotels = mockHotels[targetPref] || [];
+            if (err.message && err.message.includes("429")) {
+                showToast("⚠️ 本日のホテル検索制限に達したため、モックホテルを表示します。");
+            } else {
                 showToast("⚠️ API接続エラーのため、モックホテルを表示します。");
             }
-        } else {
-            // ② アプリIDが未設定の場合は、1秒待機するダミー処理を挟んだ後、モックデータを表示
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            hotels = mockHotels[targetPref] || [];
-            showToast("ℹ️ アプリID未設定のため、モックホテルを表示します。");
         }
         // =================================================================
 
@@ -2242,13 +2178,12 @@ function renderDetailedPrefBars() {
 window.updateSettingsFromUI = function () {
     const usernameInput = document.getElementById("settingsUsername");
     const headerTitleInput = document.getElementById("settingsHeaderTitle");
-    const rakutenInput = document.getElementById("settingsRakutenAppId");
-    const geminiInput = document.getElementById("settingsGeminiApiKey");
 
     userName = usernameInput ? usernameInput.value.trim() || "トラベラー" : "トラベラー";
     headerTitle = headerTitleInput ? headerTitleInput.value.trim() || "Kinki Wander" : "Kinki Wander";
-    rakutenAppId = rakutenInput ? rakutenInput.value.trim() : "";
-    geminiApiKey = geminiInput ? geminiInput.value.trim() : "";
+    // APIキーはサーバー側で管理されるため、フロントからの入力取得は廃止します
+    rakutenAppId = "server";
+    geminiApiKey = "server";
 
     applyAccountSettings();
     saveToStorage();
@@ -2804,13 +2739,7 @@ window.openChatDrawer = function () {
         return;
     }
 
-    // APIキーチェック
-    const apiKey = geminiApiKey || DEFAULT_GEMINI_API_KEY;
-    if (!apiKey) {
-        showToast("⚠️ AIチャットのご利用には、設定でキーの登録が必要です。");
-        setTimeout(() => switchView("settings"), 1200);
-        return;
-    }
+    // APIキーは中継サーバー側で管理されます
     
     const drawer = document.getElementById("chat-drawer");
     if (drawer) {
@@ -2842,11 +2771,6 @@ window.handleSendChatMessage = async function (event) {
     const typingId = appendTypingIndicator();
     
     try {
-        const apiKey = geminiApiKey || DEFAULT_GEMINI_API_KEY;
-        if (!apiKey) {
-            throw new Error("APIキーが見つかりません。");
-        }
-        
         // レーダーチャート値のフォーマット
         const labels = ["温泉・癒やし", "自然・景観", "歴史・文化", "グルメ", "アクティビティ", "都市・ショッピング"];
         const prefStatsStr = standStats.map((val, idx) => `${labels[idx]}: ${val}%`).join(", ");
@@ -2861,17 +2785,10 @@ window.handleSendChatMessage = async function (event) {
 - 長文は厳禁とし、最大でも「100〜150文字程度」または「3行以内」で簡潔に答えてください。
 - 箇条書きを活用して読みやすくしてください。`;
 
-        const isOAuthToken = apiKey.startsWith("ya29.");
-        const chatUrl = isOAuthToken
-            ? `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`
-            : `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const chatUrl = new URL("/api/travel/generate", window.location.origin);
         const chatHeaders = { "Content-Type": "application/json" };
-        if (isOAuthToken) {
-            chatHeaders["Authorization"] = `Bearer ${apiKey}`;
-            chatHeaders["x-goog-user-project"] = "tripdevelopment-d109d";
-        }
 
-        const response = await fetch(chatUrl, {
+        const response = await fetch(chatUrl.toString(), {
             method: "POST",
             headers: chatHeaders,
             body: JSON.stringify({
@@ -2890,25 +2807,9 @@ window.handleSendChatMessage = async function (event) {
         
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
-            const errMsg = errData.error?.message || `HTTP ${response.status}`;
-            // 401エラーならデフォルトキーでリトライ
-            if (response.status === 401 && apiKey !== DEFAULT_GEMINI_API_KEY && DEFAULT_GEMINI_API_KEY) {
-                const retryHeaders = { "Content-Type": "application/json" };
-                const retryUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${DEFAULT_GEMINI_API_KEY}`;
-                const retryResponse = await fetch(retryUrl, {
-                    method: "POST",
-                    headers: retryHeaders,
-                    body: JSON.stringify({
-                        contents: [{ role: "user", parts: [{ text: `${systemPrompt}\n\nユーザーからの相談: ${messageText}` }] }]
-                    })
-                });
-                if (retryResponse.ok) {
-                    const retryData = await retryResponse.json();
-                    const retryText = retryData.candidates?.[0]?.content?.parts?.[0]?.text || "申し訳ありません、お答えを生成できませんでした。";
-                    removeTypingIndicator(typingId);
-                    appendChatBubble("ai", retryText);
-                    return;
-                }
+            let errMsg = errData.error || `HTTP ${response.status}`;
+            if (response.status === 429) {
+                errMsg = "本日のAIチャット利用上限に達しました。明日またご相談ください。";
             }
             throw new Error(errMsg);
         }
