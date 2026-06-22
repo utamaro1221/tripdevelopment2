@@ -1038,10 +1038,9 @@ function calculateCompatibilityScore(place) {
 function createCardElement(data, isTopCard) {
     const card = document.createElement("div");
     card.className = "swipe-card";
-    // 表示優先順位の設定
+    // 表示優先順位の設定（待機カードも同サイズ・同位置でフラットに重ねる）
     card.style.zIndex = isTopCard ? 5 : 1;
     if (!isTopCard) {
-        card.style.transform = "scale(0.95) translateY(10px)";
         card.style.pointerEvents = "none";
     }
 
@@ -1130,7 +1129,7 @@ function initCardDrag(card, data) {
 
         // 傾きと回転
         const rotate = currentX * 0.08;
-        card.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) rotate(${rotate}deg)`;
+        card.style.transform = `translate(${currentX}px, ${currentY}px) rotate(${rotate}deg)`;
 
         // スワイプスタンプの透明度コントロール
         if (currentX > 30) {
@@ -1155,7 +1154,7 @@ function initCardDrag(card, data) {
         if (Math.abs(currentX) > 130) {
             const dir = currentX > 0 ? "like" : "anmari";
             card.style.transition = "transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease";
-            card.style.transform = `translate3d(${currentX > 0 ? 1000 : -1000}px, ${currentY}px, 0) rotate(${currentX > 0 ? 45 : -45}deg)`;
+            card.style.transform = `translateX(${currentX > 0 ? 1000 : -1000}px) rotate(${currentX > 0 ? 45 : -45}deg)`;
             card.style.opacity = "0";
 
             handleSwipeAction(dir, data);
@@ -1169,7 +1168,7 @@ function initCardDrag(card, data) {
         } else {
             // 元の位置に戻す (バネのようなスプリングイージング)
             card.style.transition = "transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.2)";
-            card.style.transform = "translate3d(0, 0, 0) rotate(0deg)";
+            card.style.transform = "translateX(0) rotate(0deg)";
             if (stampLike) stampLike.style.opacity = 0;
             if (stampAnmari) stampAnmari.style.opacity = 0;
         }
@@ -1224,7 +1223,7 @@ window.swipeTopCard = function (direction) {
     isDragging = true; // 連打やドラッグ重複のブロック
 
     topCard.style.transition = "transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.45s ease";
-    topCard.style.transform = `translate3d(${direction === "like" ? 1000 : -1000}px, 0, 0) rotate(${direction === "like" ? 45 : -45}deg)`;
+    topCard.style.transform = `translateX(${direction === "like" ? 1000 : -1000}px) rotate(${direction === "like" ? 45 : -45}deg)`;
     topCard.style.opacity = "0";
 
     const data = currentCardPool[0];
@@ -1834,8 +1833,8 @@ function updateCountdown() {
     renderHomePlans();
 }
 
-// 天気シミュレーター (APIキー未設定でも近畿の天気を出力)
-function simulateWeather() {
+// 天気予報を表示する関数 (サーバー中継で本物のデータを取得。エラー時は自動でモックにフォールバック)
+async function simulateWeather() {
     const weatherIcon = document.getElementById("heroWeatherIcon");
     const weatherTemp = document.getElementById("heroWeatherTemp");
     const weatherDesc = document.getElementById("heroWeatherDesc");
@@ -1855,21 +1854,64 @@ function simulateWeather() {
     if (sortedPlans.length === 0) return;
     const next = sortedPlans[0];
 
-    // 都府県に基づくダミー天候
-    const weatherData = {
-        "京都": { icon: "🌸", temp: "19°C", desc: "穏やかな晴れのち薄曇り" },
-        "大阪": { icon: "☀️", temp: "24°C", desc: "快晴・絶好の食べ歩き日和" },
-        "兵庫": { icon: "⚓", temp: "22°C", desc: "海風が心地よい晴れ" },
-        "奈良": { icon: "🦌", temp: "18°C", desc: "小雨のち晴れ、緑が映える日" },
-        "滋賀": { icon: "⛵", temp: "17°C", desc: "琵琶湖周辺は爽やかな強風" },
-        "和歌山": { icon: "🍊", temp: "25°C", desc: "南風が暖かい夏日" }
-    };
+    try {
+        const url = new URL("/api/travel/weather", window.location.origin);
+        url.searchParams.append("latitude", next.lat || 34.6937);
+        url.searchParams.append("longitude", next.lon || 135.5023);
 
-    const mockInfo = weatherData[next.prefecture] || { icon: "🌤️", temp: "20°C", desc: "快適な旅行日和" };
-    if (weatherIcon) weatherIcon.textContent = mockInfo.icon;
-    if (weatherTemp) weatherTemp.textContent = mockInfo.temp;
-    if (weatherDesc) weatherDesc.textContent = mockInfo.desc;
-    if (weatherLocation) weatherLocation.textContent = `📍 ${next.destination} (${next.prefecture})の天気`;
+        const response = await fetch(url.toString());
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || `HTTP ${response.status}`);
+        }
+
+        const tempVal = Math.round(data.main.temp) + "°C";
+        const descVal = data.weather[0].description;
+        const emoji = getWeatherIconEmoji(data.weather[0].icon);
+
+        if (weatherIcon) weatherIcon.textContent = emoji;
+        if (weatherTemp) weatherTemp.textContent = tempVal;
+        if (weatherDesc) weatherDesc.textContent = descVal;
+        if (weatherLocation) weatherLocation.textContent = `📍 ${next.destination} (${next.prefecture})の天気`;
+
+    } catch (err) {
+        console.warn("本物の天気データの取得に失敗したため、モックデータに切り替えます:", err);
+        
+        // 都府県に基づくダミー天候 (フォールバック)
+        const weatherData = {
+            "京都": { icon: "🌸", temp: "19°C", desc: "穏やかな晴れのち薄曇り" },
+            "大阪": { icon: "☀️", temp: "24°C", desc: "快晴・絶好の食べ歩き日和" },
+            "兵庫": { icon: "⚓", temp: "22°C", desc: "海風が心地よい晴れ" },
+            "奈良": { icon: "🦌", temp: "18°C", desc: "小雨のち晴れ、緑が映える日" },
+            "滋賀": { icon: "⛵", temp: "17°C", desc: "琵琶湖周辺は爽やかな強風" },
+            "和歌山": { icon: "🍊", temp: "25°C", desc: "南風が暖かい夏日" }
+        };
+
+        const mockInfo = weatherData[next.prefecture] || { icon: "🌤️", temp: "20°C", desc: "快適な旅行日和" };
+        if (weatherIcon) weatherIcon.textContent = mockInfo.icon;
+        if (weatherTemp) weatherTemp.textContent = mockInfo.temp;
+        if (weatherDesc) weatherDesc.textContent = mockInfo.desc;
+        if (weatherLocation) weatherLocation.textContent = `📍 ${next.destination} (${next.prefecture})の天気`;
+    }
+}
+
+// 天気アイコンコードを絵文字にマッピングするヘルパー関数
+function getWeatherIconEmoji(iconCode) {
+    if (!iconCode) return "🌤️";
+    const map = {
+        "01": "☀️", // clear sky
+        "02": "⛅", // few clouds
+        "03": "☁️", // scattered clouds
+        "04": "☁️", // broken clouds
+        "09": "🌧️", // shower rain
+        "10": "🌦️", // rain
+        "11": "⛈️", // thunderstorm
+        "13": "❄️", // snow
+        "50": "🌫️"  // mist
+    };
+    const prefix = iconCode.substring(0, 2);
+    return map[prefix] || "🌤️";
 }
 
 // ---------------------------
@@ -2956,6 +2998,8 @@ window.selectPlanAndGo = function (item) {
     selectPlanTarget(item, null);
 };
 
+const HOME_PLANS_INITIAL_COUNT = 3;
+
 window.renderHomePlans = function () {
     const plansContainer = document.getElementById("homePlansList");
     const plansSection = document.getElementById("homePlansSection");
@@ -2970,19 +3014,60 @@ window.renderHomePlans = function () {
 
     if (plansSection) plansSection.classList.remove("hidden");
 
-    plans.forEach(plan => {
+    // 現在の展開状態を保持
+    const isExpanded = plansContainer.dataset.expanded === "true";
+    const displayPlans = isExpanded ? plans : plans.slice(0, HOME_PLANS_INITIAL_COUNT);
+
+    displayPlans.forEach(plan => {
         const card = document.createElement("div");
         card.className = "home-plan-item";
-        card.onclick = () => viewItineraryDetails(plan.id);
+
         card.innerHTML = `
-            <div class="home-plan-item-info">
+            <div class="home-plan-item-info" style="cursor:pointer; flex:1; min-width:0;">
                 <span class="home-plan-dest">📅 ${plan.destination} の旅</span>
                 <span class="home-plan-date">出発日: ${plan.date} | ${plan.nights}泊${plan.nights + 1}日 | ${plan.people}名</span>
             </div>
-            <span class="material-icons arrow-icon">chevron_right</span>
+            <button class="home-plan-delete-btn" title="この予定を削除" onclick="deleteHomePlan(event, ${plan.id})">
+                <span class="material-icons">delete_outline</span>
+            </button>
+            <span class="material-icons arrow-icon" style="cursor:pointer;">chevron_right</span>
         `;
+
+        // テキスト部分クリックで詳細表示
+        card.querySelector(".home-plan-item-info").addEventListener("click", () => viewItineraryDetails(plan.id));
+        card.querySelector(".arrow-icon").addEventListener("click", () => viewItineraryDetails(plan.id));
+
         plansContainer.appendChild(card);
     });
+
+    // 3件超えている場合は「もっと見る / 折りたたむ」ボタンを追加
+    if (plans.length > HOME_PLANS_INITIAL_COUNT) {
+        const remaining = plans.length - HOME_PLANS_INITIAL_COUNT;
+        const toggleBtn = document.createElement("button");
+        toggleBtn.className = `home-plans-toggle-btn${isExpanded ? " expanded" : ""}`;
+        toggleBtn.innerHTML = isExpanded
+            ? `<span class="material-icons">expand_less</span> 折りたたむ`
+            : `<span class="material-icons">expand_more</span> あと${remaining}件を見る`;
+
+        toggleBtn.addEventListener("click", () => {
+            plansContainer.dataset.expanded = isExpanded ? "false" : "true";
+            renderHomePlans();
+        });
+        plansContainer.appendChild(toggleBtn);
+    }
+};
+
+window.deleteHomePlan = function (event, planId) {
+    event.stopPropagation();
+    const index = plans.findIndex(p => p.id === planId);
+    if (index === -1) return;
+
+    const planName = plans[index].destination;
+    plans.splice(index, 1);
+    saveToStorage();
+    updateGridCounts();
+    updateCountdown();
+    showToast(`「${planName} の旅」を削除しました。`);
 };
 
 window.handleHomeCta = function () {

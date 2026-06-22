@@ -372,7 +372,6 @@ body {
     height: 70%;
     max-width: 400px;
     max-height: 520px;
-    perspective: 1000px;
 }
 
 .swipe-card {
@@ -398,7 +397,7 @@ body {
 .card-img-container {
     position: relative;
     width: 100%;
-    height: 65%;
+    height: 60%;
     overflow: hidden;
     background-color: #f1f5f9;
 }
@@ -496,8 +495,8 @@ body {
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 35%;
-    padding: 16px 80px 16px 24px;
+    height: 40%;
+    padding: 12px 80px 12px 20px;
     background: var(--card-bg);
     border-top: 1px solid var(--border-color);
     pointer-events: none;
@@ -510,14 +509,14 @@ body {
 .card-info h3 {
     font-size: 1.3rem;
     font-weight: 800;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     color: var(--text-color);
 }
 
 .card-info p {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
-    line-height: 1.5;
+    line-height: 1.4;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -1159,9 +1158,9 @@ body {
 /* VIEW: HOME (ホーム & データ管理)       */
 /* ------------------------------------- */
 #view-home {
-    padding: 30px;
+    padding: 24px 20px;
     overflow-y: auto;
-    gap: 32px;
+    gap: 20px;
     align-items: center;
     width: 100%;
     display: flex;
@@ -1436,6 +1435,7 @@ body {
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     background-color: var(--bg-color);
+    object-fit: cover;
 }
 
 .avatar-opt:hover {
@@ -1818,6 +1818,7 @@ body {
     border-radius: 50%;
     background-color: var(--bg-color);
     border: 1px solid var(--border-color);
+    object-fit: cover;
 }
 
 .shared-author-name {
@@ -2675,7 +2676,7 @@ body {
 /* Empty State Card */
 .home-empty-state {
     width: 100%;
-    max-width: 500px;
+    max-width: 700px;
     margin: 20px auto;
     animation: fadeIn 0.4s ease;
 }
@@ -2720,16 +2721,18 @@ body {
 /* Image-backed Hero Card */
 .home-hero-card {
     width: 100%;
-    max-width: 500px;
-    height: 200px;
-    border-radius: 24px;
+    max-width: 700px;
+    height: 180px;
+    min-height: 180px;
+    flex-shrink: 0;
+    border-radius: 20px;
     position: relative;
     overflow: hidden;
     box-shadow: var(--shadow-premium);
     border: 1px solid var(--border-color);
     display: flex;
     align-items: center;
-    padding: 24px;
+    padding: 24px 28px;
     background-image: url('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&auto=format&fit=crop');
     background-size: cover;
     background-position: center;
@@ -2823,11 +2826,11 @@ body {
 /* Horizontal Spot Thumbnail List */
 .home-section {
     width: 100%;
-    max-width: 500px;
+    max-width: 700px;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    margin-top: 10px;
+    margin-top: 0;
 }
 
 .section-header {
@@ -2933,12 +2936,16 @@ body {
     left: 12px;
     right: 12px;
     color: #ffffff;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 800;
     z-index: 2;
-    white-space: nowrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.2;
+    word-break: break-all;
+    white-space: normal;
 }
 
 .thumbnail-star-btn {
@@ -3020,13 +3027,81 @@ body {
 
 .home-plan-item .arrow-icon {
     color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+/* 旅行予定 削除ボタン */
+.home-plan-delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-extra-muted);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    opacity: 0;
+    pointer-events: none;
+    margin-left: 4px;
+}
+
+.home-plan-item:hover .home-plan-delete-btn {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.home-plan-delete-btn:hover {
+    color: var(--accent-anmari);
+    background: rgba(249, 115, 22, 0.1);
+}
+
+.home-plan-delete-btn .material-icons {
+    font-size: 1.1rem;
+}
+
+/* 旅行予定 もっと見るボタン */
+.home-plans-toggle-btn {
+    width: 100%;
+    background: var(--card-bg);
+    border: 1.5px dashed var(--border-color);
+    border-radius: 14px;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-top: 4px;
+}
+
+.home-plans-toggle-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: rgba(var(--primary-color-rgb), 0.04);
+    transform: translateY(-1px);
+}
+
+.home-plans-toggle-btn .material-icons {
+    font-size: 1.1rem;
+    transition: transform 0.3s ease;
+}
+
+.home-plans-toggle-btn.expanded .material-icons {
+    transform: rotate(180deg);
 }
 
 /* Bottom Chat / Search Bar */
 .home-ai-chat-bar-container {
     width: 100%;
-    max-width: 500px;
-    margin-top: 10px;
+    max-width: 700px;
+    margin-top: 0;
 }
 
 .home-ai-chat-bar {
@@ -3110,7 +3185,8 @@ body {
     background-color: rgba(255,255,255,0.1);
 }
 
-.mypage-avatar-wrapper img {
+.mypage-avatar-wrapper img,
+.profile-avatar-wrapper img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -3243,7 +3319,7 @@ body {
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
-    margin: 8px 0;
+    margin: 4px 0;
 }
 
 .tag-pill {

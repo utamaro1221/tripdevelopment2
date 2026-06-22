@@ -29,12 +29,13 @@ const apiLimiter = rateLimit({
 const dailyStats = {
     date: new Date().toDateString(),
     geminiCount: 0,
-    rakutenCount: 0
+    rakutenCount: 0,
+    weatherCount: 0
 };
 
 /**
  * デイリーリミットのチェックと加算を行う関数
- * @param {string} apiType 'gemini' | 'rakuten'
+ * @param {string} apiType 'gemini' | 'rakuten' | 'weather'
  * @returns {boolean} 上限以下ならtrue、上限を超えていればfalse
  */
 function checkAndIncrementDailyLimit(apiType) {
@@ -45,6 +46,7 @@ function checkAndIncrementDailyLimit(apiType) {
         dailyStats.date = today;
         dailyStats.geminiCount = 0;
         dailyStats.rakutenCount = 0;
+        dailyStats.weatherCount = 0;
     }
 
     if (apiType === 'gemini') {
@@ -61,10 +63,53 @@ function checkAndIncrementDailyLimit(apiType) {
         }
         dailyStats.rakutenCount++;
         console.log(`[Rakuten API] Request accepted. Daily Count: ${dailyStats.rakutenCount}/${limit}`);
+    } else if (apiType === 'weather') {
+        const limit = parseInt(process.env.DAILY_WEATHER_LIMIT) || 300;
+        if (dailyStats.weatherCount >= limit) {
+            return false;
+        }
+        dailyStats.weatherCount++;
+        console.log(`[Weather API] Request accepted. Daily Count: ${dailyStats.weatherCount}/${limit}`);
     }
 
     return true;
 }
+
+// 天気予報API (OpenWeatherMap) 中継エンドポイント
+app.get('/api/travel/weather', apiLimiter, async (req, res) => {
+    const { latitude, longitude } = req.query;
+
+    if (!latitude || !longitude) {
+        return res.status(400).json({ error: '経緯度情報 (latitude, longitude) が必要です。' });
+    }
+
+    const apiKey = process.env.OPENWEATHER_API_KEY;
+    if (!apiKey) {
+        return res.status(500).json({ error: 'サーバー側の天気APIキー (OPENWEATHER_API_KEY) が設定されていません。' });
+    }
+
+    // デイリーリミットチェック
+    if (!checkAndIncrementDailyLimit('weather')) {
+        return res.status(429).json({ error: '天気APIの1日の利用上限に達しました。明日またお試しください。' });
+    }
+
+    try {
+        const url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&lang=ja&appid=${apiKey}`;
+
+        console.log(`[Weather API] Fetching weather for lat:${latitude}, lon:${longitude}`);
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`Weather API returned status ${response.status}`);
+        }
+
+        const data = await response.json();
+        res.json(data);
+    } catch (err) {
+        console.error('[Weather Proxy Error]', err);
+        res.status(500).json({ error: '天気情報の取得に失敗しました。' });
+    }
+});
 
 // 楽天トラベルAPI中継エンドポイント
 app.get('/api/travel/hotels', apiLimiter, async (req, res) => {
