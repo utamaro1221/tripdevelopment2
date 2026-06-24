@@ -1,9 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { 
-    getAuth, 
-    signInWithEmailAndPassword, 
-    createUserWithEmailAndPassword, 
-    signOut, 
+import {
+    getAuth,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    signOut,
     onAuthStateChanged,
     GoogleAuthProvider,
     signInWithPopup,
@@ -12,18 +12,55 @@ import {
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDeC3R7NLajt8zesqmQalgoeYSdtmicOPk",
-  authDomain: "tripdevelopment-d109d.firebaseapp.com",
-  projectId: "tripdevelopment-d109d",
-  storageBucket: "tripdevelopment-d109d.firebasestorage.app",
-  messagingSenderId: "15713811869",
-  appId: "1:15713811869:web:0928db27dfa1d906e3c374",
-  measurementId: "G-ZLZET7PJMS"
+    apiKey: "AIzaSyDeC3R7NLajt8zesqmQalgoeYSdtmicOPk",
+    authDomain: "tripdevelopment-d109d.firebaseapp.com",
+    projectId: "tripdevelopment-d109d",
+    storageBucket: "tripdevelopment-d109d.firebasestorage.app",
+    messagingSenderId: "15713811869",
+    appId: "1:15713811869:web:0928db27dfa1d906e3c374",
+    measurementId: "G-ZLZET7PJMS"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+// ==========================================
+// 🌟 本物の Google Places API を呼び出す関数
+// ==========================================
+window.fetchPlacePhoto = async function (placeName) {
+    if (!placeName) return "https://placehold.co/600x400?text=No+Image";
+
+    // すでに直接URLが指定されている場合はそのまま返す
+    if (typeof placeName === 'string' && placeName.startsWith("http")) {
+        return placeName;
+    }
+
+    try {
+        // あなたが構築した server.js の Places API エンドポイントを呼び出す
+        const url = new URL("http://localhost:3000/api/travel/places");
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ textQuery: placeName })
+        });
+
+        if (!response.ok) throw new Error(`Places API Error: ${response.status}`);
+        const data = await response.json();
+
+        // 写真データが見つかった場合、server.js 経由で取得するURLを生成
+        if (data.places && data.places.length > 0 && data.places[0].photos && data.places[0].photos.length > 0) {
+            const photoName = data.places[0].photos[0].name;
+            return `http://localhost:3000/api/travel/photo?name=${encodeURIComponent(photoName)}&maxWidthPx=800`;
+        }
+
+    } catch (error) {
+        console.error(`[API通信エラー] ${placeName} の写真取得に失敗:`, error);
+    }
+
+    // エラー時や写真がなかった場合のプレースホルダー
+    return `https://placehold.co/800x600/f1f5f9/64748b?text=${encodeURIComponent(placeName)}`;
+};
 
 // ==========================================
 // 1. 観光スポットデータ定義 (近畿地方限定)
@@ -565,7 +602,7 @@ let isAuthStateResolved = false;
 
 window.tryEnteringApp = function () {
     if (!isSplashAnimationFinished || !isAuthStateResolved) return;
-    
+
     if (auth.currentUser) {
         const splash = document.getElementById("launch-screen");
         if (splash) {
@@ -608,7 +645,7 @@ function updateAuthUI(user) {
     const settingsAuthBtn = document.getElementById("settingsAuthBtn");
     const shareLoggedOut = document.getElementById("shareLoggedOutState");
     const shareLoggedIn = document.getElementById("shareLoggedInState");
-    
+
     const nameEl = document.getElementById("userName");
     const statusEl = document.getElementById("userStatus");
     const myPageName = document.getElementById("myPageName");
@@ -622,7 +659,7 @@ function updateAuthUI(user) {
             if (statusEl) statusEl.textContent = "ゲストモードで利用中";
             if (myPageName) myPageName.textContent = userName;
             if (myPageStatus) myPageStatus.textContent = "ゲストモードで利用中";
-            
+
             if (settingsUserStatus) {
                 settingsUserStatus.innerHTML = `
                     <div class="auth-status-card logged-out">
@@ -653,7 +690,7 @@ function updateAuthUI(user) {
             if (statusEl) statusEl.textContent = "アカウント同期中 (連携済み)";
             if (myPageName) myPageName.textContent = userName;
             if (myPageStatus) myPageStatus.textContent = "アカウント同期中 (連携済み)";
-            
+
             if (settingsUserStatus) {
                 settingsUserStatus.innerHTML = `
                     <div class="auth-status-card logged-in">
@@ -685,7 +722,7 @@ function updateAuthUI(user) {
         if (statusEl) statusEl.textContent = "近畿エリア探索中";
         if (myPageName) myPageName.textContent = userName;
         if (myPageStatus) myPageStatus.textContent = "近畿エリア探索中";
-        
+
         if (settingsUserStatus) {
             settingsUserStatus.innerHTML = `
                 <div class="auth-status-card logged-out">
@@ -765,7 +802,7 @@ function initApp() {
 
     // チャート表示の更新
     updateChart();
-    
+
     // 共有リストの更新
     renderShareView();
 }
@@ -932,7 +969,7 @@ window.startPersonalizedSearch = function () {
     if (genreText) genreText.textContent = topGenreLabel;
 
     showToast(`💡 ${topGenreLabel}特化レコメンドモードを開始しました！`);
-    
+
     // スワイプ画面に切り替える
     switchView("swipe");
 };
@@ -941,7 +978,7 @@ window.disableRecommendationMode = function () {
     recommendationMode = false;
     const banner = document.getElementById("personalizedRecommendationBanner");
     if (banner) banner.classList.add("hidden");
-    
+
     showToast("標準検索モードに戻しました。");
     applyFilters();
 };
@@ -1004,7 +1041,7 @@ function prefetchNextImages() {
 
 function calculateCompatibilityScore(place) {
     let score = 0;
-    
+
     // 1. 同行者
     if (place.companion) {
         let maxCompPref = 0;
@@ -1015,22 +1052,22 @@ function calculateCompatibilityScore(place) {
         });
         score += maxCompPref;
     }
-    
+
     // 2. 予算
     if (place.budget && detailedPrefs.budget[place.budget]) {
         score += detailedPrefs.budget[place.budget];
     }
-    
+
     // 3. 移動手段
     if (place.transport && detailedPrefs.transport[place.transport]) {
         score += detailedPrefs.transport[place.transport];
     }
-    
+
     // 4. 目的
     if (place.purpose && detailedPrefs.purpose[place.purpose]) {
         score += detailedPrefs.purpose[place.purpose];
     }
-    
+
     let avgScore = Math.round(score / 4);
     return Math.max(30, Math.min(99, avgScore));
 }
@@ -1075,6 +1112,18 @@ function createCardElement(data, isTopCard) {
         prefetchNextImages();
     }
 
+    // 👇👇👇 ここから追加 👇👇👇
+    fetchPlacePhoto(data.name, data.lat, data.lon).then(url => {
+        if (url) {
+            const img = card.querySelector('.card-img');
+            if (img) img.src = url;
+            // kinkiPlacesのデータも更新しておき、次回以降表示を早くする
+            const place = kinkiPlaces.find(p => p.id === data.id);
+            if (place) place.img = url;
+        }
+    });
+    // 👆👆👆 ここまで追加 👆👆👆
+
     return card;
 }
 
@@ -1094,7 +1143,7 @@ window.toggleFavorite = function (starBtn, event, id) {
         starBtn.classList.add("starred");
         if (starIcon) starIcon.textContent = "star";
         showToast("お気に入りに追加しました！⭐");
-        
+
         // Ensure favorited item is also in Saved Spots (likes)
         if (!likes.some(l => l.id === id)) {
             likes.push(item);
@@ -1334,7 +1383,7 @@ async function safeFetchJson(url, options = {}) {
                 if (textData && textData.length < 200) {
                     errMsg = textData;
                 }
-            } catch (textErr) {}
+            } catch (textErr) { }
         }
         throw new Error(errMsg);
     }
@@ -1356,7 +1405,7 @@ async function fetchRakutenHotels(lat, lon) {
 
     try {
         const data = await safeFetchJson(url.toString());
-        
+
         if (data.hotels && data.hotels.length > 0) {
             const hotelsList = data.hotels.map(h => {
                 const basicInfo = h.hotel[0].hotelBasicInfo;
@@ -1430,7 +1479,7 @@ ${excludeStr}
 
         const jsonText = resData.candidates[0].content.parts[0].text;
         const newPlaces = JSON.parse(jsonText);
-        
+
         const baseId = Date.now();
         return newPlaces.map((place, idx) => {
             return {
@@ -1457,11 +1506,11 @@ ${excludeStr}
 }
 
 // AIでの観光地追加ボタンのアクション
-window.generatePlacesWithAI = async function() {
+window.generatePlacesWithAI = async function () {
     const stack = document.getElementById("card-stack");
     const container = document.getElementById("swipeActionsContainer");
     if (container) container.classList.add("hidden");
-    
+
     stack.innerHTML = `
         <div class="empty-stack-view" style="animation: fadeIn 0.3s ease;">
             <div class="boat-spinner-container">
@@ -1501,13 +1550,13 @@ window.generatePlacesWithAI = async function() {
     try {
         const existingNames = kinkiPlaces.map(p => p.name);
         const newPlaces = await fetchGeminiPlaces(existingNames);
-        
+
         clearInterval(progressInterval);
         if (fill) fill.style.width = "100%";
         if (train) train.style.left = "100%";
         if (percent) percent.textContent = "100%";
         await new Promise(resolve => setTimeout(resolve, 300));
-        
+
         if (newPlaces && newPlaces.length > 0) {
             kinkiPlaces.unshift(...newPlaces);
             showToast("✨ AIが新しい観光スポットを " + newPlaces.length + " 件追加しました！");
@@ -1758,7 +1807,7 @@ window.generateTravelPlan = async function (event) {
 
         // 提案表示
         document.getElementById("aiPlanText").textContent = itinerary;
-        
+
         // アクセス情報表示
         const transitText = transitAccessRoutes[activePlanTarget.name] || "公共交通機関の情報が見つかりませんでした。詳細なルートはナビアプリ等でご確認ください。";
         const transitEl = document.getElementById("aiPlanTransitText");
@@ -1860,7 +1909,7 @@ function updateGridCounts() {
     const savedEl = document.getElementById("savedSpotsCount");
     const anmariEl = document.getElementById("anmariCount");
     const planEl = document.getElementById("homePlansCount");
-    
+
     if (savedEl) savedEl.textContent = likes.length;
     if (anmariEl) anmariEl.textContent = anmaris.length;
     if (planEl) planEl.textContent = plans.length;
@@ -1869,14 +1918,14 @@ function updateGridCounts() {
 function updateCountdown() {
     const el = document.getElementById("heroCountdownDays");
     const dest = document.getElementById("heroCountdownDest");
-    
+
     const homeEmptyState = document.getElementById("home-empty-state");
     const homeHeroCard = document.getElementById("home-hero-card");
 
     if (plans.length === 0) {
         if (homeEmptyState) homeEmptyState.classList.remove("hidden");
         if (homeHeroCard) homeHeroCard.classList.add("hidden");
-        
+
         const homeCtaBtn = document.getElementById("homeCtaBtn");
         if (homeCtaBtn) {
             if (likes.length > 0) {
@@ -1885,7 +1934,7 @@ function updateCountdown() {
                 homeCtaBtn.textContent = "AIに次の旅行を相談する";
             }
         }
-        
+
         renderSavedSpotsHome();
         renderHomePlans();
         return;
@@ -1933,7 +1982,7 @@ function updateCountdown() {
         homeHeroCard.style.backgroundSize = "cover";
         homeHeroCard.style.backgroundPosition = "center";
     }
-    
+
     renderSavedSpotsHome();
     renderHomePlans();
 }
@@ -1999,7 +2048,7 @@ async function simulateWeather() {
 
     } catch (err) {
         console.warn("本物の天気データの取得に失敗したため、モックデータに切り替えます:", err);
-        
+
         // 都府県に基づくダミー天候 (フォールバック)
         const weatherData = {
             "京都": { icon: "🌸", temp: "19°C", desc: "穏やかな晴れのち薄曇り" },
@@ -2743,17 +2792,17 @@ window.checkStandCompatibility = function (id, targetStats) {
     if (!targetStats) {
         targetStats = [60, 50, 70, 60, 50, 40];
     }
-    
+
     let sumDiff = 0;
     for (let i = 0; i < 6; i++) {
         sumDiff += Math.abs(standStats[i] - targetStats[i]);
     }
     const score = Math.max(30, Math.min(100, Math.round(100 - (sumDiff / 6))));
-    
+
     let description = "ユニーク！新しい発見がある旅の組み合わせです。";
     let icon = "explore";
     let colorClass = "compat-unique";
-    
+
     if (score >= 85) {
         description = "相性抜群！旅行の価値観が完全に一致しています。";
         icon = "verified";
@@ -2862,7 +2911,7 @@ window.useSharedPlan = function (sharedPlanId) {
     saveToStorage();
 
     showToast(`📅 「${sp.destination}」のプランをあなたの予定にコピーしました！`);
-    
+
     // ホーム画面へ遷移して追加された予定を表示
     switchView("home");
 };
@@ -2991,7 +3040,7 @@ window.openChatDrawer = function () {
     }
 
     // APIキーは中継サーバー側で管理されます
-    
+
     const drawer = document.getElementById("chat-drawer");
     if (drawer) {
         drawer.classList.remove("hidden");
@@ -3011,21 +3060,21 @@ window.handleSendChatMessage = async function (event) {
     if (!input) return;
     const messageText = input.value.trim();
     if (!messageText) return;
-    
+
     // 入力欄をクリア
     input.value = "";
-    
+
     // ユーザー発言を吹き出し追加
     appendChatBubble("user", messageText);
-    
+
     // AI入力中インジケータ表示
     const typingId = appendTypingIndicator();
-    
+
     try {
         // レーダーチャート値のフォーマット
         const labels = ["温泉・癒やし", "自然・景観", "歴史・文化", "グルメ", "アクティビティ", "都市・ショッピング"];
         const prefStatsStr = standStats.map((val, idx) => `${labels[idx]}: ${val}%`).join(", ");
-        
+
         const standName = document.getElementById("standName")?.textContent || "トラベラー・スター";
         const standRank = document.getElementById("standRank")?.textContent || "";
         const systemPrompt = `ユーザー名: ${userName}
@@ -3059,15 +3108,15 @@ window.handleSendChatMessage = async function (event) {
                 ]
             })
         });
-        
+
         const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || "申し訳ありません、お答えを生成できませんでした。";
-        
+
         // 入力中を消す
         removeTypingIndicator(typingId);
-        
+
         // AIの返答を吹き出し追加
         appendChatBubble("ai", replyText);
-        
+
     } catch (error) {
         console.error("Gemini API Error:", error);
         removeTypingIndicator(typingId);
@@ -3084,7 +3133,7 @@ window.handleSendChatMessage = async function (event) {
 function appendChatBubble(sender, text) {
     const body = document.getElementById("chatDrawerBody");
     if (!body) return;
-    
+
     const bubble = document.createElement("div");
     bubble.className = `chat-bubble chat-bubble-${sender}`;
     bubble.innerHTML = `
@@ -3098,7 +3147,7 @@ function appendChatBubble(sender, text) {
 function appendTypingIndicator() {
     const body = document.getElementById("chatDrawerBody");
     if (!body) return null;
-    
+
     const typingId = "typing-" + Date.now();
     const bubble = document.createElement("div");
     bubble.id = typingId;
@@ -3156,12 +3205,47 @@ window.renderSavedSpotsHome = function () {
         return;
     }
 
+    // likes.forEach をしっかり関数の中に収める
     likes.forEach(item => {
         const isStarred = favorites.some(f => f.id === item.id);
         const card = document.createElement("div");
         card.className = "saved-spot-thumbnail-card";
+
+        // 👇 【追加】data-id を付与する
+        card.setAttribute("data-id", item.id);
+
         card.onclick = () => selectPlanAndGo(item);
         card.innerHTML = `
+                <img src="${item.img}" alt="${item.name}">
+                <div class="thumbnail-overlay"></div>
+                <span class="thumbnail-pref">📍 ${item.prefecture}</span>
+                <h4 class="thumbnail-name">${item.name}</h4>
+                <button class="thumbnail-star-btn ${isStarred ? 'starred' : ''}" onclick="toggleFavoriteFromHome(this, event, ${item.id})">
+                    <span class="material-icons star-icon">${isStarred ? 'star' : 'star_border'}</span>
+                </button>
+            `;
+        scrollContainer.appendChild(card);
+
+        // 👇 【追加】非同期で写真を差し替え
+        fetchPlacePhoto(item.name, item.lat, item.lon).then(url => {
+            if (url) {
+                const img = scrollContainer.querySelector(`.saved-spot-thumbnail-card[data-id="${item.id}"] img`);
+                if (img) img.src = url;
+            }
+        });
+    });
+}; // ← ★本当の関数の終わりはココ！
+
+likes.forEach(item => {
+    const isStarred = favorites.some(f => f.id === item.id);
+    const card = document.createElement("div");
+    card.className = "saved-spot-thumbnail-card";
+
+    // 👇 【追加】data-id を付与する
+    card.setAttribute("data-id", item.id);
+
+    card.onclick = () => selectPlanAndGo(item);
+    card.innerHTML = `
             <img src="${item.img}" alt="${item.name}">
             <div class="thumbnail-overlay"></div>
             <span class="thumbnail-pref">📍 ${item.prefecture}</span>
@@ -3170,10 +3254,16 @@ window.renderSavedSpotsHome = function () {
                 <span class="material-icons star-icon">${isStarred ? 'star' : 'star_border'}</span>
             </button>
         `;
-        scrollContainer.appendChild(card);
-    });
-};
+    scrollContainer.appendChild(card);
 
+    // 👇 【追加】非同期で写真を差し替え
+    fetchPlacePhoto(item.name, item.lat, item.lon).then(url => {
+        if (url) {
+            const img = scrollContainer.querySelector(`.saved-spot-thumbnail-card[data-id="${item.id}"] img`);
+            if (img) img.src = url;
+        }
+    });
+});
 window.toggleFavoriteFromHome = function (starBtn, event, id) {
     event.stopPropagation();
     const item = kinkiPlaces.find(p => p.id === id);
@@ -3190,7 +3280,7 @@ window.toggleFavoriteFromHome = function (starBtn, event, id) {
         starBtn.classList.add("starred");
         if (starIcon) starIcon.textContent = "star";
         showToast("お気に入りに追加しました！⭐");
-        
+
         // Ensure starred item is also in Saved Spots (likes)
         if (!likes.some(l => l.id === id)) {
             likes.push(item);
@@ -3299,12 +3389,12 @@ function generateProactiveItineraryText(title, spots, companion, transport, budg
     const dates = new Date();
     dates.setDate(dates.getDate() + 7); // デフォルトで来週
     const dateStr = dates.toISOString().split('T')[0];
-    
+
     let text = `【AI先回り提案】${title}\n`;
     text += `📅 日程: ${dateStr} 〜 | 👥 人数: 2名様 | 💰 予算目安: ${budget}\n`;
     text += `🚗 移動手段: ${transport}\n\n`;
     text += `--- 🗺️ 行程スケジュール提案 ---\n`;
-    
+
     if (spots.length === 1) {
         const s = spots[0];
         text += `■ 1日目 (日帰り):\n`;
@@ -3338,7 +3428,7 @@ window.renderProactiveSuggestions = function () {
     let candidates = [];
     if (likes.length > 0) {
         let unusedLikes = likes.filter(l => !dismissedSuggestions.includes(l.name));
-        
+
         if (unusedLikes.length > 0) {
             // 府県でグルーピング
             let byPref = {};
@@ -3355,10 +3445,10 @@ window.renderProactiveSuggestions = function () {
                         spots: [spots[0], spots[1]],
                         prefecture: pref,
                         season: spots[0].season,
-                        companion: detailedPrefs.companion ? Object.entries(detailedPrefs.companion).sort((a,b)=>b[1]-a[1])[0][0] : "カップル",
-                        budget: detailedPrefs.budget ? Object.entries(detailedPrefs.budget).sort((a,b)=>b[1]-a[1])[0][0] : "スタンダード",
-                        transport: detailedPrefs.transport ? Object.entries(detailedPrefs.transport).sort((a,b)=>b[1]-a[1])[0][0] : "公共交通機関",
-                        purpose: detailedPrefs.purpose ? Object.entries(detailedPrefs.purpose).sort((a,b)=>b[1]-a[1])[0][0] : "リフレッシュ"
+                        companion: detailedPrefs.companion ? Object.entries(detailedPrefs.companion).sort((a, b) => b[1] - a[1])[0][0] : "カップル",
+                        budget: detailedPrefs.budget ? Object.entries(detailedPrefs.budget).sort((a, b) => b[1] - a[1])[0][0] : "スタンダード",
+                        transport: detailedPrefs.transport ? Object.entries(detailedPrefs.transport).sort((a, b) => b[1] - a[1])[0][0] : "公共交通機関",
+                        purpose: detailedPrefs.purpose ? Object.entries(detailedPrefs.purpose).sort((a, b) => b[1] - a[1])[0][0] : "リフレッシュ"
                     });
                 } else if (spots.length === 1) {
                     // 同府県の他スポットを探す
@@ -3369,10 +3459,10 @@ window.renderProactiveSuggestions = function () {
                             spots: [spots[0], otherSpot],
                             prefecture: pref,
                             season: spots[0].season,
-                            companion: detailedPrefs.companion ? Object.entries(detailedPrefs.companion).sort((a,b)=>b[1]-a[1])[0][0] : "カップル",
-                            budget: detailedPrefs.budget ? Object.entries(detailedPrefs.budget).sort((a,b)=>b[1]-a[1])[0][0] : "スタンダード",
-                            transport: detailedPrefs.transport ? Object.entries(detailedPrefs.transport).sort((a,b)=>b[1]-a[1])[0][0] : "公共交通機関",
-                            purpose: detailedPrefs.purpose ? Object.entries(detailedPrefs.purpose).sort((a,b)=>b[1]-a[1])[0][0] : "リフレッシュ"
+                            companion: detailedPrefs.companion ? Object.entries(detailedPrefs.companion).sort((a, b) => b[1] - a[1])[0][0] : "カップル",
+                            budget: detailedPrefs.budget ? Object.entries(detailedPrefs.budget).sort((a, b) => b[1] - a[1])[0][0] : "スタンダード",
+                            transport: detailedPrefs.transport ? Object.entries(detailedPrefs.transport).sort((a, b) => b[1] - a[1])[0][0] : "公共交通機関",
+                            purpose: detailedPrefs.purpose ? Object.entries(detailedPrefs.purpose).sort((a, b) => b[1] - a[1])[0][0] : "リフレッシュ"
                         });
                     } else {
                         // 単一スポットでの提案
@@ -3381,10 +3471,10 @@ window.renderProactiveSuggestions = function () {
                             spots: [spots[0]],
                             prefecture: pref,
                             season: spots[0].season,
-                            companion: detailedPrefs.companion ? Object.entries(detailedPrefs.companion).sort((a,b)=>b[1]-a[1])[0][0] : "一人旅",
-                            budget: detailedPrefs.budget ? Object.entries(detailedPrefs.budget).sort((a,b)=>b[1]-a[1])[0][0] : "スタンダード",
-                            transport: detailedPrefs.transport ? Object.entries(detailedPrefs.transport).sort((a,b)=>b[1]-a[1])[0][0] : "公共交通機関",
-                            purpose: detailedPrefs.purpose ? Object.entries(detailedPrefs.purpose).sort((a,b)=>b[1]-a[1])[0][0] : "リフレッシュ"
+                            companion: detailedPrefs.companion ? Object.entries(detailedPrefs.companion).sort((a, b) => b[1] - a[1])[0][0] : "一人旅",
+                            budget: detailedPrefs.budget ? Object.entries(detailedPrefs.budget).sort((a, b) => b[1] - a[1])[0][0] : "スタンダード",
+                            transport: detailedPrefs.transport ? Object.entries(detailedPrefs.transport).sort((a, b) => b[1] - a[1])[0][0] : "公共交通機関",
+                            purpose: detailedPrefs.purpose ? Object.entries(detailedPrefs.purpose).sort((a, b) => b[1] - a[1])[0][0] : "リフレッシュ"
                         });
                     }
                 }
@@ -3416,7 +3506,7 @@ window.renderProactiveSuggestions = function () {
                 purpose: "リフレッシュ"
             }
         ];
-        
+
         defaultPairs.forEach(p => {
             const keyName = p.spots.map(s => s.name).join("-");
             if (!dismissedSuggestions.includes(keyName) && candidates.length < 2) {
@@ -3513,7 +3603,7 @@ window.adoptProactiveSuggestion = function (sugId) {
     if (!sug) return;
 
     const itineraryText = generateProactiveItineraryText(sug.title, sug.spots, sug.companion, sug.transport, sug.budget);
-    
+
     const dates = new Date();
     dates.setDate(dates.getDate() + 7);
     const dateStr = dates.toISOString().split('T')[0];
@@ -3537,7 +3627,7 @@ window.adoptProactiveSuggestion = function (sugId) {
     saveToStorage();
 
     showToast(`📅 プラン「${sug.title}」を予定に追加しました！`);
-    
+
     updateCountdown();
     updateGridCounts();
     calculateStandStats();
@@ -3571,11 +3661,11 @@ window.editProactiveSuggestion = function (sugId) {
     const dates = new Date();
     dates.setDate(dates.getDate() + 7);
     const dateStr = dates.toISOString().split('T')[0];
-    
+
     document.getElementById("planDate").value = dateStr;
     document.getElementById("planNights").value = "1";
     document.getElementById("planPeople").value = "2";
-    
+
     const budgetVal = sug.budget === "低予算" ? "30000" : sug.budget === "ラグジュアリー" ? "100000" : "50000";
     document.getElementById("planBudget").value = budgetVal;
 
@@ -3587,7 +3677,7 @@ window.editProactiveSuggestion = function (sugId) {
     });
     const firstPill = document.querySelector(`#priorityPills .priority-pill[data-val="自然・癒やし"]`);
     if (firstPill) firstPill.classList.add("active");
-    
+
     currentPriority = ["自然・癒やし"];
 
     showToast("✏️ 提案ルートの編集設定をプリセットしました。");

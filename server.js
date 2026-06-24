@@ -19,7 +19,7 @@ app.use(express.static(__dirname));
 // 1分間に最大30リクエストまで
 const apiLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1分
-    max: 30,
+    max: 3000,
     message: { error: 'リクエストが多すぎます。1分後にやり直してください。' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -195,7 +195,77 @@ app.post('/api/travel/generate', apiLimiter, async (req, res) => {
         res.status(500).json({ error: 'Gemini APIでの生成処理に失敗しました。' });
     }
 });
+// -------------------------------------------------------------------
+// 【追加】このブロックを 188行目付近 (app.listen の直前) に貼り付けてください
+// -------------------------------------------------------------------
 
+// Google Places API (New) 中継エンドポイント
+// 1. スポット検索 (場所の特定と写真の参照名取得)
+app.post('/api/travel/places', apiLimiter, async (req, res) => {
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    if (!apiKey) {
+        return res.status(500).json({ error: 'サーバー側の Google Places API キー (GOOGLE_PLACES_API_KEY) が設定されていません。' });
+    }
+
+    try {
+        const url = 'https://places.googleapis.com/v1/places:searchText';
+        const fieldMask = req.headers['x-goog-fieldmask'] || 'places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.nationalPhoneNumber,places.photos';
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': apiKey,
+                'X-Goog-FieldMask': fieldMask
+            },
+            body: JSON.stringify(req.body)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error('[Places API Error]', data);
+            return res.status(response.status).json(data);
+        }
+
+        res.json(data);
+    } catch (err) {
+        console.error('[Places Proxy Error]', err);
+        res.status(500).json({ error: 'スポット情報の取得に失敗しました。' });
+    }
+});
+
+// 2. 写真データ取得 (バイナリ転送)
+app.get('/api/travel/photo', apiLimiter, async (req, res) => {
+    const { name, maxWidthPx } = req.query;
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+
+    if (!name) return res.status(400).send('パラメータ "name" が必要です。');
+    if (!apiKey) return res.status(500).send('APIキーが設定されていません。');
+
+    try {
+        const url = `https://places.googleapis.com/v1/${name}/media?maxWidthPx=${maxWidthPx || 800}&key=${apiKey}`;
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`Photo API Error: ${response.status}`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (contentType) {
+            res.setHeader('Content-Type', contentType);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        res.send(buffer);
+
+    } catch (err) {
+        console.error('[Photo Proxy Error]', err);
+        res.status(500).send('写真の取得に失敗しました。');
+    }
+});
 // サーバー起動
 app.listen(PORT, () => {
     console.log(`==================================================`);
