@@ -20,6 +20,36 @@ const firebaseConfig = {
     appId: "1:15713811869:web:0928db27dfa1d906e3c374",
     measurementId: "G-ZLZET7PJMS"
 };
+// ==========================================
+// 🌟 429エラー対策: 画像の遅延読み込み (Lazy Loading) オブザーバー
+// ==========================================
+const imageObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+        // カードが画面内に入ったら
+        if (entry.isIntersecting) {
+            const card = entry.target;
+            const placeName = card.dataset.placeName;
+            const imgEl = card.querySelector('img');
+
+            // まだプレースホルダー画像の場合のみAPIを叩く
+            if (placeName && imgEl && imgEl.src.includes('unsplash.com')) {
+                fetchPlacePhoto(placeName).then(url => {
+                    if (url) {
+                        imgEl.src = url;
+                        // 取得済みの場合はデータも更新して次回以降リクエストしないようにする
+                        const place = kinkiPlaces.find(p => p.name === placeName);
+                        if (place) place.img = url;
+                    }
+                });
+            }
+            // 一度処理したら監視を解除
+            observer.unobserve(card);
+        }
+    });
+}, {
+    rootMargin: '100px 0px', // 画面に入る100px手前で読み込み開始
+    threshold: 0.1
+});
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -1112,17 +1142,8 @@ function createCardElement(data, isTopCard) {
         prefetchNextImages();
     }
 
-    // 👇👇👇 ここから追加 👇👇👇
-    fetchPlacePhoto(data.name, data.lat, data.lon).then(url => {
-        if (url) {
-            const img = card.querySelector('.card-img');
-            if (img) img.src = url;
-            // kinkiPlacesのデータも更新しておき、次回以降表示を早くする
-            const place = kinkiPlaces.find(p => p.id === data.id);
-            if (place) place.img = url;
-        }
-    });
-    // 👆👆👆 ここまで追加 👆👆👆
+    card.dataset.placeName = data.name;
+    imageObserver.observe(card);
 
     return card;
 }
@@ -3226,44 +3247,12 @@ window.renderSavedSpotsHome = function () {
             `;
         scrollContainer.appendChild(card);
 
-        // 👇 【追加】非同期で写真を差し替え
-        fetchPlacePhoto(item.name, item.lat, item.lon).then(url => {
-            if (url) {
-                const img = scrollContainer.querySelector(`.saved-spot-thumbnail-card[data-id="${item.id}"] img`);
-                if (img) img.src = url;
-            }
-        });
+        scrollContainer.appendChild(card);
+
+        card.dataset.placeName = item.name;
+        imageObserver.observe(card);
     });
-}; // ← ★本当の関数の終わりはココ！
-
-likes.forEach(item => {
-    const isStarred = favorites.some(f => f.id === item.id);
-    const card = document.createElement("div");
-    card.className = "saved-spot-thumbnail-card";
-
-    // 👇 【追加】data-id を付与する
-    card.setAttribute("data-id", item.id);
-
-    card.onclick = () => selectPlanAndGo(item);
-    card.innerHTML = `
-            <img src="${item.img}" alt="${item.name}">
-            <div class="thumbnail-overlay"></div>
-            <span class="thumbnail-pref">📍 ${item.prefecture}</span>
-            <h4 class="thumbnail-name">${item.name}</h4>
-            <button class="thumbnail-star-btn ${isStarred ? 'starred' : ''}" onclick="toggleFavoriteFromHome(this, event, ${item.id})">
-                <span class="material-icons star-icon">${isStarred ? 'star' : 'star_border'}</span>
-            </button>
-        `;
-    scrollContainer.appendChild(card);
-
-    // 👇 【追加】非同期で写真を差し替え
-    fetchPlacePhoto(item.name, item.lat, item.lon).then(url => {
-        if (url) {
-            const img = scrollContainer.querySelector(`.saved-spot-thumbnail-card[data-id="${item.id}"] img`);
-            if (img) img.src = url;
-        }
-    });
-});
+};
 window.toggleFavoriteFromHome = function (starBtn, event, id) {
     event.stopPropagation();
     const item = kinkiPlaces.find(p => p.id === id);
