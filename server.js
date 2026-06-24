@@ -40,7 +40,7 @@ const dailyStats = {
  */
 function checkAndIncrementDailyLimit(apiType) {
     const today = new Date().toDateString();
-    
+
     // 日付が変わっていたらカウントをリセット
     if (dailyStats.date !== today) {
         dailyStats.date = today;
@@ -98,7 +98,7 @@ app.get('/api/travel/weather', apiLimiter, async (req, res) => {
 
         console.log(`[Weather API] Fetching weather for lat:${latitude}, lon:${longitude}`);
         const response = await fetch(url);
-        
+
         if (!response.ok) {
             throw new Error(`Weather API returned status ${response.status}`);
         }
@@ -131,26 +131,30 @@ app.get('/api/travel/hotels', apiLimiter, async (req, res) => {
 
     try {
         const url = new URL('https://app.rakuten.co.jp/services/api/Travel/SimpleHotelSearch/20170426');
+
+        // 楽天が要求する必須パラメータのみに厳選
         url.searchParams.append('format', 'json');
-        url.searchParams.append('applicationId', appId);
+        url.searchParams.append('applicationId', '956f257a-dd66-45cc-821a-e03c8d741e97');
         url.searchParams.append('latitude', latitude);
         url.searchParams.append('longitude', longitude);
         url.searchParams.append('searchRadius', '3');
         url.searchParams.append('datumType', '1');
         url.searchParams.append('hits', '5');
 
-        console.log(`[Rakuten API] Fetching hotels for lat:${latitude}, lon:${longitude}`);
+        console.log('通信先URL:', url.toString());
+
         const response = await fetch(url.toString());
-        
+        const data = await response.json();
+
         if (!response.ok) {
-            throw new Error(`Rakuten API returned status ${response.status}`);
+            console.error('楽天APIエラー:', data);
+            return res.status(response.status).json(data);
         }
 
-        const data = await response.json();
-        res.json(data);
+        return res.json(data);
     } catch (err) {
-        console.error('[Rakuten Proxy Error]', err);
-        res.status(500).json({ error: '楽天トラベルAPIからの情報取得に失敗しました。' });
+        console.error('サーバーエラー:', err);
+        return res.status(500).json({ error: '通信に失敗しました' });
     }
 });
 
@@ -168,7 +172,7 @@ app.post('/api/travel/generate', apiLimiter, async (req, res) => {
 
     try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-        
+
         console.log('[Gemini API] Requesting content generation...');
         const response = await fetch(url, {
             method: 'POST',
