@@ -10,6 +10,32 @@ import {
     signInAnonymously
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
+import {
+    open3DRouteSimulation,
+    close3DRouteSimulation,
+    start3DAnimation,
+    pause3DAnimation,
+    reset3DAnimation,
+    simUpdateHUD,
+    loadGoogleMaps,
+    fetchRoutesData,
+    fetchPlaceDetails,
+    generateFallbackLatLngPath,
+    getPathPointAndHeading
+} from "./simulation3d.js";
+
+window.open3DRouteSimulation = open3DRouteSimulation;
+window.close3DRouteSimulation = close3DRouteSimulation;
+window.start3DAnimation = start3DAnimation;
+window.pause3DAnimation = pause3DAnimation;
+window.reset3DAnimation = reset3DAnimation;
+window.simUpdateHUD = simUpdateHUD;
+window.loadGoogleMaps = loadGoogleMaps;
+window.fetchRoutesData = fetchRoutesData;
+window.fetchPlaceDetails = fetchPlaceDetails;
+window.generateFallbackLatLngPath = generateFallbackLatLngPath;
+window.getPathPointAndHeading = getPathPointAndHeading;
+
 // Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyDeC3R7NLajt8zesqmQalgoeYSdtmicOPk",
@@ -1853,8 +1879,9 @@ window.generateTravelPlan = async function (event) {
         updateCountdown();
         updateGridCounts();
 
-        // 予定を入れたことによるスタンド能力の精密動作、持続力パラメータ更新
         calculateStandStats();
+
+        bind3DSimButton(planObj);
 
     } catch (error) {
         clearInterval(progressInterval);
@@ -1863,6 +1890,17 @@ window.generateTravelPlan = async function (event) {
         showToast("⚠️ プラン作成に失敗しました。");
     }
 };
+
+function bind3DSimButton(planData) {
+    const btn = document.getElementById("launch3DSimBtn");
+    if (btn) {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener("click", () => {
+            open3DRouteSimulation(planData);
+        });
+    }
+}
 
 // 再試行
 window.retryPlanGeneration = function () {
@@ -2663,6 +2701,8 @@ window.viewItineraryDetails = function (planId) {
     if (transitEl) transitEl.textContent = transitText;
 
     document.getElementById("planResults").classList.remove("hidden");
+
+    bind3DSimButton(plan);
 };
 
 // モーダル内の項目削除
