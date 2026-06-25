@@ -748,40 +748,37 @@
 
 
 
-    <!-- AI Chatbot Drawer -->
-    <div id="chat-drawer" class="chat-drawer hidden">
-        <div class="chat-drawer-header">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="material-icons" style="color: var(--primary-color);">support_agent</span>
-                <span class="chat-drawer-title">AI旅行相談窓口</span>
-            </div>
+    <div class="chat-drawer-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="material-icons" style="color: var(--primary-color);">support_agent</span>
+            <span class="chat-drawer-title">AI旅行相談窓口</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="chatEditModeBtn" onclick="toggleChatEditMode()"
+                style="font-size:0.75rem; padding:4px 10px; border-radius:99px; border:1px solid var(--border-color); background:transparent; color:var(--text-muted); cursor:pointer;">
+                ✏️ プラン編集モード
+            </button>
             <button class="chat-drawer-close" onclick="closeChatDrawer()">✕</button>
         </div>
-        <div class="chat-drawer-body" id="chatDrawerBody">
-            <div class="chat-bubble chat-bubble-ai">
-                <div class="chat-avatar">🤖</div>
-                <div class="chat-text">
-                    こんにちは！旅行プランナーのAI相談員です。あなたの旅行傾向（レーダーチャート）を学習し、最適な旅行計画や不安解消のアドバイスをします。何でもお気軽にご相談ください！
-                </div>
-            </div>
-        </div>
-        <div class="chat-drawer-footer">
-            <form id="chatBotForm" onsubmit="handleSendChatMessage(event)"
-                style="display: flex; width: 100%; gap: 8px; margin: 0;">
-                <input type="text" id="chatInput" class="form-input" placeholder="質問を入力してください..." required
-                    autocomplete="off">
-                <button type="submit" class="btn-primary"
-                    style="padding: 10px 16px; min-width: auto; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
-                    <span class="material-icons" style="font-size: 1.2rem;">send</span>
-                </button>
-            </form>
-        </div>
+    </div>
+    </div>
+    <div class="chat-drawer-footer">
+        <form id="chatBotForm" onsubmit="handleSendChatMessage(event)"
+            style="display: flex; width: 100%; gap: 8px; margin: 0;">
+            <input type="text" id="chatInput" class="form-input" placeholder="質問を入力してください..." required
+                autocomplete="off">
+            <button type="submit" class="btn-primary"
+                style="padding: 10px 16px; min-width: auto; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+                <span class="material-icons" style="font-size: 1.2rem;">send</span>
+            </button>
+        </form>
+    </div>
     </div>
 
     <!-- Toast container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script type="module" src="script.js?v=1.2.7"></script>
+    <script type="module" src="script.js?v=1.2.9"></script>
 </body>
 
 </html>

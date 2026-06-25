@@ -629,6 +629,8 @@ let currentPriority = ["グルメ"];
 let recommendationMode = false;
 let isSplashAnimationFinished = false;
 let isAuthStateResolved = false;
+let chatEditMode = false;
+let chatHistory = [];
 
 window.tryEnteringApp = function () {
     if (!isSplashAnimationFinished || !isAuthStateResolved) return;
@@ -3053,17 +3055,19 @@ window.signInAsGuestSplash = async function () {
 // ==========================================
 
 window.openChatDrawer = function () {
-    // 認証状態のチェック: ログインユーザー限定 (ゲストは無効)
     const user = auth.currentUser;
     if (!user || user.isAnonymous) {
         showToast("⚠️ AIチャットのご利用にはログインが必要です。");
         return;
     }
 
-    // APIキーは中継サーバー側で管理されます
-
     const drawer = document.getElementById("chat-drawer");
     if (drawer) {
+        // 前回の強制命令をリセットして、CSSのアニメーションに任せる
+        drawer.style.display = "";
+        drawer.style.transform = "";
+        drawer.style.pointerEvents = "";
+
         drawer.classList.remove("hidden");
     }
 };
@@ -3071,83 +3075,44 @@ window.openChatDrawer = function () {
 window.closeChatDrawer = function () {
     const drawer = document.getElementById("chat-drawer");
     if (drawer) {
+        // ここもリセット
+        drawer.style.transform = "";
         drawer.classList.add("hidden");
     }
+    chatHistory = [];
 };
 
-window.handleSendChatMessage = async function (event) {
-    event.preventDefault();
-    const input = document.getElementById("chatInput");
-    if (!input) return;
-    const messageText = input.value.trim();
-    if (!messageText) return;
+window.closeChatDrawer = function () {
+    const drawer = document.getElementById("chat-drawer");
+    if (drawer) {
+        drawer.classList.add("hidden");
+        // 強制的に画面外へ押し出す
+        drawer.style.transform = "translateX(100%)";
+    }
+    chatHistory = [];
+};
 
-    // 入力欄をクリア
-    input.value = "";
-
-    // ユーザー発言を吹き出し追加
-    appendChatBubble("user", messageText);
-
-    // AI入力中インジケータ表示
-    const typingId = appendTypingIndicator();
-
-    try {
-        // レーダーチャート値のフォーマット
-        const labels = ["温泉・癒やし", "自然・景観", "歴史・文化", "グルメ", "アクティビティ", "都市・ショッピング"];
-        const prefStatsStr = standStats.map((val, idx) => `${labels[idx]}: ${val}%`).join(", ");
-
-        const standName = document.getElementById("standName")?.textContent || "トラベラー・スター";
-        const standRank = document.getElementById("standRank")?.textContent || "";
-        const systemPrompt = `ユーザー名: ${userName}
-旅行の好みパラメータ: ${prefStatsStr}
-旅行スタンド: ${standName} (${standRank})
-
-あなたは旅行プランナーのAI相談員（ユーザーの「旅行スタンド」の案内役）です。回答を行う際は、ユーザーの旅行スタンド（例: 温泉の守護神、美食の支配者など）の属性や、興味関心が高いパラメータ（特に値が大きい項目）を優先的に考慮した提案・目的地選定やアドバイスを行ってください。
-【重要・最優先ルール】
-- 提案やアドバイスを行う目的地は、必ず近畿地方（大阪府、京都府、兵庫県、奈良県、滋賀県、和歌山県）のスポットに限定してください。東京や北海道、沖縄など、近畿地方以外の地域は絶対に提案しないでください。
-- 会話の中で「あなたの旅行スタンド【${standName}】の特性から見ると…」など、旅行スタンドのコンセプトに言及して親しみやすく回答してください。
-- 回答は極めて簡潔に、短く要点をまとめて答えてください。
-- 長文は厳禁とし、最大でも「100〜150文字程度」または「3行以内」で簡潔に答えてください。
-- 箇条書きを活用して読みやすくしてください。`;
-
-        const chatUrl = getApiUrl("/api/travel/generate");
-        const chatHeaders = { "Content-Type": "application/json" };
-
-        const data = await safeFetchJson(chatUrl, {
-            method: "POST",
-            headers: chatHeaders,
-            body: JSON.stringify({
-                contents: [
-                    {
-                        role: "user",
-                        parts: [
-                            {
-                                text: `${systemPrompt}\n\nユーザーからの相談: ${messageText}`
-                            }
-                        ]
-                    }
-                ]
-            })
-        });
-
-        const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || "申し訳ありません、お答えを生成できませんでした。";
-
-        // 入力中を消す
-        removeTypingIndicator(typingId);
-
-        // AIの返答を吹き出し追加
-        appendChatBubble("ai", replyText);
-
-    } catch (error) {
-        console.error("Gemini API Error:", error);
-        removeTypingIndicator(typingId);
-        let errorMsgToShow = "⚠️ メッセージの送信に失敗しました。接続状況や設定をご確認ください。";
-        if (error.message && error.message.includes("429")) {
-            errorMsgToShow = "⚠️ 本日のAIチャット利用上限に達しました。明日またご相談ください。";
-        } else if (error.message) {
-            errorMsgToShow = `⚠️ エラー: ${error.message}`;
+window.toggleChatEditMode = function () {
+    chatEditMode = !chatEditMode;
+    const btn = document.getElementById("chatEditModeBtn");
+    if (chatEditMode) {
+        btn.style.background = "var(--primary-color)";
+        btn.style.color = "#fff";
+        btn.style.borderColor = "var(--primary-color)";
+        const targetPlan = plans[plans.length - 1];
+        if (targetPlan) {
+            appendChatBubble("ai", `✏️ プラン編集モードをONにしました。\n「${targetPlan.destination}の旅」を編集できます。\n例：「2日目を温泉にして」「グルメを増やして」など自然に話しかけてください。`);
+        } else {
+            appendChatBubble("ai", "⚠️ 編集できるプランがありません。先にプランを作成してください。");
+            chatEditMode = false;
+            btn.style.background = "transparent";
+            btn.style.color = "var(--text-muted)";
         }
-        appendChatBubble("ai", errorMsgToShow);
+    } else {
+        btn.style.background = "transparent";
+        btn.style.color = "var(--text-muted)";
+        btn.style.borderColor = "var(--border-color)";
+        appendChatBubble("ai", "プラン編集モードをOFFにしました。通常の旅行相談モードに戻ります。");
     }
 };
 
