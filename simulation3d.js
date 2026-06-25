@@ -3,7 +3,7 @@ let simPathCoords = [];
 let simAnimationId = null;
 let simProgress = 0;
 let simIsPlaying = false;
-let simSpeed = 0.0003;
+let simSpeed = 1.0;
 let simStartTime = null;
 let simTotalDistance = 0;
 let simOverlayEl = null;
@@ -229,7 +229,7 @@ function renderSimOverlay() {
         reset3DAnimation();
     });
     document.getElementById("simSpeedSlider").addEventListener("input", (e) => {
-        simSpeed = parseFloat(e.target.value) * 0.0001;
+        simSpeed = 0.5 + (parseFloat(e.target.value) - 1) * (1.0 / 9);
     });
 }
 
@@ -237,15 +237,22 @@ function animateStep(timestamp) {
     if (!simIsPlaying) return;
     if (!simStartTime) simStartTime = timestamp;
     const elapsed = (timestamp - simStartTime) / 1000;
-    simProgress += simSpeed;
+    const baseDuration = 180;
+    const delta = (timestamp - (animateStep._lastTimestamp || timestamp)) / 1000;
+    animateStep._lastTimestamp = timestamp;
+    simProgress += (delta / baseDuration) * simSpeed;
     if (simProgress >= 1) {
         simProgress = 1;
         simIsPlaying = false;
     }
     const point = getPathPointAndHeading(simPathCoords, simProgress);
     if (simMap) {
-        simMap.panTo({ lat: point.lat, lng: point.lng });
-        simMap.setHeading(point.heading);
+        simMap.moveCamera({
+            center: { lat: point.lat, lng: point.lng },
+            heading: point.heading,
+            tilt: 65,
+            zoom: 17
+        });
     }
     const simulatedSpeed = 40 + Math.sin(simProgress * Math.PI * 4) * 20;
     const traveledDistance = simTotalDistance * simProgress;
@@ -258,6 +265,7 @@ function animateStep(timestamp) {
     if (simProgress < 1) {
         simAnimationId = requestAnimationFrame(animateStep);
     } else {
+        animateStep._lastTimestamp = null;
         const playBtn = document.getElementById("simPlayBtn");
         if (playBtn) {
             playBtn.querySelector(".material-icons").textContent = "replay";
@@ -282,10 +290,10 @@ export async function open3DRouteSimulation(plan) {
     });
     const startLat = 34.6937;
     const startLng = 135.5023;
-    const endLat = plan.lat || 34.9949;
-    const endLng = plan.lon || 135.7850;
+    const endLat = parseFloat(plan.lat) || 34.9949;
+    const endLng = parseFloat(plan.lon) || 135.7850;
     try {
-        await loadGoogleMaps("AIzaSyC08CYI4KhqOPBwt7vUqmR4kmzhTgEpecM");
+        await loadGoogleMaps("AIzaSyB3NKrrdzg7yCnn_ATcmWs-r5j4Z5PDcBg");
     } catch (e) {
         simPathCoords = generateFallbackLatLngPath(startLat, startLng, endLat, endLng, 100);
         simTotalDistance = calculateTotalDistance(simPathCoords);
@@ -307,10 +315,10 @@ function initSimMap(startLat, startLng, endLat, endLng) {
     if (!container) return;
     simMap = new google.maps.Map(container, {
         center: { lat: startLat, lng: startLng },
-        zoom: 14,
-        tilt: 60,
+        zoom: 17,
+        tilt: 65,
         heading: 0,
-        mapTypeId: "hybrid",
+        mapId: "762efe723963e54aa2efe1dd",
         disableDefaultUI: true,
         gestureHandling: "greedy"
     });
@@ -399,9 +407,14 @@ export function reset3DAnimation() {
     });
     if (simMap && simPathCoords.length > 0) {
         const start = simPathCoords[0];
-        simMap.panTo({ lat: start.lat, lng: start.lng });
-        simMap.setHeading(0);
+        simMap.moveCamera({
+            center: { lat: start.lat, lng: start.lng },
+            heading: 0,
+            tilt: 65,
+            zoom: 17
+        });
     }
+    animateStep._lastTimestamp = null;
     const playBtn = document.getElementById("simPlayBtn");
     if (playBtn) {
         playBtn.querySelector(".material-icons").textContent = "play_arrow";

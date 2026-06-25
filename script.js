@@ -1351,14 +1351,21 @@ function renderLikedList() {
         const div = document.createElement("div");
         div.className = `liked-item ${isSelected ? 'selected' : ''}`;
         div.setAttribute("data-id", item.id);
-        div.onclick = () => selectPlanTarget(item, div);
         div.innerHTML = `
             <img src="${item.img}" class="liked-item-thumb">
-            <div class="liked-item-info">
+            <div class="liked-item-info" style="flex:1; min-width:0;">
                 <h4>${item.name}</h4>
                 <p>📍 ${item.prefecture} / 🏷️ ${item.season}時期</p>
             </div>
+            <button class="sim3d-launch-mini-btn" title="3Dルートシミュレーション">
+                <span class="material-icons" style="font-size:1.1rem;">route</span>
+            </button>
         `;
+        div.querySelector(".liked-item-info").addEventListener("click", () => selectPlanTarget(item, div));
+        div.querySelector(".sim3d-launch-mini-btn").addEventListener("click", (e) => {
+            e.stopPropagation();
+            open3DRouteSimulation({ destination: item.name, lat: item.lat, lon: item.lon });
+        });
         listContainer.appendChild(div);
     });
 }
@@ -3313,16 +3320,11 @@ window.renderSavedSpotsHome = function () {
         return;
     }
 
-    // likes.forEach をしっかり関数の中に収める
     likes.forEach(item => {
         const isStarred = favorites.some(f => f.id === item.id);
         const card = document.createElement("div");
         card.className = "saved-spot-thumbnail-card";
-
-        // 👇 【追加】data-id を付与する
         card.setAttribute("data-id", item.id);
-
-        card.onclick = () => selectPlanAndGo(item);
         card.innerHTML = `
                 <img src="${item.img}" alt="${item.name}">
                 <div class="thumbnail-overlay"></div>
@@ -3331,13 +3333,20 @@ window.renderSavedSpotsHome = function () {
                 <button class="thumbnail-star-btn ${isStarred ? 'starred' : ''}" onclick="toggleFavoriteFromHome(this, event, ${item.id})">
                     <span class="material-icons star-icon">${isStarred ? 'star' : 'star_border'}</span>
                 </button>
+                <button class="thumbnail-sim3d-btn" title="3Dルートシミュレーション">
+                    <span class="material-icons" style="font-size:1rem;">route</span>
+                </button>
             `;
-        scrollContainer.appendChild(card);
-
-        scrollContainer.appendChild(card);
-
+        card.querySelector(".thumbnail-overlay").addEventListener("click", () => selectPlanAndGo(item));
+        card.querySelector(".thumbnail-name").addEventListener("click", () => selectPlanAndGo(item));
+        card.querySelector(".thumbnail-pref").addEventListener("click", () => selectPlanAndGo(item));
+        card.querySelector(".thumbnail-sim3d-btn").addEventListener("click", (e) => {
+            e.stopPropagation();
+            open3DRouteSimulation({ destination: item.name, lat: item.lat, lon: item.lon });
+        });
         card.dataset.placeName = item.name;
         imageObserver.observe(card);
+        scrollContainer.appendChild(card);
     });
 };
 window.toggleFavoriteFromHome = function (starBtn, event, id) {
@@ -3402,13 +3411,19 @@ window.renderHomePlans = function () {
                 <span class="home-plan-dest">📅 ${plan.destination} の旅</span>
                 <span class="home-plan-date">出発日: ${plan.date} | ${plan.nights}泊${plan.nights + 1}日 | ${plan.people}名</span>
             </div>
+            <button class="sim3d-launch-mini-btn" title="3Dルートシミュレーション">
+                <span class="material-icons" style="font-size:1.1rem;">route</span>
+            </button>
             <button class="home-plan-delete-btn" title="この予定を削除" onclick="deleteHomePlan(event, ${plan.id})">
                 <span class="material-icons">delete_outline</span>
             </button>
             <span class="material-icons arrow-icon" style="cursor:pointer;">chevron_right</span>
         `;
 
-        // テキスト部分クリックで詳細表示
+        card.querySelector(".sim3d-launch-mini-btn").addEventListener("click", (e) => {
+            e.stopPropagation();
+            open3DRouteSimulation({ destination: plan.destination, lat: plan.lat, lon: plan.lon });
+        });
         card.querySelector(".home-plan-item-info").addEventListener("click", () => viewItineraryDetails(plan.id));
         card.querySelector(".arrow-icon").addEventListener("click", () => viewItineraryDetails(plan.id));
 
