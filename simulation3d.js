@@ -8,6 +8,12 @@ let simStartTime = null;
 let simTotalDistance = 0;
 let simOverlayEl = null;
 let simGoogleMapsLoaded = false;
+let simLastRenderTime = 0;
+let simCurrentHeading = null;
+let simRoutePolyline = null;
+let simStartMarker = null;
+let simEndMarker = null;
+let simVehicleMarker = null;
 
 function getApiUrl(path) {
     const base = (window.location.port && window.location.port !== "3000")
@@ -45,7 +51,7 @@ export function loadGoogleMaps(apiKey) {
     });
 }
 
-export async function fetchRoutesData(originLat, originLng, destLat, destLng) {
+export async function fetchRoutesData(originLat, originLng, destLat, destLng, intermediates = []) {
     try {
         const url = getApiUrl("/api/travel/routes");
         const response = await fetch(url, {
@@ -53,7 +59,8 @@ export async function fetchRoutesData(originLat, originLng, destLat, destLng) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 origin: { lat: originLat, lng: originLng },
-                destination: { lat: destLat, lng: destLng }
+                destination: { lat: destLat, lng: destLng },
+                intermediates: intermediates
             })
         });
         if (!response.ok) {
@@ -115,9 +122,15 @@ export function getPathPointAndHeading(path, progress) {
     const nextPoint = path[Math.min(i + 1, path.length - 1)];
     const lat = currentPoint.lat + (nextPoint.lat - currentPoint.lat) * fraction;
     const lng = currentPoint.lng + (nextPoint.lng - currentPoint.lng) * fraction;
-    const dLat = nextPoint.lat - currentPoint.lat;
-    const dLng = nextPoint.lng - currentPoint.lng;
-    const heading = (Math.atan2(dLng, dLat) * 180) / Math.PI;
+    const p1 = new google.maps.LatLng(currentPoint.lat, currentPoint.lng);
+    const p2 = new google.maps.LatLng(nextPoint.lat, nextPoint.lng);
+    let heading = 0;
+    if (currentPoint.lat !== nextPoint.lat || currentPoint.lng !== nextPoint.lng) {
+        heading = google.maps.geometry.spherical.computeHeading(p1, p2);
+        getPathPointAndHeading._lastHeading = heading;
+    } else {
+        heading = getPathPointAndHeading._lastHeading || 0;
+    }
     return { lat, lng, heading };
 }
 
@@ -235,6 +248,12 @@ function renderSimOverlay() {
 
 function animateStep(timestamp) {
     if (!simIsPlaying) return;
+    const frameDuration = 1000 / 30;
+    if (timestamp - simLastRenderTime < frameDuration) {
+        simAnimationId = requestAnimationFrame(animateStep);
+        return;
+    }
+    simLastRenderTime = timestamp;
     if (!simStartTime) simStartTime = timestamp;
     const elapsed = (timestamp - simStartTime) / 1000;
     const baseDuration = 180;
@@ -246,13 +265,27 @@ function animateStep(timestamp) {
         simIsPlaying = false;
     }
     const point = getPathPointAndHeading(simPathCoords, simProgress);
+    if (simCurrentHeading === null) {
+        simCurrentHeading = point.heading;
+    } else {
+        let diff = point.heading - simCurrentHeading;
+        if (diff < -180) diff += 360;
+        if (diff > 180) diff -= 360;
+        simCurrentHeading += diff * 0.15;
+    }
     if (simMap) {
         simMap.moveCamera({
             center: { lat: point.lat, lng: point.lng },
-            heading: point.heading,
+            heading: simCurrentHeading,
             tilt: 65,
             zoom: 17
         });
+        if (simVehicleMarker) {
+            simVehicleMarker.setPosition({ lat: point.lat, lng: point.lng });
+            const iconInfo = simVehicleMarker.getIcon();
+            iconInfo.rotation = point.heading - 90;
+            simVehicleMarker.setIcon(iconInfo);
+        }
     }
     const simulatedSpeed = 40 + Math.sin(simProgress * Math.PI * 4) * 20;
     const traveledDistance = simTotalDistance * simProgress;
@@ -280,6 +313,7 @@ export async function open3DRouteSimulation(plan) {
     simProgress = 0;
     simIsPlaying = false;
     simStartTime = null;
+    simCurrentHeading = null;
     const destName = plan.destination || "Destination";
     simUpdateHUD({
         speed: 0,
@@ -288,10 +322,19 @@ export async function open3DRouteSimulation(plan) {
         progress: 0,
         destination: destName
     });
-    const startLat = 34.6937;
-    const startLng = 135.5023;
-    const endLat = parseFloat(plan.lat) || 34.9949;
-    const endLng = parseFloat(plan.lon) || 135.7850;
+    let startLat = 34.6937;
+    let startLng = 135.5023;
+    let endLat = parseFloat(plan.lat) || 34.9949;
+    let endLng = parseFloat(plan.lon) || 135.7850;
+    let intermediates = [];
+    if (plan.waypoints && plan.waypoints.length >= 2) {
+        const wp = plan.waypoints;
+        startLat = parseFloat(wp[0].lat);
+        startLng = parseFloat(wp[0].lng);
+        endLat = parseFloat(wp[wp.length - 1].lat);
+        endLng = parseFloat(wp[wp.length - 1].lng);
+        intermediates = wp.slice(1, wp.length - 1).map(p => ({ lat: parseFloat(p.lat), lng: parseFloat(p.lng) }));
+    }
     try {
         await loadGoogleMaps("AIzaSyB3NKrrdzg7yCnn_ATcmWs-r5j4Z5PDcBg");
     } catch (e) {
@@ -300,7 +343,7 @@ export async function open3DRouteSimulation(plan) {
         initSimMapFallback(startLat, startLng);
         return;
     }
-    const routeData = await fetchRoutesData(startLat, startLng, endLat, endLng);
+    const routeData = await fetchRoutesData(startLat, startLng, endLat, endLng, intermediates);
     if (routeData && routeData.path) {
         simPathCoords = routeData.path;
     } else {
@@ -313,34 +356,51 @@ export async function open3DRouteSimulation(plan) {
 function initSimMap(startLat, startLng, endLat, endLng) {
     const container = document.getElementById("sim3dMapContainer");
     if (!container) return;
-    simMap = new google.maps.Map(container, {
-        center: { lat: startLat, lng: startLng },
-        zoom: 17,
-        tilt: 65,
-        heading: 0,
-        mapId: "762efe723963e54aa2efe1dd",
-        colorScheme: google.maps.ColorScheme.DARK,
-        disableDefaultUI: true,
-        gestureHandling: "greedy"
-    });
-    const routePath = new google.maps.Polyline({
+    if (!simMap) {
+        simMap = new google.maps.Map(container, {
+            center: { lat: startLat, lng: startLng },
+            zoom: 17,
+            tilt: 65,
+            heading: 0,
+            mapId: "762efe723963e54aa2efe1dd",
+            colorScheme: google.maps.ColorScheme.DARK,
+            disableDefaultUI: true,
+            gestureHandling: "greedy"
+        });
+    }
+    simRoutePolyline = new google.maps.Polyline({
         path: simPathCoords,
         geodesic: true,
         strokeColor: "#4f8cff",
         strokeOpacity: 0.9,
         strokeWeight: 5
     });
-    routePath.setMap(simMap);
-    new google.maps.Marker({
+    simRoutePolyline.setMap(simMap);
+    simStartMarker = new google.maps.Marker({
         position: { lat: startLat, lng: startLng },
-        map: simMap,
         label: "S"
     });
-    new google.maps.Marker({
+    simStartMarker.setMap(simMap);
+    simEndMarker = new google.maps.Marker({
         position: { lat: endLat, lng: endLng },
-        map: simMap,
         label: "G"
     });
+    simEndMarker.setMap(simMap);
+    const trainColor = Math.random() < 0.1 ? "#FFD700" : "#FFFFFF";
+    simVehicleMarker = new google.maps.Marker({
+        position: { lat: startLat, lng: startLng },
+        icon: {
+            path: "M -20,5 L 10,5 C 18,5 23,3 25,0 C 27,-3 26,-6 20,-6 L -20,-6 Z M -15,-4 L -9,-4 L -9,-2 L -15,-2 Z M -5,-4 L 1,-4 L 1,-2 L -5,-2 Z M 5,-4 L 12,-4 L 10,-2 L 5,-2 Z",
+            fillColor: trainColor,
+            fillOpacity: 1,
+            strokeColor: "#1D4ED8",
+            strokeWeight: 1,
+            scale: 1.2,
+            anchor: new google.maps.Point(3, -0.5),
+            rotation: 0
+        }
+    });
+    simVehicleMarker.setMap(simMap);
 }
 
 function initSimMapFallback(startLat, startLng) {
@@ -364,9 +424,23 @@ export function close3DRouteSimulation() {
     simIsPlaying = false;
     simProgress = 0;
     simStartTime = null;
+    simCurrentHeading = null;
     simPathCoords = [];
-    if (simMap) {
-        simMap = null;
+    if (simRoutePolyline) {
+        simRoutePolyline.setMap(null);
+        simRoutePolyline = null;
+    }
+    if (simStartMarker) {
+        simStartMarker.setMap(null);
+        simStartMarker = null;
+    }
+    if (simEndMarker) {
+        simEndMarker.setMap(null);
+        simEndMarker = null;
+    }
+    if (simVehicleMarker) {
+        simVehicleMarker.setMap(null);
+        simVehicleMarker = null;
     }
     if (simOverlayEl) {
         simOverlayEl.classList.add("hidden");
@@ -400,6 +474,7 @@ export function reset3DAnimation() {
     pause3DAnimation();
     simProgress = 0;
     simStartTime = null;
+    simCurrentHeading = null;
     simUpdateHUD({
         speed: 0,
         distance: 0,

@@ -253,7 +253,7 @@ function decodePolyline(encoded) {
 
 app.post('/api/travel/routes', async (req, res) => {
     try {
-        const { origin, destination } = req.body;
+        const { origin, destination, intermediates } = req.body;
         if (!origin || !destination) {
             return res.status(400).json({ error: "Invalid request body" });
         }
@@ -276,6 +276,16 @@ app.post('/api/travel/routes', async (req, res) => {
             },
             travelMode: "DRIVE"
         };
+        if (Array.isArray(intermediates) && intermediates.length > 0) {
+            requestBody.intermediates = intermediates.map(p => ({
+                location: {
+                    latLng: {
+                        latitude: parseFloat(p.lat),
+                        longitude: parseFloat(p.lng)
+                    }
+                }
+            }));
+        }
         const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
             method: "POST",
             headers: {

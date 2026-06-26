@@ -1398,6 +1398,72 @@ function selectPlanTarget(item, element) {
     if (targetName) targetName.innerHTML = `<span class="material-icons" style="vertical-align: middle; color: var(--primary-color);">location_on</span> ${item.name} 行き旅行プラン設定`;
 }
 
+async function fetchGeminiItinerary(name, pref, date, nightsText, people, budget, priorities, others, startStation) {
+    const url = getApiUrl("/api/travel/generate");
+    const standName = document.getElementById("standName")?.textContent || "トラベラー・スター";
+    const standRank = document.getElementById("standRank")?.textContent || "";
+
+    const promptText = `
+あなたは旅行プランナーです。ユーザーの「旅行スタンド（Travel Stand）」の特性を最大限に活かした、近畿地方の魅力的で具体的な旅行プランを作成してください。
+
+【旅行情報】
+目的地: ${name} (${pref})
+出発地（最寄り駅）: ${startStation || '大阪・梅田付近'}
+日付: ${date} 〜
+期間: ${nightsText}
+人数: ${people}名
+予算目安: ${budget.toLocaleString()}円程度
+重視ポイント: ${priorities.join(", ")}
+ユーザーの旅行スタンド: ${standName} (${standRank})
+その他要望: ${others}
+
+【回答ルール】
+1. タイトルは「【${name}を巡る ${nightsText} 旅行プラン】」から始めてください。
+2. スケジュール提案は「■ 1日目:」「■ 2日目:」「■ 最終日:」などの形式で、具体的かつ時間（例: 午前、昼食、午後、夜間）を分けて記載してください。
+3. ユーザーの旅行スタンド（例: 温泉の守護神、美食の支配者など）のコンセプトや特性に寄り添った、オリジナリティあふれる特別な体験・店舗・アクティビティ（実在または近畿ならではの魅力的な提案）を必ず1箇位置くなどして、旅行スタンドに言及した上で含めてください。
+4. 口調は丁寧で、旅のワクワク感を高めるような魅力的な表現にしてください。
+5. itineraryText の内容は純粋な日本語のテキスト（改行と通常の記号「・」「■」のみ）で出力し、マークダウンの装飾記号（** や *）は一切含めないでください。
+6. 必ず以下のJSON形式のみで出力してください。JSONの外側にテキストを一切含めないでください。
+{
+  "itineraryText": "（上記ルールに従った旅行プランのプレーンテキスト）",
+  "waypoints": [
+    {"lat": 出発地の緯度, "lng": 出発地の経度},
+    {"lat": 経由到1の緯度, "lng": 経由到1の経度},
+    {"lat": 経由到2の緯度, "lng": 経由到2の経度},
+    {"lat": 目的地の緯度, "lng": 目的地の経度}
+  ]
+}
+waypointsは最低3つ以上のオブジェクトを含み、配列の最初の要素（インデックス0）は必ず出発地（${startStation || '大阪・梅田付近'}）の正確な座標にしてください。最後の要素が目的地（${name}）の実際の緯度経度、その間に旅程上の主要経由地を含めてください。
+`;
+
+    const requestBody = {
+        contents: [{
+            parts: [{ text: promptText }]
+        }]
+    };
+
+    try {
+        const resData = await safeFetchJson(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(requestBody)
+        });
+        const rawText = resData.candidates[0].content.parts[0].text;
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            throw new Error("JSON not found in Gemini response");
+        }
+        return JSON.parse(jsonMatch[0]);
+    } catch (error) {
+        console.error("Gemini APIでの旅行プラン生成に失敗しました:", error);
+        throw error;
+    }
+}
+
+
+
 window.togglePriorityPill = function (pill) {
     const val = pill.getAttribute("data-val");
     pill.classList.toggle("active");
@@ -1670,55 +1736,8 @@ const transitAccessRoutes = {
     "六甲山テラス": "阪急神戸線「御影駅」から神戸市バス16系統で「六甲ケーブル下駅」へ。六甲ケーブルで山頂へ登り、六甲山上バスで「六甲ガーデンテラス」下車。"
 };
 
-// Gemini APIを中継サーバー経由で呼び出して旅行プラン（行程テキスト）を生成する関数
-async function fetchGeminiItinerary(name, pref, date, nightsText, people, budget, priorities, others) {
-    const url = getApiUrl("/api/travel/generate");
-    const standName = document.getElementById("standName")?.textContent || "トラベラー・スター";
-    const standRank = document.getElementById("standRank")?.textContent || "";
 
-    const promptText = `
-あなたは旅行プランナーです。ユーザーの「旅行スタンド（Travel Stand）」の特性を最大限に活かした、近畿地方の魅力的で具体的な旅行プランを作成してください。
 
-【旅行情報】
-目的地: ${name} (${pref})
-日付: ${date} 〜
-期間: ${nightsText}
-人数: ${people}名
-予算目安: ${budget.toLocaleString()}円程度
-重視ポイント: ${priorities.join(", ")}
-ユーザーの旅行スタンド: ${standName} (${standRank})
-その他要望: ${others}
-
-【回答ルール】
-1. タイトルは「【${name}を巡る ${nightsText} 旅行プラン】」から始めてください。
-2. スケジュール提案は「■ 1日目:」「■ 2日目:」「■ 最終日:」などの形式で、具体的かつ時間（例: 午前、昼食、午後、夜間）を分けて記載してください。
-3. ユーザーの旅行スタンド（例: 温泉の守護神、美食の支配者など）のコンセプトや特性に寄り添った、オリジナリティあふれる特別な体験・店舗・アクティビティ（実在または近畿ならではの魅力的な提案）を必ず1箇位置くなどして、旅行スタンドに言及した上で含めてください。
-4. 口調は丁寧で、旅のワクワク感を高めるような魅力的な表現にしてください。
-5. 出力はプレーンテキスト形式で記述し、マークダウンの装飾記号（** や *）は一切含めず、純粋な日本語のテキスト（改行と通常の記号「・」「■」のみ）で出力してください。
-`;
-
-    const requestBody = {
-        contents: [{
-            parts: [{ text: promptText }]
-        }]
-    };
-
-    try {
-        const resData = await safeFetchJson(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(requestBody)
-        });
-        return resData.candidates[0].content.parts[0].text;
-    } catch (error) {
-        console.error("Gemini APIでの旅行プラン生成に失敗しました:", error);
-        throw error;
-    }
-}
-
-// 旅行プランの生成 (※APIを中で await するため async 関数に変更)
 window.generateTravelPlan = async function (event) {
     event.preventDefault();
     if (!activePlanTarget) return;
@@ -1728,6 +1747,7 @@ window.generateTravelPlan = async function (event) {
     const peopleVal = parseInt(document.getElementById("planPeople").value);
     const budgetVal = parseInt(document.getElementById("planBudget").value);
     const othersVal = document.getElementById("planOthers").value;
+    const startStationVal = document.getElementById("planStartStation").value;
     const simulateError = false;
 
     // フォームを隠してローディング表示
@@ -1766,14 +1786,16 @@ window.generateTravelPlan = async function (event) {
         const targetPref = activePlanTarget.prefecture;
         const selectedNightsText = `${nightsVal}泊${nightsVal + 1}日`;
 
-        // AI提案テキストの生成
-        let itinerary = "";
+        let itineraryText = "";
+        let waypoints = [];
         try {
-            itinerary = await fetchGeminiItinerary(activePlanTarget.name, targetPref, dateVal, selectedNightsText, peopleVal, budgetVal, currentPriority, othersVal);
+            const geminiResult = await fetchGeminiItinerary(activePlanTarget.name, targetPref, dateVal, selectedNightsText, peopleVal, budgetVal, currentPriority, othersVal, startStationVal);
+            itineraryText = geminiResult.itineraryText || "";
+            waypoints = Array.isArray(geminiResult.waypoints) ? geminiResult.waypoints : [];
             showToast("✨ AIがあなたの旅行スタンドに合わせた特製プランを生成しました！");
         } catch (apiErr) {
             console.warn("AIプラン生成に失敗したため、推奨テンプレートを表示します:", apiErr);
-            itinerary = generateItineraryText(activePlanTarget.name, targetPref, dateVal, selectedNightsText, peopleVal, budgetVal, currentPriority, othersVal);
+            itineraryText = generateItineraryText(activePlanTarget.name, targetPref, dateVal, selectedNightsText, peopleVal, budgetVal, currentPriority, othersVal);
             showToast("⚠️ AI生成制限のため、推奨テンプレートでプランを作成しました。");
         }
 
@@ -1843,7 +1865,6 @@ window.generateTravelPlan = async function (event) {
             });
         }
 
-        // データを予定リストに保存
         const planObj = {
             id: Date.now(),
             destination: activePlanTarget.name,
@@ -1852,15 +1873,15 @@ window.generateTravelPlan = async function (event) {
             nights: nightsVal,
             people: peopleVal,
             budget: budgetVal,
-            lat: activePlanTarget.lat, // ダミー座標ではなく本物の観光地の緯度経度を保存
+            lat: activePlanTarget.lat,
             lon: activePlanTarget.lon,
-            itineraryText: itinerary
+            itineraryText: itineraryText,
+            waypoints: waypoints
         };
         plans.push(planObj);
         saveToStorage();
 
-        // 提案表示
-        document.getElementById("aiPlanText").textContent = itinerary;
+        document.getElementById("aiPlanText").textContent = itineraryText;
 
         // アクセス情報表示
         const transitText = transitAccessRoutes[activePlanTarget.name] || "公共交通機関の情報が見つかりませんでした。詳細なルートはナビアプリ等でご確認ください。";
