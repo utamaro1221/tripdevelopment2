@@ -319,6 +319,7 @@ function initSimMap(startLat, startLng, endLat, endLng) {
         tilt: 65,
         heading: 0,
         mapId: "762efe723963e54aa2efe1dd",
+        colorScheme: google.maps.ColorScheme.DARK,
         disableDefaultUI: true,
         gestureHandling: "greedy"
     });
