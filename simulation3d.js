@@ -111,27 +111,51 @@ export function generateFallbackLatLngPath(startLat, startLng, endLat, endLng, s
 }
 
 export function getPathPointAndHeading(path, progress) {
-    if (!path || path.length === 0) {
-        return { lat: 0, lng: 0, heading: 0 };
-    }
+    if (!path || path.length === 0) return { lat: 0, lng: 0, heading: 0 };
+    if (path.length === 1) return { lat: path[0].lat, lng: path[0].lng, heading: 0 };
+
     const clampedProgress = Math.max(0, Math.min(1, progress));
-    const index = clampedProgress * (path.length - 1);
-    const i = Math.floor(index);
-    const fraction = index - i;
-    const currentPoint = path[Math.min(i, path.length - 1)];
+
+    if (!path._totalDist || !path._distances) {
+        let total = 0;
+        path._distances = [0];
+        for (let i = 1; i < path.length; i++) {
+            const p1 = new google.maps.LatLng(path[i - 1].lat, path[i - 1].lng);
+            const p2 = new google.maps.LatLng(path[i].lat, path[i].lng);
+            const d = google.maps.geometry.spherical.computeDistanceBetween(p1, p2);
+            total += d;
+            path._distances.push(total);
+        }
+        path._totalDist = total;
+    }
+
+    const targetDist = clampedProgress * path._totalDist;
+    let i = 0;
+    while (i < path._distances.length - 1 && path._distances[i + 1] < targetDist) {
+        i++;
+    }
+
+    const currentPoint = path[i];
     const nextPoint = path[Math.min(i + 1, path.length - 1)];
-    const lat = currentPoint.lat + (nextPoint.lat - currentPoint.lat) * fraction;
-    const lng = currentPoint.lng + (nextPoint.lng - currentPoint.lng) * fraction;
+    const segmentDist = path._distances[i + 1] - path._distances[i];
+    let fraction = 0;
+    if (segmentDist > 0) {
+        fraction = (targetDist - path._distances[i]) / segmentDist;
+    }
+
     const p1 = new google.maps.LatLng(currentPoint.lat, currentPoint.lng);
     const p2 = new google.maps.LatLng(nextPoint.lat, nextPoint.lng);
-    let heading = 0;
-    if (currentPoint.lat !== nextPoint.lat || currentPoint.lng !== nextPoint.lng) {
-        heading = google.maps.geometry.spherical.computeHeading(p1, p2);
-        getPathPointAndHeading._lastHeading = heading;
-    } else {
+
+    const interpPoint = google.maps.geometry.spherical.interpolate(p1, p2, fraction);
+    let heading = google.maps.geometry.spherical.computeHeading(p1, p2);
+
+    if (currentPoint.lat === nextPoint.lat && currentPoint.lng === nextPoint.lng) {
         heading = getPathPointAndHeading._lastHeading || 0;
+    } else {
+        getPathPointAndHeading._lastHeading = heading;
     }
-    return { lat, lng, heading };
+
+    return { lat: interpPoint.lat(), lng: interpPoint.lng(), heading: heading };
 }
 
 function calculateTotalDistance(path) {
@@ -282,9 +306,17 @@ function animateStep(timestamp) {
         });
         if (simVehicleMarker) {
             simVehicleMarker.setPosition({ lat: point.lat, lng: point.lng });
-            const iconInfo = simVehicleMarker.getIcon();
-            iconInfo.rotation = point.heading - 90;
-            simVehicleMarker.setIcon(iconInfo);
+            const currentColor = simVehicleMarker.getIcon().fillColor;
+            simVehicleMarker.setIcon({
+                path: "M -20,5 L 10,5 C 18,5 23,3 25,0 C 27,-3 26,-6 20,-6 L -20,-6 Z M -15,-4 L -9,-4 L -9,-2 L -15,-2 Z M -5,-4 L 1,-4 L 1,-2 L -5,-2 Z M 5,-4 L 12,-4 L 10,-2 L 5,-2 Z",
+                fillColor: currentColor,
+                fillOpacity: 1,
+                strokeColor: "#1D4ED8",
+                strokeWeight: 1,
+                scale: 1.2,
+                anchor: new google.maps.Point(0, 0),
+                rotation: point.heading - 180
+            });
         }
     }
     const simulatedSpeed = 40 + Math.sin(simProgress * Math.PI * 4) * 20;
