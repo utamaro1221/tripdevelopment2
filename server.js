@@ -112,7 +112,7 @@ app.get('/api/travel/hotels', apiLimiter, async (req, res) => {
         url.searchParams.append('latitude', latitude);
         url.searchParams.append('longitude', longitude);
         url.searchParams.append('searchRadius', '3');
-        url.searchParams.append('datumType', '1');
+
         url.searchParams.append('hits', '5');
 
         const response = await fetch(url.toString());

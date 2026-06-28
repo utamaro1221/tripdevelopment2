@@ -1528,7 +1528,8 @@ async function fetchRakutenHotels(lat, lon) {
 
         if (data.hotels && data.hotels.length > 0) {
             const hotelsList = data.hotels.map(h => {
-                const basicInfo = h.hotel[0].hotelBasicInfo;
+                const basicInfo = h.hotel?.[0]?.hotelBasicInfo;
+                if (!basicInfo) return null;
                 return {
                     name: basicInfo.hotelName,
                     rating: basicInfo.reviewAverage || "評価なし",
@@ -1537,7 +1538,7 @@ async function fetchRakutenHotels(lat, lon) {
                     url: basicInfo.hotelInformationUrl,
                     img: basicInfo.hotelImageUrl || ""
                 };
-            });
+            }).filter(Boolean);
             sessionStorage.setItem(cacheKey, JSON.stringify(hotelsList));
             return hotelsList;
         }
@@ -1597,8 +1598,15 @@ ${excludeStr}
             body: JSON.stringify(requestBody)
         });
 
-        const jsonText = resData.candidates[0].content.parts[0].text;
-        const newPlaces = JSON.parse(jsonText);
+        const jsonText = resData.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!jsonText) {
+            throw new Error("No text candidates in Gemini response");
+        }
+        const jsonMatch = jsonText.match(/\[[\s\S]*\]/);
+        if (!jsonMatch) {
+            throw new Error("JSON array not found in Gemini response");
+        }
+        const newPlaces = JSON.parse(jsonMatch[0]);
 
         const baseId = Date.now();
         return newPlaces.map((place, idx) => {
@@ -3237,6 +3245,14 @@ window.handleSendChatMessage = async function (event) {
 
     input.value = "";
     appendChatBubble("user", messageText);
+    if (messageText.includes("プラン作成") || messageText.includes("プランを作って") || messageText.includes("プランを立てて") || messageText.includes("プラン生成")) {
+        if (activePlanTarget === null || activePlanTarget === undefined) {
+            appendChatBubble("ai", "プランを作成するために、まずは気になるスポットを選択して目的地に設定してください！");
+            return;
+        }
+        generateTravelPlan(event);
+        return;
+    }
     const typingId = appendTypingIndicator();
 
     try {
@@ -3823,3 +3839,4 @@ window.rejectProactiveSuggestion = function (sugId) {
 
     showToast("😐 提案ルートを却下しました。");
 };
+
