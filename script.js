@@ -1427,10 +1427,9 @@ async function fetchGeminiItinerary(name, pref, date, nightsText, people, budget
 {
   "itineraryText": "（上記ルールに従った旅行プランのプレーンテキスト）",
   "waypoints": [
-    {"lat": 出発地の緯度, "lng": 出発地の経度},
-    {"lat": 経由到1の緯度, "lng": 経由到1の経度},
-    {"lat": 経由到2の緯度, "lng": 経由到2の経度},
-    {"lat": 目的地の緯度, "lng": 目的地の経度}
+    {"lat": 出発地の緯度, "lng": 出発地の経度, "name": "出発地名", "description": "出発地の一言紹介（30文字以内）"},
+    {"lat": 経由地1の緯度, "lng": 経由地1の経度, "name": "経由地1の名前", "description": "ここの見どころを一言（30文字以内）"},
+    {"lat": 目的地の緯度, "lng": 目的地の経度, "name": "目的地名", "description": "目的地の魅力を一言（30文字以内）"}
   ]
 }
 waypointsは最低3つ以上のオブジェクトを含み、配列の最初の要素（インデックス0）は必ず出発地（${startStation || '大阪・梅田付近'}）の正確な座標にしてください。最後の要素が目的地（${name}）の実際の緯度経度、その間に旅程上の主要経由地を含めてください。
@@ -1933,7 +1932,14 @@ function bind3DSimButton(planData) {
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
         newBtn.addEventListener("click", () => {
-            open3DRouteSimulation(planData);
+            const wps = planData.waypoints || [];
+            const labels = wps.map(function(wp, i) {
+                if (i === 0) return "出発地";
+                if (i === wps.length - 1) return planData.destination || "目的地";
+                return "経由地" + i;
+            });
+            const enrichedPlan = Object.assign({}, planData, { waypointLabels: labels });
+            open3DRouteSimulation(enrichedPlan);
         });
     }
 }

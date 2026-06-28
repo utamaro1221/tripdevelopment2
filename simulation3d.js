@@ -13,7 +13,12 @@ let simCurrentHeading = null;
 let simRoutePolyline = null;
 let simStartMarker = null;
 let simEndMarker = null;
+let simWaypointMarkers = [];
+let simWaypointLabels = [];
 let simVehicleMarker = null;
+let simStopPoints = [];
+let simStoppedIndexes = [];
+let simStopTimer = null;
 
 function getApiUrl(path) {
     const base = (window.location.port && window.location.port !== "3000")
@@ -284,6 +289,27 @@ function animateStep(timestamp) {
     const delta = (timestamp - (animateStep._lastTimestamp || timestamp)) / 1000;
     animateStep._lastTimestamp = timestamp;
     simProgress += (delta / baseDuration) * simSpeed;
+    simStopPoints.forEach(function(stop, idx) {
+        if (simStoppedIndexes.indexOf(idx) !== -1) return;
+        const stopProgress = idx / Math.max(simStopPoints.length - 1, 1);
+        if (simProgress >= stopProgress - 0.01 && idx > 0 && idx < simStopPoints.length - 1) {
+            simStoppedIndexes.push(idx);
+            simIsPlaying = false;
+            if (simAnimationId) {
+                cancelAnimationFrame(simAnimationId);
+                simAnimationId = null;
+            }
+            const banner = document.createElement("div");
+            banner.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(15,23,42,0.95);color:#fff;padding:20px 32px;border-radius:16px;font-size:1.2rem;font-weight:800;z-index:99999;text-align:center;border:2px solid #4f8cff;box-shadow:0 8px 32px rgba(79,140,255,0.4);max-width:320px;";
+            banner.innerHTML = "📍 " + stop.label + " に到着！<br><span style='font-size:0.9rem;font-weight:400;opacity:0.9;margin-top:6px;display:block;'>" + stop.description + "</span><span style='font-size:0.8rem;font-weight:400;opacity:0.6;margin-top:8px;display:block;'>3秒後に再出発します</span>";
+            document.body.appendChild(banner);
+            simStopTimer = setTimeout(function() {
+                banner.remove();
+                simIsPlaying = true;
+                simAnimationId = requestAnimationFrame(animateStep);
+            }, 3000);
+        }
+    });
     if (simProgress >= 1) {
         simProgress = 1;
         simIsPlaying = false;
@@ -306,17 +332,8 @@ function animateStep(timestamp) {
         });
         if (simVehicleMarker) {
             simVehicleMarker.setPosition({ lat: point.lat, lng: point.lng });
-            const currentColor = simVehicleMarker.getIcon().fillColor;
-            simVehicleMarker.setIcon({
-                path: "M -20,5 L 10,5 C 18,5 23,3 25,0 C 27,-3 26,-6 20,-6 L -20,-6 Z M -15,-4 L -9,-4 L -9,-2 L -15,-2 Z M -5,-4 L 1,-4 L 1,-2 L -5,-2 Z M 5,-4 L 12,-4 L 10,-2 L 5,-2 Z",
-                fillColor: currentColor,
-                fillOpacity: 1,
-                strokeColor: "#1D4ED8",
-                strokeWeight: 1,
-                scale: 1.2,
-                anchor: new google.maps.Point(0, 0),
-                rotation: point.heading - 180
-            });
+            const iconInfo = simVehicleMarker.getIcon();
+            simVehicleMarker.setIcon(Object.assign({}, iconInfo, { rotation: simCurrentHeading - 90 }));
         }
     }
     const simulatedSpeed = 40 + Math.sin(simProgress * Math.PI * 4) * 20;
@@ -382,10 +399,20 @@ export async function open3DRouteSimulation(plan) {
         simPathCoords = generateFallbackLatLngPath(startLat, startLng, endLat, endLng, 100);
     }
     simTotalDistance = calculateTotalDistance(simPathCoords);
-    initSimMap(startLat, startLng, endLat, endLng);
+    simWaypointLabels = plan.waypointLabels || [];
+    simStopPoints = (plan.waypoints || []).map(function(wp, i) {
+        return {
+            lat: parseFloat(wp.lat),
+            lng: parseFloat(wp.lng),
+            label: wp.name || (plan.waypointLabels || [])[i] || ("経由地" + i),
+            description: wp.description || ""
+        };
+    });
+    simStoppedIndexes = [];
+    initSimMap(startLat, startLng, endLat, endLng, intermediates);
 }
 
-function initSimMap(startLat, startLng, endLat, endLng) {
+function initSimMap(startLat, startLng, endLat, endLng, intermediates) {
     const container = document.getElementById("sim3dMapContainer");
     if (!container) return;
     if (!simMap) {
@@ -433,6 +460,32 @@ function initSimMap(startLat, startLng, endLat, endLng) {
         }
     });
     simVehicleMarker.setMap(simMap);
+    simWaypointMarkers = [];
+    if (Array.isArray(intermediates)) {
+        intermediates.forEach(function (wp, i) {
+            const label = simWaypointLabels[i + 1] || ("経由地" + (i + 1));
+            const marker = new google.maps.Marker({
+                position: { lat: wp.lat, lng: wp.lng },
+                map: simMap,
+                title: label,
+                label: {
+                    text: label,
+                    color: "#ffffff",
+                    fontSize: "11px",
+                    fontWeight: "bold"
+                },
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 8,
+                    fillColor: "#4f8cff",
+                    fillOpacity: 1,
+                    strokeColor: "#ffffff",
+                    strokeWeight: 2
+                }
+            });
+            simWaypointMarkers.push(marker);
+        });
+    }
 }
 
 function initSimMapFallback(startLat, startLng) {
@@ -474,6 +527,12 @@ export function close3DRouteSimulation() {
         simVehicleMarker.setMap(null);
         simVehicleMarker = null;
     }
+    simWaypointMarkers.forEach(function (m) { m.setMap(null); });
+    simWaypointMarkers = [];
+    simWaypointLabels = [];
+    if (simStopTimer) { clearTimeout(simStopTimer); simStopTimer = null; }
+    simStopPoints = [];
+    simStoppedIndexes = [];
     if (simOverlayEl) {
         simOverlayEl.classList.add("hidden");
     }
