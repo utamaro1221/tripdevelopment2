@@ -169,8 +169,11 @@
                 <span class="material-icons">menu</span>
             </button>
             <h1 class="header-title" id="headerTitle">Kinki Wander</h1>
-            <div class="header-avatar" onclick="switchView('settings')">
-                <img id="headerUserAvatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=traveler" alt="Avatar">
+            <div style="display: flex; align-items: center;">
+                <button id="rubi-switch" class="ruby-toggle-btn">漢字のみ</button>
+                <div class="header-avatar" onclick="switchView('settings')">
+                    <img id="headerUserAvatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=traveler" alt="Avatar">
+                </div>
             </div>
         </header>
 
@@ -798,6 +801,7 @@
     <!-- Toast container -->
     <div class="toast-container" id="toastContainer"></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <script type="module" src="script.js?v=1.2.9"></script>
 </body>
 

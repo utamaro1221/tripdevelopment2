@@ -131,10 +131,17 @@ app.get('/api/travel/hotels', apiLimiter, async (req, res) => {
 app.post('/api/travel/generate', apiLimiter, async (req, res) => {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
+        console.error("Gemini API Error: GEMINI_API_KEY is not defined in environment variables.");
         return res.status(500).json({ error: 'サーバー側の Gemini API キー (GEMINI_API_KEY) が設定されていません。' });
     }
 
+    if (!req.body || !req.body.contents) {
+        console.error("Gemini API Error: Request body or contents is missing/null.");
+        return res.status(400).json({ error: 'リクエストボディまたはコンテンツが指定されていません。' });
+    }
+
     if (!checkAndIncrementDailyLimit('gemini')) {
+        console.error("Gemini API Error: Daily usage limit reached.");
         return res.status(429).json({ error: 'Gemini APIの1日の利用上限に達しました。明日またお試しください。' });
     }
 
@@ -148,14 +155,22 @@ app.post('/api/travel/generate', apiLimiter, async (req, res) => {
             body: JSON.stringify(req.body)
         });
 
-        const data = await response.json();
+        let data;
+        try {
+            data = await response.json();
+        } catch (jsonErr) {
+            console.error("Gemini API Error: Failed to parse JSON response from Gemini API.", jsonErr);
+            return res.status(502).json({ error: 'Gemini API からの応答の解析に失敗しました。' });
+        }
 
         if (!response.ok) {
+            console.error("Gemini API Error: API returned error status:", response.status, data);
             return res.status(response.status).json(data);
         }
 
         res.json(data);
     } catch (err) {
+        console.error("Gemini API Error: Unexpected crash in generation endpoint.", err);
         res.status(500).json({ error: 'Gemini APIでの生成処理に失敗しました。' });
     }
 });
@@ -163,6 +178,7 @@ app.post('/api/travel/generate', apiLimiter, async (req, res) => {
 app.post('/api/travel/places', apiLimiter, async (req, res) => {
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     if (!apiKey) {
+        console.error("Places API Error: GOOGLE_PLACES_API_KEY is not defined in environment variables.");
         return res.status(500).json({ error: 'サーバー側の Google Places API キー (GOOGLE_PLACES_API_KEY) が設定されていません。' });
     }
 
@@ -180,14 +196,22 @@ app.post('/api/travel/places', apiLimiter, async (req, res) => {
             body: JSON.stringify(req.body)
         });
 
-        const data = await response.json();
+        let data;
+        try {
+            data = await response.json();
+        } catch (jsonErr) {
+            console.error("Places API Error: Failed to parse JSON response from Places API.", jsonErr);
+            return res.status(502).json({ error: 'Places API からの応答の解析に失敗しました。' });
+        }
 
         if (!response.ok) {
+            console.error("Places API Error: API returned error status:", response.status, data);
             return res.status(response.status).json(data);
         }
 
         res.json(data);
     } catch (err) {
+        console.error("Places API Error: Unexpected crash in places endpoint.", err);
         res.status(500).json({ error: 'スポット情報の取得に失敗しました。' });
     }
 });
@@ -196,14 +220,21 @@ app.get('/api/travel/photo', apiLimiter, async (req, res) => {
     const { name, maxWidthPx } = req.query;
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
 
-    if (!name) return res.status(400).send('パラメータ "name" が必要です。');
-    if (!apiKey) return res.status(500).send('APIキーが設定されていません。');
+    if (!name) {
+        console.error("Photo API Error: Parameter 'name' is missing.");
+        return res.status(400).send('パラメータ "name" が必要です。');
+    }
+    if (!apiKey) {
+        console.error("Photo API Error: GOOGLE_PLACES_API_KEY is not defined in environment variables.");
+        return res.status(500).send('APIキーが設定されていません。');
+    }
 
     try {
         const url = `https://places.googleapis.com/v1/${name}/media?maxWidthPx=${maxWidthPx || 800}&key=${apiKey}`;
         const response = await fetch(url);
 
         if (!response.ok) {
+            console.error("Photo API Error: Failed to fetch media from Places API. Status:", response.status);
             throw new Error(`Photo API Error: ${response.status}`);
         }
 
@@ -216,7 +247,20 @@ app.get('/api/travel/photo', apiLimiter, async (req, res) => {
         const buffer = Buffer.from(arrayBuffer);
         res.send(buffer);
     } catch (err) {
-        res.status(500).send('写真の取得に失敗しました。');
+        console.error("Photo API Error: Failed to retrieve photo. Fallback to placeholder image.", err);
+        const fallbackUrl = "https://placehold.co/800x600/f1f5f9/64748b?text=No+Image";
+        try {
+            const fallbackRes = await fetch(fallbackUrl);
+            if (fallbackRes.ok) {
+                const arrayBuffer = await fallbackRes.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
+                res.setHeader('Content-Type', 'image/png');
+                return res.status(200).send(buffer);
+            }
+        } catch (fallbackErr) {
+            console.error("Fallback image fetch failed:", fallbackErr);
+        }
+        res.status(200).json({ error: "no_image", defaultUrl: fallbackUrl });
     }
 });
 

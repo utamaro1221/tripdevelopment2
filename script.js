@@ -116,6 +116,71 @@ window.fetchPlacePhoto = async function (placeName) {
     return `https://placehold.co/800x600/f1f5f9/64748b?text=${encodeURIComponent(placeName)}`;
 };
 
+const nameDisplayModeMap = {
+    "清水寺": { kanji: "清水寺", ruby: "<ruby>清水寺<rt>きよみずでら</rt></ruby>", hiragana: "きよみずでら" },
+    "有馬温泉": { kanji: "有馬温泉", ruby: "<ruby>有馬温泉<rt>ありまおんせん</rt></ruby>", hiragana: "ありまおんせん" },
+    "道頓堀": { kanji: "道頓堀", ruby: "<ruby>道頓堀<rt>どうとんぼり</rt></ruby>", hiragana: "どうとんぼり" },
+    "奈良公園": { kanji: "奈良公園", ruby: "<ruby>奈良公園<rt>ならこうえん</rt></ruby>", hiragana: "ならこうえん" },
+    "メタセコイア並木": { kanji: "メタセコイア並木", ruby: "メタセコイア<ruby>並木<rt>なみき</rt></ruby>", hiragana: "めたせこいあなみき" },
+    "那智の滝": { kanji: "那智の滝", ruby: "<ruby>那智<rt>なち</rt></ruby>の<ruby>滝<rt>たき</rt></ruby>", hiragana: "なちのたき" },
+    "姫路城": { kanji: "姫路城", ruby: "<ruby>姫路城<rt>ひめじじょう</rt></ruby>", hiragana: "ひめじじょう" },
+    "嵐山竹林の小径": { kanji: "嵐山竹林の小径", ruby: "<ruby>嵐山竹林<rt>あらしやまちくりん</rt></ruby>の<ruby>小径<rt>こみち</rt></ruby>", hiragana: "あらしやまちくりんのこみち" },
+    "白良浜": { kanji: "白良浜", ruby: "<ruby>白良浜<rt>しららはま</rt></ruby>", hiragana: "しららはま" },
+    "比叡山延暦寺": { kanji: "比叡山延暦寺", ruby: "<ruby>比叡山延暦寺<rt>ひえいざんえんりゃくじ</rt></ruby>", hiragana: "ひえいざんえんりゃくじ" },
+    "黒門市場": { kanji: "黒門市場", ruby: "<ruby>黒門市場<rt>くろもんいちば</rt></ruby>", hiragana: "くろもんいちば" },
+    "伏見稲荷大社": { kanji: "伏見稲荷大社", ruby: "<ruby>伏見稲荷大社<rt>ふしみいなりたいしゃ</rt></ruby>", hiragana: "ふしみいなりたいしゃ" },
+    "竹田城跡": { kanji: "竹田城跡", ruby: "<ruby>竹田城跡<rt>たけだじょうせき</rt></ruby>", hiragana: "たけだじょうせき" },
+    "吉野山": { kanji: "吉野山", ruby: "<ruby>吉野山<rt>よしのやま</rt></ruby>", hiragana: "よしのやま" },
+    "高野山 金剛峯寺": { kanji: "高野山 金剛峯寺", ruby: "<ruby>高野山<rt>こうやさん</rt></ruby> <ruby>金剛峯寺<rt>こんごうぶじ</rt></ruby>", hiragana: "こうやさんこんごうぶじ" },
+    "近江八幡の水郷": { kanji: "近江八幡の水郷", ruby: "<ruby>近江八幡<rt>おうみはちまん</rt></ruby>の<ruby>水郷<rt>すいごう</rt></ruby>", hiragana: "おうみはちまんのすいごう" },
+    "天橋立": { kanji: "天橋立", ruby: "<ruby>天橋立<rt>あまのはしだて</rt></ruby>", hiragana: "あまのはしだて" },
+    "彦根城": { kanji: "彦根城", ruby: "<ruby>彦根城<rt>ひこねじょう</rt></ruby>", hiragana: "ひこねじょう" },
+    "アドベンチャーワールド": { kanji: "アドベンチャーワールド", ruby: "アドベンチャーワールド", hiragana: "aどべんちゃーわーるど" },
+    "熊野古道": { kanji: "熊野古道", ruby: "<ruby>熊野古道<rt>くまのこどう</rt></ruby>", hiragana: "くまのこどう" },
+    "大阪城公園": { kanji: "大阪城公園", ruby: "<ruby>大阪城公園<rt>おおさかじょうこうえん</rt></ruby>", hiragana: "おおさかじょうこうえん" },
+    "法隆寺": { kanji: "法隆寺", ruby: "<ruby>法隆寺<rt>ほうりゅうじ</rt></ruby>", hiragana: "ほうりゅうじ" },
+    "城崎温泉": { kanji: "城崎温泉", ruby: "<ruby>城崎温泉<rt>きのさきおんせん</rt></ruby>", hiragana: "きのさきおんせん" }
+};
+
+let currentNameMode = 0;
+
+function getDisplayName(name) {
+    const modes = ["kanji", "ruby", "hiragana"];
+    const mode = modes[currentNameMode];
+    const data = nameDisplayModeMap[name];
+    if (data) {
+        return data[mode] || name;
+    }
+    return name;
+}
+
+function formatItineraryHtml(text) {
+    if (!text) return "";
+    let html = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    html = html.replace(/\n/g, "<br>");
+    Object.keys(nameDisplayModeMap).forEach(key => {
+        const regex = new RegExp(key, "g");
+        html = html.replace(regex, `<span class="place-name" data-original-name="${key}">${getDisplayName(key)}</span>`);
+    });
+    return html;
+}
+
+window.toggleNameDisplayMode = function () {
+    currentNameMode = (currentNameMode + 1) % 3;
+    const btn = document.getElementById("rubi-switch");
+    if (btn) {
+        const labels = ["漢字のみ", "漢字＋ルビ", "ひらがな"];
+        btn.textContent = labels[currentNameMode];
+    }
+    const placeElements = document.querySelectorAll(".place-name");
+    placeElements.forEach(el => {
+        const origName = el.getAttribute("data-original-name");
+        if (origName) {
+            el.innerHTML = getDisplayName(origName);
+        }
+    });
+};
+
 // ==========================================
 // 1. 観光スポットデータ定義 (近畿地方限定)
 // ==========================================
@@ -861,6 +926,13 @@ function initApp() {
 
     // 共有リストの更新
     renderShareView();
+
+    const rubyBtn = document.getElementById("rubi-switch");
+    if (rubyBtn) {
+        rubyBtn.addEventListener("click", () => {
+            toggleNameDisplayMode();
+        });
+    }
 }
 
 function saveToStorage() {
@@ -1152,7 +1224,7 @@ function createCardElement(data, isTopCard) {
         </div>
         <button class="card-star-btn ${isStarred ? 'starred' : ''}" onclick="toggleFavorite(this, event, ${data.id})"><span class="material-icons-outlined star-icon">${isStarred ? 'star' : 'star_border'}</span></button>
         <div class="card-info">
-            <h3>${data.name}</h3>
+            <h3><span class="place-name" data-original-name="${data.name}">${getDisplayName(data.name)}</span></h3>
             <div class="card-tags-container">
                 <span class="tag-pill"><span class="material-icons">people</span>${data.companion ? data.companion.join('・') : ''}</span>
                 <span class="tag-pill"><span class="material-icons">payments</span>${data.budget || 'スタンダード'}</span>
@@ -1354,7 +1426,7 @@ function renderLikedList() {
         div.innerHTML = `
             <img src="${item.img}" class="liked-item-thumb">
             <div class="liked-item-info" style="flex:1; min-width:0;">
-                <h4>${item.name}</h4>
+                <h4><span class="place-name" data-original-name="${item.name}">${getDisplayName(item.name)}</span></h4>
                 <p>📍 ${item.prefecture} / 🏷️ ${item.season}時期</p>
             </div>
             <button class="sim3d-launch-mini-btn" title="3Dルートシミュレーション">
@@ -1395,7 +1467,7 @@ function selectPlanTarget(item, element) {
     const form = document.getElementById("planForm");
     if (form) form.classList.remove("hidden");
     const targetName = document.getElementById("planTargetName");
-    if (targetName) targetName.innerHTML = `<span class="material-icons" style="vertical-align: middle; color: var(--primary-color);">location_on</span> ${item.name} 行き旅行プラン設定`;
+    if (targetName) targetName.innerHTML = `<span class="material-icons" style="vertical-align: middle; color: var(--primary-color);">location_on</span> <span class="place-name" data-original-name="${item.name}">${getDisplayName(item.name)}</span> 行き旅行プラン設定`;
 }
 
 async function fetchGeminiItinerary(name, pref, date, nightsText, people, budget, priorities, others, startStation) {
@@ -1806,6 +1878,67 @@ window.generateTravelPlan = async function (event) {
             showToast("⚠️ AI生成制限のため、推奨テンプレートでプランを作成しました。");
         }
 
+        let startCoords = null;
+        try {
+            if (startStationVal && startStationVal.trim()) {
+                startCoords = await new Promise((resolve, reject) => {
+                    if (!window.google || !window.google.maps || !window.google.maps.Geocoder) {
+                        reject(new Error("Geocoder not available"));
+                        return;
+                    }
+                    const geocoder = new google.maps.Geocoder();
+                    geocoder.geocode({ address: startStationVal }, (results, status) => {
+                        if (status === "OK" && results && results[0]) {
+                            const loc = results[0].geometry.location;
+                            resolve({ lat: loc.lat(), lng: loc.lng() });
+                        } else {
+                            reject(new Error("Geocoding status: " + status));
+                        }
+                    });
+                });
+            }
+        } catch (geocodeErr) {
+            console.warn("Geocoding failed:", geocodeErr);
+        }
+
+        if (startCoords) {
+            if (waypoints.length > 0) {
+                waypoints[0] = {
+                    lat: startCoords.lat,
+                    lng: startCoords.lng,
+                    name: startStationVal || waypoints[0].name || "出発地",
+                    description: waypoints[0].description || "出発地"
+                };
+            } else {
+                waypoints = [
+                    { lat: startCoords.lat, lng: startCoords.lng, name: startStationVal || "出発地", description: "出発地" },
+                    { lat: (startCoords.lat + activePlanTarget.lat) / 2, lng: (startCoords.lng + activePlanTarget.lon) / 2, name: "経由地", description: "ルート上の経由地" },
+                    { lat: activePlanTarget.lat, lng: activePlanTarget.lon, name: activePlanTarget.name, description: "目的地" }
+                ];
+            }
+        } else {
+            if (waypoints.length > 0) {
+                if (typeof waypoints[0].lat !== 'number' || typeof waypoints[0].lng !== 'number') {
+                    const fallbackLat = 34.7024;
+                    const fallbackLng = 135.4959;
+                    waypoints[0] = {
+                        lat: fallbackLat,
+                        lng: fallbackLng,
+                        name: startStationVal || "出発地 (梅田)",
+                        description: "出発地 (フォールバック)"
+                    };
+                }
+            } else {
+                const fallbackLat = 34.7024;
+                const fallbackLng = 135.4959;
+                waypoints = [
+                    { lat: fallbackLat, lng: fallbackLng, name: startStationVal || "出発地 (梅田)", description: "出発地 (フォールバック)" },
+                    { lat: (fallbackLat + activePlanTarget.lat) / 2, lng: (fallbackLng + activePlanTarget.lon) / 2, name: "経由地", description: "ルート上の経由地" },
+                    { lat: activePlanTarget.lat, lng: activePlanTarget.lon, name: activePlanTarget.name, description: "目的地" }
+                ];
+            }
+        }
+
         // =================================================================
         // 【ここから楽天トラベルAPI連携の分岐処理】
         // =================================================================
@@ -1888,7 +2021,7 @@ window.generateTravelPlan = async function (event) {
         plans.push(planObj);
         saveToStorage();
 
-        document.getElementById("aiPlanText").textContent = itineraryText;
+        document.getElementById("aiPlanText").innerHTML = formatItineraryHtml(itineraryText);
 
         // アクセス情報表示
         const transitText = transitAccessRoutes[activePlanTarget.name] || "公共交通機関の情報が見つかりませんでした。詳細なルートはナビアプリ等でご確認ください。";
@@ -2638,7 +2771,7 @@ function renderModalList(type, list, container) {
             return `
                 <div class="modal-item" id="modal-item-${item.id}">
                     <div class="modal-item-info">
-                        <div class="modal-item-name">${item.name}</div>
+                        <div class="modal-item-name">${getDisplayName(item.name)}</div>
                         <div class="modal-item-sub">📍 ${item.prefecture} / ${item.season}時期</div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 12px;">
@@ -2665,7 +2798,7 @@ function renderModalList(type, list, container) {
             return `
                 <div class="modal-item" id="modal-item-${item.id}">
                     <div class="modal-item-info">
-                        <div class="modal-item-name">${item.name}</div>
+                        <div class="modal-item-name">${getDisplayName(item.name)}</div>
                         <div class="modal-item-sub">📍 ${item.prefecture} | ${item.description.substring(0, 30)}...</div>
                     </div>
                     <button class="btn-item-delete" onclick="deleteModalItem('favorites', ${item.id})">
@@ -2674,11 +2807,10 @@ function renderModalList(type, list, container) {
                 </div>
             `;
         } else {
-            // recent-likes
             return `
                 <div class="modal-item" id="modal-item-${item.id}">
                     <div class="modal-item-info">
-                        <div class="modal-item-name">${item.name}</div>
+                        <div class="modal-item-name">${getDisplayName(item.name)}</div>
                         <div class="modal-item-sub">📍 ${item.prefecture} | ${item.description.substring(0, 30)}...</div>
                     </div>
                     <button class="btn-item-delete" onclick="deleteModalItem('recent-likes', ${item.id})">
@@ -2735,7 +2867,7 @@ window.viewItineraryDetails = function (planId) {
         hotelList.appendChild(card);
     });
 
-    document.getElementById("aiPlanText").textContent = plan.itineraryText;
+    document.getElementById("aiPlanText").innerHTML = formatItineraryHtml(plan.itineraryText);
 
     // アクセス情報表示
     const transitText = transitAccessRoutes[plan.destination] || "公共交通機関の情報が見つかりませんでした。詳細なルートはナビアプリ等でご確認ください。";
@@ -3135,30 +3267,17 @@ window.signInAsGuestSplash = async function () {
 // ==========================================
 
 window.openChatDrawer = function () {
-    const user = window._auth?.currentUser;
-    if (!user || user.isAnonymous) {
-        showToast("⚠️ AIチャットのご利用にはログインが必要です。");
-        return;
-    }
-    const drawer = document.getElementById("chat-drawer");
-    if (drawer) drawer.classList.remove("hidden");
-};
-
-window.closeChatDrawer = function () {
     const drawer = document.getElementById("chat-drawer");
     if (drawer) {
-        // ここもリセット
-        drawer.style.transform = "";
-        drawer.classList.add("hidden");
+        drawer.classList.remove("hidden");
+        drawer.style.transform = "translateX(0)";
     }
-    chatHistory = [];
 };
 
 window.closeChatDrawer = function () {
     const drawer = document.getElementById("chat-drawer");
     if (drawer) {
         drawer.classList.add("hidden");
-        // 強制的に画面外へ押し出す
         drawer.style.transform = "translateX(100%)";
     }
     chatHistory = [];
@@ -3320,7 +3439,7 @@ ${targetPlan.itineraryText}
                 plans[plans.length - 1].itineraryText = parsed.updatedItinerary;
                 saveToStorage();
                 const planTextEl = document.getElementById("aiPlanText");
-                if (planTextEl) planTextEl.textContent = parsed.updatedItinerary;
+                if (planTextEl) planTextEl.innerHTML = formatItineraryHtml(parsed.updatedItinerary);
                 showToast("✏️ プランを更新しました！");
             } catch (e) {
                 appendChatBubble("ai", replyText);
@@ -3336,6 +3455,7 @@ ${targetPlan.itineraryText}
             errorMsg = "⚠️ 本日のAIチャット利用上限に達しました。";
         }
         appendChatBubble("ai", errorMsg);
+        console.error("Chat message send error:", error);
     }
 };
 
@@ -3372,7 +3492,7 @@ window.renderSavedSpotsHome = function () {
                 <img src="${item.img}" alt="${item.name}">
                 <div class="thumbnail-overlay"></div>
                 <span class="thumbnail-pref">📍 ${item.prefecture}</span>
-                <h4 class="thumbnail-name">${item.name}</h4>
+                <h4 class="thumbnail-name">${getDisplayName(item.name)}</h4>
                 <button class="thumbnail-star-btn ${isStarred ? 'starred' : ''}" onclick="toggleFavoriteFromHome(this, event, ${item.id})">
                     <span class="material-icons star-icon">${isStarred ? 'star' : 'star_border'}</span>
                 </button>
@@ -3391,6 +3511,24 @@ window.renderSavedSpotsHome = function () {
         imageObserver.observe(card);
         scrollContainer.appendChild(card);
     });
+
+    if (window.Sortable && !scrollContainer._sortable) {
+        scrollContainer._sortable = new Sortable(scrollContainer, {
+            animation: 150,
+            onEnd: function () {
+                const newLikes = [];
+                scrollContainer.querySelectorAll(".saved-spot-thumbnail-card").forEach(el => {
+                    const id = parseInt(el.getAttribute("data-id"));
+                    const item = likes.find(p => p.id === id);
+                    if (item) {
+                        newLikes.push(item);
+                    }
+                });
+                likes = newLikes;
+                saveToStorage();
+            }
+        });
+    }
 };
 window.toggleFavoriteFromHome = function (starBtn, event, id) {
     event.stopPropagation();
@@ -3803,7 +3941,7 @@ window.editProactiveSuggestion = function (sugId) {
     const budgetVal = sug.budget === "低予算" ? "30000" : sug.budget === "ラグジュアリー" ? "100000" : "50000";
     document.getElementById("planBudget").value = budgetVal;
 
-    document.getElementById("planTargetName").innerHTML = `<span class="material-icons" style="vertical-align: middle; color: var(--primary-color);">location_on</span> ${spot.name} 行き旅行プラン設定`;
+    document.getElementById("planTargetName").innerHTML = `<span class="material-icons" style="vertical-align: middle; color: var(--primary-color);">location_on</span> <span class="place-name" data-original-name="${spot.name}">${getDisplayName(spot.name)}</span> 行き旅行プラン設定`;
     document.getElementById("planOthers").value = "AI先回り提案をカスタマイズ中";
 
     document.querySelectorAll("#priorityPills .priority-pill").forEach(p => {
