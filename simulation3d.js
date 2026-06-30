@@ -11,6 +11,9 @@ let simGoogleMapsLoaded = false;
 let simLastRenderTime = 0;
 let simCurrentHeading = null;
 let simRoutePolyline = null;
+let simProgressPolyline = null;
+let simCurrentZoom = 17;
+let simCurrentTilt = 65;
 let simStartMarker = null;
 let simEndMarker = null;
 let simWaypointMarkers = [];
@@ -19,6 +22,84 @@ let simVehicleMarker = null;
 let simStopPoints = [];
 let simStoppedIndexes = [];
 let simStopTimer = null;
+
+const spotCategories = {
+    "清水寺": "history",
+    "有馬温泉": "healing",
+    "道頓堀": "food",
+    "奈良公園": "nature",
+    "メタセコイア並木": "nature",
+    "那智の滝": "nature",
+    "姫路城": "history",
+    "嵐山竹林の小径": "nature",
+    "白良浜": "nature",
+    "比叡山延暦寺": "history",
+    "黒門市場": "food",
+    "伏見稲荷大社": "history",
+    "竹田城跡": "history",
+    "吉野山": "nature",
+    "高野山 金剛峯寺": "history",
+    "近江八幡の水郷": "nature",
+    "天橋立": "nature",
+    "彦根城": "history",
+    "アドベンチャーワールド": "nature",
+    "熊野古道": "nature",
+    "大阪城公園": "nature",
+    "法隆寺": "history",
+    "城崎温泉": "healing",
+    "天龍寺": "history",
+    "琵琶湖バレイ": "nature",
+    "六甲山テラス": "nature"
+};
+
+function getSpotCategory(name) {
+    if (!name) return "default";
+    if (name.includes("出発地") || name === "S") return "start";
+    if (name.includes("目的地") || name === "G") return "goal";
+    for (const key in spotCategories) {
+        if (name.includes(key)) {
+            return spotCategories[key];
+        }
+    }
+    return "default";
+}
+
+function createCustomMarkerIcon(category) {
+    let strokeColor = "#00f3ff";
+    let fillColor = "#0f172a";
+    let iconContent = "";
+    if (category === "history") {
+        strokeColor = "#F59E0B";
+        iconContent = '<path d="M4 6h16v2h-2v12h-2V8H8v12H6V8H4V6zm3 4h10v2H7v-2z" fill="' + strokeColor + '"/>';
+    } else if (category === "healing") {
+        strokeColor = "#10B981";
+        iconContent = '<path d="M7 19c.5 0 .9-.2 1.3-.5.5-.3.8-.5 1.2-.5s.7.2 1.2.5c.5.3 1 .5 1.6.5s1.1-.2 1.6-.5c.5-.3.7-.5 1.2-.5.4 0 .7.2 1.2.5.4.3.8.5 1.3.5v-2c-.5 0-.9-.2-1.3-.5-.5-.3-.8-.5-1.2-.5s-.7.2-1.2.5c-.5.3-1 .5-1.6.5s-1.1-.2-1.6-.5c-.5-.3-.7-.5-1.2-.5-.4 0-.7.2-1.2.5-.4.3-.8.5-1.3.5v2zm0-4c.5 0 .9-.2 1.3-.5.5-.3.8-.5 1.2-.5s.7.2 1.2.5c.5.3 1 .5 1.6.5s1.1-.2 1.6-.5c.5-.3.7-.5 1.2-.5.4 0 .7.2 1.2.5.4.3.8.5 1.3.5v-2c-.5 0-.9-.2-1.3-.5-.5-.3-.8-.5-1.2-.5s-.7.2-1.2.5c-.5.3-1 .5-1.6.5s-1.1-.2-1.6-.5c-.5-.3-.7-.5-1.2-.5-.4 0-.7.2-1.2.5-.4.3-.8.5-1.3.5v2zm5-11c-.83 0-1.5.67-1.5 1.5V9h3V5.5c0-.83-.67-1.5-1.5-1.5zm-4 2c-.83 0-1.5.67-1.5 1.5V9h3V7.5c0-.83-.67-1.5-1.5-1.5zm8 0c-.83 0-1.5.67-1.5 1.5V9h3V7.5c0-.83-.67-1.5-1.5-1.5z" fill="' + strokeColor + '"/>';
+    } else if (category === "food") {
+        strokeColor = "#F43F5E";
+        iconContent = '<path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-8.03c2.09-.13 3.75-1.85 3.75-3.97V2H11v7zm7-3V2h-2v10h2.5v10h2.5V2c-2.76 0-5 2.24-5 5z" fill="' + strokeColor + '"/>';
+    } else if (category === "nature") {
+        strokeColor = "#84CC16";
+        iconContent = '<path d="M12 2L4 15h3v5h10v-5h3L12 2zm0 3.3L17.2 13H15v5H9v-5H6.8L12 5.3z" fill="' + strokeColor + '"/>';
+    } else if (category === "start") {
+        strokeColor = "#3B82F6";
+        iconContent = '<path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="' + strokeColor + '"/>';
+    } else if (category === "goal") {
+        strokeColor = "#8B5CF6";
+        iconContent = '<path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z" fill="' + strokeColor + '"/>';
+    } else {
+        strokeColor = "#06B6D4";
+        iconContent = '<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="' + strokeColor + '"/>';
+    }
+    const svgString = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="40" height="40">' +
+        '<circle cx="12" cy="12" r="11" fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="2"/>' +
+        iconContent +
+        '</svg>';
+    return {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgString),
+        scaledSize: new google.maps.Size(40, 40),
+        anchor: new google.maps.Point(20, 20)
+    };
+}
 
 function getApiUrl(path) {
     const base = (window.location.port && window.location.port !== "3000")
@@ -44,7 +125,7 @@ export function loadGoogleMaps(apiKey) {
             return;
         }
         const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry,marker`;
         script.async = true;
         script.defer = true;
         script.onload = () => {
@@ -271,7 +352,7 @@ function renderSimOverlay() {
         reset3DAnimation();
     });
     document.getElementById("simSpeedSlider").addEventListener("input", (e) => {
-        simSpeed = 0.5 + (parseFloat(e.target.value) - 1) * (1.0 / 9);
+        simSpeed = parseFloat(e.target.value) / 3;
     });
 }
 
@@ -285,10 +366,15 @@ function animateStep(timestamp) {
     simLastRenderTime = timestamp;
     if (!simStartTime) simStartTime = timestamp;
     const elapsed = (timestamp - simStartTime) / 1000;
-    const baseDuration = 180;
     const delta = (timestamp - (animateStep._lastTimestamp || timestamp)) / 1000;
     animateStep._lastTimestamp = timestamp;
-    simProgress += (delta / baseDuration) * simSpeed;
+    let baseSpeed = 40;
+    if (simTotalDistance / 40 > 180) {
+        baseSpeed = simTotalDistance / 180;
+    }
+    const currentSpeed = baseSpeed * simSpeed;
+    const totalDist = Math.max(1, simTotalDistance);
+    simProgress += (currentSpeed * delta) / totalDist;
     simStopPoints.forEach(function(stop, idx) {
         if (simStoppedIndexes.indexOf(idx) !== -1) return;
         const stopProgress = idx / Math.max(simStopPoints.length - 1, 1);
@@ -315,28 +401,32 @@ function animateStep(timestamp) {
         simIsPlaying = false;
     }
     const point = getPathPointAndHeading(simPathCoords, simProgress);
-    if (simCurrentHeading === null) {
-        simCurrentHeading = point.heading;
-    } else {
-        let diff = point.heading - simCurrentHeading;
-        if (diff < -180) diff += 360;
-        if (diff > 180) diff -= 360;
-        simCurrentHeading += diff * 0.15;
+    const passedPath = [];
+    const targetDist = simProgress * (simPathCoords._totalDist || 0);
+    passedPath.push(simPathCoords[0]);
+    for (let i = 1; i < simPathCoords.length; i++) {
+        if (simPathCoords._distances && simPathCoords._distances[i] <= targetDist) {
+            passedPath.push(simPathCoords[i]);
+        } else {
+            break;
+        }
+    }
+    passedPath.push({ lat: point.lat, lng: point.lng });
+    if (simProgressPolyline) {
+        simProgressPolyline.setPath(passedPath);
     }
     if (simMap) {
         simMap.moveCamera({
             center: { lat: point.lat, lng: point.lng },
-            heading: simCurrentHeading,
+            heading: 0,
             tilt: 65,
             zoom: 17
         });
         if (simVehicleMarker) {
             simVehicleMarker.setPosition({ lat: point.lat, lng: point.lng });
-            const iconInfo = simVehicleMarker.getIcon();
-            simVehicleMarker.setIcon(Object.assign({}, iconInfo, { rotation: simCurrentHeading - 90 }));
         }
     }
-    const simulatedSpeed = 40 + Math.sin(simProgress * Math.PI * 4) * 20;
+    const simulatedSpeed = baseSpeed * simSpeed + Math.sin(simProgress * Math.PI * 4) * 5;
     const traveledDistance = simTotalDistance * simProgress;
     simUpdateHUD({
         speed: simulatedSpeed,
@@ -363,6 +453,8 @@ export async function open3DRouteSimulation(plan) {
     simIsPlaying = false;
     simStartTime = null;
     simCurrentHeading = null;
+    simCurrentZoom = 17;
+    simCurrentTilt = 65;
     const destName = plan.destination || "Destination";
     simUpdateHUD({
         speed: 0,
@@ -422,6 +514,7 @@ function initSimMap(startLat, startLng, endLat, endLng, intermediates) {
             tilt: 65,
             heading: 0,
             mapId: "762efe723963e54aa2efe1dd",
+            mapTypeId: "hybrid",
             colorScheme: google.maps.ColorScheme.DARK,
             disableDefaultUI: true,
             gestureHandling: "greedy"
@@ -430,58 +523,45 @@ function initSimMap(startLat, startLng, endLat, endLng, intermediates) {
     simRoutePolyline = new google.maps.Polyline({
         path: simPathCoords,
         geodesic: true,
-        strokeColor: "#4f8cff",
-        strokeOpacity: 0.9,
-        strokeWeight: 5
+        strokeColor: "#1e293b",
+        strokeOpacity: 0.6,
+        strokeWeight: 6
     });
     simRoutePolyline.setMap(simMap);
+    simProgressPolyline = new google.maps.Polyline({
+        path: [],
+        geodesic: true,
+        strokeColor: "#00f3ff",
+        strokeOpacity: 1.0,
+        strokeWeight: 6
+    });
+    simProgressPolyline.setMap(simMap);
     simStartMarker = new google.maps.Marker({
         position: { lat: startLat, lng: startLng },
-        label: "S"
+        icon: createCustomMarkerIcon("start"),
+        title: "出発地",
+        map: simMap
     });
-    simStartMarker.setMap(simMap);
     simEndMarker = new google.maps.Marker({
         position: { lat: endLat, lng: endLng },
-        label: "G"
+        icon: createCustomMarkerIcon("goal"),
+        title: "目的地",
+        map: simMap
     });
-    simEndMarker.setMap(simMap);
-    const trainColor = Math.random() < 0.1 ? "#FFD700" : "#FFFFFF";
     simVehicleMarker = new google.maps.Marker({
         position: { lat: startLat, lng: startLng },
-        icon: {
-            path: "M -20,5 L 10,5 C 18,5 23,3 25,0 C 27,-3 26,-6 20,-6 L -20,-6 Z M -15,-4 L -9,-4 L -9,-2 L -15,-2 Z M -5,-4 L 1,-4 L 1,-2 L -5,-2 Z M 5,-4 L 12,-4 L 10,-2 L 5,-2 Z",
-            fillColor: trainColor,
-            fillOpacity: 1,
-            strokeColor: "#1D4ED8",
-            strokeWeight: 1,
-            scale: 1.2,
-            anchor: new google.maps.Point(3, -0.5),
-            rotation: 0
-        }
+        map: simMap
     });
-    simVehicleMarker.setMap(simMap);
     simWaypointMarkers = [];
     if (Array.isArray(intermediates)) {
         intermediates.forEach(function (wp, i) {
             const label = simWaypointLabels[i + 1] || ("経由地" + (i + 1));
+            const category = getSpotCategory(label);
             const marker = new google.maps.Marker({
                 position: { lat: wp.lat, lng: wp.lng },
                 map: simMap,
                 title: label,
-                label: {
-                    text: label,
-                    color: "#ffffff",
-                    fontSize: "11px",
-                    fontWeight: "bold"
-                },
-                icon: {
-                    path: google.maps.SymbolPath.CIRCLE,
-                    scale: 8,
-                    fillColor: "#4f8cff",
-                    fillOpacity: 1,
-                    strokeColor: "#ffffff",
-                    strokeWeight: 2
-                }
+                icon: createCustomMarkerIcon(category)
             });
             simWaypointMarkers.push(marker);
         });
@@ -514,6 +594,10 @@ export function close3DRouteSimulation() {
     if (simRoutePolyline) {
         simRoutePolyline.setMap(null);
         simRoutePolyline = null;
+    }
+    if (simProgressPolyline) {
+        simProgressPolyline.setMap(null);
+        simProgressPolyline = null;
     }
     if (simStartMarker) {
         simStartMarker.setMap(null);
@@ -566,6 +650,11 @@ export function reset3DAnimation() {
     simProgress = 0;
     simStartTime = null;
     simCurrentHeading = null;
+    simCurrentZoom = 17;
+    simCurrentTilt = 65;
+    if (simProgressPolyline) {
+        simProgressPolyline.setPath([]);
+    }
     simUpdateHUD({
         speed: 0,
         distance: 0,

@@ -140,6 +140,18 @@ app.post('/api/travel/generate', apiLimiter, async (req, res) => {
         return res.status(400).json({ error: 'リクエストボディまたはコンテンツが指定されていません。' });
     }
 
+    if (req.body.contents) {
+        req.body.contents.forEach(content => {
+            if (content.parts) {
+                content.parts.forEach(part => {
+                    if (typeof part.text === 'string') {
+                        part.text += "\n各スポットに付与する季節タグ（season tag）は、プラン全体で提案している季節と必ず一致させること。もし特定の季節に限定されないスポットの場合は『通年』または『通年おすすめ』というタグを出力すること。";
+                    }
+                });
+            }
+        });
+    }
+
     if (!checkAndIncrementDailyLimit('gemini')) {
         console.error("Gemini API Error: Daily usage limit reached.");
         return res.status(429).json({ error: 'Gemini APIの1日の利用上限に達しました。明日またお試しください。' });

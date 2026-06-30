@@ -1200,6 +1200,48 @@ function calculateCompatibilityScore(place) {
     return Math.max(30, Math.min(99, avgScore));
 }
 
+function getSeasonEmoji(season) {
+    if (season === "春") return "🌸";
+    if (season === "夏") return "☀️";
+    if (season === "秋") return "🍂";
+    if (season === "冬") return "❄️";
+    if (season === "通年" || season === "通年おすすめ") return "✨";
+    return "🗓️";
+}
+
+function getSeasonText(season) {
+    if (season === "通年" || season === "通年おすすめ") return season;
+    return season + "おすすめ";
+}
+
+function getSeasonBadgeHtml(season) {
+    return `<span class="card-season-badge">${getSeasonEmoji(season)} ${getSeasonText(season)}</span>`;
+}
+
+function getSugSeasonBadgeHtml(season) {
+    let emoji = "🗓️";
+    let text = season + "時期に最適";
+    let style = "background: rgba(16, 185, 129, 0.1); color: #10b981;";
+    if (season === "春") {
+        emoji = "🌸";
+        style = "background: rgba(244, 63, 94, 0.1); color: #f43f5e;";
+    } else if (season === "夏") {
+        emoji = "☀️";
+        style = "background: rgba(14, 165, 233, 0.1); color: #0ea5e9;";
+    } else if (season === "秋") {
+        emoji = "🍂";
+        style = "background: rgba(249, 115, 22, 0.1); color: #f97316;";
+    } else if (season === "冬") {
+        emoji = "❄️";
+        style = "background: rgba(99, 102, 241, 0.1); color: #6366f1;";
+    } else if (season === "通年" || season === "通年おすすめ") {
+        emoji = "✨";
+        text = season;
+        style = "background: rgba(234, 179, 8, 0.1); color: #eab308;";
+    }
+    return `<span class="sug-season-badge" style="${style} padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">${emoji} ${text}</span>`;
+}
+
 function createCardElement(data, isTopCard) {
     const card = document.createElement("div");
     card.className = "swipe-card";
@@ -1217,7 +1259,7 @@ function createCardElement(data, isTopCard) {
         <div class="card-img-container">
             <img src="${data.img}" class="card-img" alt="${data.name}">
             <span class="card-prefecture-badge">📍 ${data.prefecture}</span>
-            <span class="card-season-badge">🍂 ${data.season}おすすめ</span>
+            ${getSeasonBadgeHtml(data.season)}
             ${isRecommended ? `<span class="card-match-badge"><span class="material-icons" style="font-size: 0.95rem; vertical-align: middle;">bolt</span>AIマッチ度 ${matchScore}%</span>` : ''}
             <div class="swipe-stamp stamp-like">いいね</div>
             <div class="swipe-stamp stamp-anmari">興味なし</div>
@@ -1427,7 +1469,7 @@ function renderLikedList() {
             <img src="${item.img}" class="liked-item-thumb">
             <div class="liked-item-info" style="flex:1; min-width:0;">
                 <h4><span class="place-name" data-original-name="${item.name}">${getDisplayName(item.name)}</span></h4>
-                <p>📍 ${item.prefecture} / 🏷️ ${item.season}時期</p>
+                <p>📍 ${item.prefecture} / 🏷️ ${item.season.includes('通年') ? item.season : item.season + '時期'}</p>
             </div>
             <button class="sim3d-launch-mini-btn" title="3Dルートシミュレーション">
                 <span class="material-icons" style="font-size:1.1rem;">route</span>
@@ -1495,13 +1537,14 @@ async function fetchGeminiItinerary(name, pref, date, nightsText, people, budget
 3. ユーザーの旅行スタンド（例: 温泉の守護神、美食の支配者など）のコンセプトや特性に寄り添った、オリジナリティあふれる特別な体験・店舗・アクティビティ（実在または近畿ならではの魅力的な提案）を必ず1箇位置くなどして、旅行スタンドに言及した上で含めてください。
 4. 口調は丁寧で、旅のワクワク感を高めるような魅力的な表現にしてください。
 5. itineraryText の内容は純粋な日本語のテキスト（改行と通常の記号「・」「■」のみ）で出力し、マークダウンの装飾記号（** や *）は一切含めないでください。
-6. 必ず以下のJSON形式のみで出力してください。JSONの外側にテキストを一切含めないでください。
+6. 各スポットに付与する季節タグ（season tag）は、プラン全体で提案している季節と必ず一致させること。もし特定の季節に限定されないスポットの場合は『通年』または『通年おすすめ』というタグを出力すること。
+7. 必ず以下のJSON形式のみで出力してください。JSONの外側にテキストを一切含めないでください。
 {
   "itineraryText": "（上記ルールに従った旅行プランのプレーンテキスト）",
   "waypoints": [
     {"lat": 出発地の緯度, "lng": 出発地の経度, "name": "出発地名", "description": "出発地の一言紹介（30文字以内）"},
-    {"lat": 経由地1の緯度, "lng": 経由地1の経度, "name": "経由地1の名前", "description": "ここの見どころを一言（30文字以内）"},
-    {"lat": 目的地の緯度, "lng": 目的地の経度, "name": "目的地名", "description": "目的地の魅力を一言（30文字以内）"}
+    {"lat": 経由地1の緯度, "lng": 経由地1の経度, "name": "経由地1の名前", "description": "ここの見どころを一言（30文字以内）", "season": "季節タグ（例: 春、夏、秋、冬、通年、通年おすすめのいずれか）"},
+    {"lat": 目的地の緯度, "lng": 目的地の経度, "name": "目的地名", "description": "目的地の魅力を一言（30文字以内）", "season": "季節タグ（例: 春、夏、秋、冬、通年、通年おすすめのいずれか）"}
   ]
 }
 waypointsは最低3つ以上のオブジェクトを含み、配列の最初の要素（インデックス0）は必ず出発地（${startStation || '大阪・梅田付近'}）の正確な座標にしてください。最後の要素が目的地（${name}）の実際の緯度経度、その間に旅程上の主要経由地を含めてください。
@@ -1635,7 +1678,7 @@ ${excludeStr}
   {
     "name": "観光地名（例: 清水寺）",
     "prefecture": "都府県名（例: 京都）※「都」「府」「県」は付けないでください（京都、大阪、兵庫、奈良、滋賀、和歌山）",
-    "season": "おすすめの時期（春、夏、秋、冬のいずれか1文字）",
+    "season": "おすすめの時期（春、夏、秋、冬、通年、通年おすすめのいずれか。各スポットに付与する季節タグ（season tag）は、プラン全体で提案している季節と必ず一致させること。もし特定の季節に限定されないスポットの場合は『通年』または『通年おすすめ』を出力すること）",
     "category": "カテゴリ名（history, nature, food, healing のいずれか）",
     "description": "観光地の魅力を伝える魅力的な紹介文（2〜3文程度、100文字以内で、思わず行きたくなるような文章）",
     "tags": ["タグ1", "タグ2", "タグ3"] ※ 観光地に関連する「自然」「グルメ」「歴史」「観光」「リラックス」「アクティブ」「癒やし」などのタグを3つ設定してください,
@@ -2772,7 +2815,7 @@ function renderModalList(type, list, container) {
                 <div class="modal-item" id="modal-item-${item.id}">
                     <div class="modal-item-info">
                         <div class="modal-item-name">${getDisplayName(item.name)}</div>
-                        <div class="modal-item-sub">📍 ${item.prefecture} / ${item.season}時期</div>
+                        <div class="modal-item-sub">📍 ${item.prefecture} / ${item.season.includes('通年') ? item.season : item.season + '時期'}</div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <span class="modal-item-days">自動消滅まであと${daysLeft}日</span>
@@ -3826,7 +3869,7 @@ window.renderProactiveSuggestions = function () {
         card.innerHTML = `
             <div class="sug-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <span class="sug-tag-badge" style="background: rgba(var(--primary-color-rgb), 0.1); color: var(--primary-color); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">✨ AI先回り自動提案</span>
-                <span class="sug-season-badge" style="background: rgba(249, 115, 22, 0.1); color: #f97316; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">🍂 ${sug.season}時期に最適</span>
+                ${getSugSeasonBadgeHtml(sug.season)}
             </div>
             
             <h4 class="sug-title" style="font-size: 1.05rem; font-weight: 800; margin-bottom: 12px; color: var(--text-color);">${sug.title}</h4>
