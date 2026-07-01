@@ -103,9 +103,7 @@ function createCustomMarkerIcon(category) {
 }
 
 function getApiUrl(path) {
-    const base = (window.location.port && window.location.port !== "3000")
-        ? "http://localhost:3000"
-        : window.location.origin;
+    const base = "https://tripdevelopment2.onrender.com";
     return `${base}${path}`;
 }
 

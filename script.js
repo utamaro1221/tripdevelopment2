@@ -91,7 +91,7 @@ window.fetchPlacePhoto = async function (placeName) {
 
     try {
         // あなたが構築した server.js の Places API エンドポイントを呼び出す
-        const url = new URL("http://localhost:3000/api/travel/places");
+        const url = new URL("https://tripdevelopment2.onrender.com/api/travel/places");
 
         const response = await fetch(url, {
             method: 'POST',
@@ -105,7 +105,7 @@ window.fetchPlacePhoto = async function (placeName) {
         // 写真データが見つかった場合、server.js 経由で取得するURLを生成
         if (data.places && data.places.length > 0 && data.places[0].photos && data.places[0].photos.length > 0) {
             const photoName = data.places[0].photos[0].name;
-            return `http://localhost:3000/api/travel/photo?name=${encodeURIComponent(photoName)}&maxWidthPx=800`;
+            return `https://tripdevelopment2.onrender.com/api/travel/photo?name=${encodeURIComponent(photoName)}&maxWidthPx=800`;
         }
 
     } catch (error) {
@@ -1594,12 +1594,8 @@ window.backToPlanForm = function () {
     document.getElementById("planForm").classList.remove("hidden");
 };
 
-// Base URL for API calls. If page is hosted on a different port (like Live Server at 5500),
-// route API requests to the proxy server at http://localhost:3000.
 function getApiUrl(path) {
-    const base = (window.location.port && window.location.port !== "3000")
-        ? "http://localhost:3000"
-        : window.location.origin;
+    const base = "https://tripdevelopment2.onrender.com";
     return `${base}${path}`;
 }
 
