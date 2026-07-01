@@ -66,8 +66,9 @@ app.get('/api/travel/hotels', apiLimiter, async (req, res) => {
     }
 
     const appId = process.env.RAKUTEN_APPLICATION_ID;
-    if (!appId) {
-        return res.status(500).json({ error: 'サーバー側の楽天トラベル アプリID (RAKUTEN_APPLICATION_ID) が設定されていません。' });
+    const accessKey = process.env.RAKUTEN_ACCESS_KEY;
+    if (!appId || !accessKey) {
+        return res.status(500).json({ error: 'サーバー側の楽天トラベル アプリIDまたはアクセスキーが設定されていません。' });
     }
 
     if (!checkAndIncrementDailyLimit('rakuten')) {
@@ -75,9 +76,10 @@ app.get('/api/travel/hotels', apiLimiter, async (req, res) => {
     }
 
     try {
-        const url = new URL('https://app.rakuten.co.jp/services/api/Travel/KeywordHotelSearch/20170426');
+        const url = new URL('https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426');
         url.searchParams.append('format', 'json');
         url.searchParams.append('applicationId', appId);
+        url.searchParams.append('accessKey', accessKey); // 新仕様で必須
         url.searchParams.append('keyword', keyword);
         url.searchParams.append('hits', '5');
 
