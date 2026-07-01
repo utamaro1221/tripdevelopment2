@@ -22,6 +22,7 @@ let simVehicleMarker = null;
 let simStopPoints = [];
 let simStoppedIndexes = [];
 let simStopTimer = null;
+let AdvancedMarkerElement = null;
 
 const spotCategories = {
     "清水寺": "history",
@@ -416,14 +417,9 @@ function animateStep(timestamp) {
         simProgressPolyline.setPath(passedPath);
     }
     if (simMap) {
-        simMap.moveCamera({
-            center: { lat: point.lat, lng: point.lng },
-            heading: 0,
-            tilt: 65,
-            zoom: 17
-        });
+        simMap.setCenter({ lat: point.lat, lng: point.lng });
         if (simVehicleMarker) {
-            simVehicleMarker.setPosition({ lat: point.lat, lng: point.lng });
+            simVehicleMarker.position = { lat: point.lat, lng: point.lng };
         }
     }
     const simulatedSpeed = baseSpeed * simSpeed + Math.sin(simProgress * Math.PI * 4) * 5;
@@ -470,25 +466,36 @@ export async function open3DRouteSimulation(plan) {
     let intermediates = [];
     if (plan.waypoints && plan.waypoints.length >= 2) {
         const wp = plan.waypoints;
-        startLat = parseFloat(wp[0].lat);
-        startLng = parseFloat(wp[0].lng);
         endLat = parseFloat(wp[wp.length - 1].lat);
         endLng = parseFloat(wp[wp.length - 1].lng);
         intermediates = wp.slice(1, wp.length - 1).map(p => ({ lat: parseFloat(p.lat), lng: parseFloat(p.lng) }));
     }
-    try {
-        await loadGoogleMaps("AIzaSyB3NKrrdzg7yCnn_ATcmWs-r5j4Z5PDcBg");
-    } catch (e) {
-        simPathCoords = generateFallbackLatLngPath(startLat, startLng, endLat, endLng, 100);
-        simTotalDistance = calculateTotalDistance(simPathCoords);
-        initSimMapFallback(startLat, startLng);
-        return;
+    await loadGoogleMaps("AIzaSyB3NKrrdzg7yCnn_ATcmWs-r5j4Z5PDcBg");
+    if (plan.departure) {
+        await new Promise(function(resolve) {
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ address: plan.departure, region: "JP" }, function(results, status) {
+                if (status === "OK" && results[0]) {
+                    startLat = results[0].geometry.location.lat();
+                    startLng = results[0].geometry.location.lng();
+                    if (plan.waypoints && plan.waypoints.length >= 1) {
+                        plan.waypoints[0].lat = startLat;
+                        plan.waypoints[0].lng = startLng;
+                    }
+                }
+                resolve();
+            });
+        });
     }
     const routeData = await fetchRoutesData(startLat, startLng, endLat, endLng, intermediates);
     if (routeData && routeData.path) {
         simPathCoords = routeData.path;
     } else {
         simPathCoords = generateFallbackLatLngPath(startLat, startLng, endLat, endLng, 100);
+    }
+    if (simPathCoords && simPathCoords.length > 0) {
+        startLat = simPathCoords[0].lat;
+        startLng = simPathCoords[0].lng;
     }
     simTotalDistance = calculateTotalDistance(simPathCoords);
     simWaypointLabels = plan.waypointLabels || [];
@@ -501,12 +508,14 @@ export async function open3DRouteSimulation(plan) {
         };
     });
     simStoppedIndexes = [];
-    initSimMap(startLat, startLng, endLat, endLng, intermediates);
+    await initSimMap(startLat, startLng, endLat, endLng, intermediates);
 }
 
-function initSimMap(startLat, startLng, endLat, endLng, intermediates) {
+async function initSimMap(startLat, startLng, endLat, endLng, intermediates) {
     const container = document.getElementById("sim3dMapContainer");
     if (!container) return;
+    const { AdvancedMarkerElement: ame } = await google.maps.importLibrary("marker");
+    AdvancedMarkerElement = ame;
     if (!simMap) {
         simMap = new google.maps.Map(container, {
             center: { lat: startLat, lng: startLng },
@@ -519,6 +528,11 @@ function initSimMap(startLat, startLng, endLat, endLng, intermediates) {
             disableDefaultUI: true,
             gestureHandling: "greedy"
         });
+    } else {
+        simMap.setCenter({ lat: startLat, lng: startLng });
+        simMap.setZoom(17);
+        simMap.setTilt(65);
+        simMap.setHeading(0);
     }
     simRoutePolyline = new google.maps.Polyline({
         path: simPathCoords,
@@ -548,10 +562,30 @@ function initSimMap(startLat, startLng, endLat, endLng, intermediates) {
         title: "目的地",
         map: simMap
     });
-    simVehicleMarker = new google.maps.Marker({
-        position: { lat: startLat, lng: startLng },
-        map: simMap
-    });
+    if (Math.random() < 0.08) {
+        simVehicleMarker = new AdvancedMarkerElement({
+            position: { lat: startLat, lng: startLng },
+            map: simMap
+        });
+    } else {
+        const shinkansenEl = document.createElement("div");
+        shinkansenEl.style.fontSize = "32px";
+        shinkansenEl.style.display = "flex";
+        shinkansenEl.style.alignItems = "center";
+        shinkansenEl.style.justifyContent = "center";
+        shinkansenEl.style.width = "40px";
+        shinkansenEl.style.height = "40px";
+        shinkansenEl.style.background = "rgba(255, 255, 255, 0.9)";
+        shinkansenEl.style.borderRadius = "50%";
+        shinkansenEl.style.boxShadow = "0 4px 10px rgba(0, 0, 0, 0.3)";
+        shinkansenEl.style.border = "2px solid #00f3ff";
+        shinkansenEl.innerText = "🚄";
+        simVehicleMarker = new AdvancedMarkerElement({
+            position: { lat: startLat, lng: startLng },
+            map: simMap,
+            content: shinkansenEl
+        });
+    }
     simWaypointMarkers = [];
     if (Array.isArray(intermediates)) {
         intermediates.forEach(function (wp, i) {
@@ -608,9 +642,10 @@ export function close3DRouteSimulation() {
         simEndMarker = null;
     }
     if (simVehicleMarker) {
-        simVehicleMarker.setMap(null);
+        simVehicleMarker.map = null;
         simVehicleMarker = null;
     }
+
     simWaypointMarkers.forEach(function (m) { m.setMap(null); });
     simWaypointMarkers = [];
     simWaypointLabels = [];
@@ -669,7 +704,11 @@ export function reset3DAnimation() {
             tilt: 65,
             zoom: 17
         });
+        if (simVehicleMarker) {
+            simVehicleMarker.position = { lat: start.lat, lng: start.lng };
+        }
     }
+
     animateStep._lastTimestamp = null;
     const playBtn = document.getElementById("simPlayBtn");
     if (playBtn) {

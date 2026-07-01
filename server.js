@@ -106,16 +106,22 @@ app.get('/api/travel/hotels', apiLimiter, async (req, res) => {
     }
 
     try {
-        const url = new URL('https://app.rakuten.co.jp/services/api/Travel/SimpleHotelSearch/20170426');
+        const url = new URL('https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426');
         url.searchParams.append('format', 'json');
         url.searchParams.append('applicationId', appId);
+        url.searchParams.append('keyword', req.query.keyword || '');
+        url.searchParams.append('accessKey', process.env.RAKUTEN_ACCESS_KEY || '');
         url.searchParams.append('latitude', latitude);
         url.searchParams.append('longitude', longitude);
         url.searchParams.append('searchRadius', '3');
-
+        url.searchParams.append('datumType', '1');
         url.searchParams.append('hits', '5');
 
-        const response = await fetch(url.toString());
+        const response = await fetch(url.toString(), {
+            headers: {
+                'Referer': process.env.APP_URL || 'http://localhost:3000'
+            }
+        });
         const data = await response.json();
 
         if (!response.ok) {

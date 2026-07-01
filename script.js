@@ -1625,7 +1625,7 @@ async function safeFetchJson(url, options = {}) {
 }
 
 // 実際の楽天トラベルAPIを中継サーバー経由で呼び出す関数
-async function fetchRakutenHotels(lat, lon) {
+async function fetchRakutenHotels(lat, lon, keyword) {
     const cacheKey = `rakuten_hotels_${lat}_${lon}`;
     const cached = sessionStorage.getItem(cacheKey);
     if (cached) {
@@ -1636,6 +1636,7 @@ async function fetchRakutenHotels(lat, lon) {
     const url = new URL(getApiUrl("/api/travel/hotels"));
     url.searchParams.append("latitude", lat);
     url.searchParams.append("longitude", lon);
+    url.searchParams.append("keyword", keyword || "ホテル");
 
     try {
         const data = await safeFetchJson(url.toString());
@@ -1989,7 +1990,7 @@ window.generateTravelPlan = async function (event) {
         let isHotelFallback = false;
         try {
             // 選択された観光地(activePlanTarget)の緯度(lat)・経度(lon)を中継サーバーに渡してホテルを検索します
-            hotels = await fetchRakutenHotels(activePlanTarget.lat, activePlanTarget.lon);
+            hotels = await fetchRakutenHotels(activePlanTarget.lat, activePlanTarget.lon, activePlanTarget.name);
             showToast("✨ 楽天トラベルAPIから周辺のホテル情報を取得しました！");
         } catch (err) {
             // API呼び出しでエラーが起きた場合は、従来のモックデータにフォールバック（自動切り替え）
@@ -2061,6 +2062,7 @@ window.generateTravelPlan = async function (event) {
             itineraryText: itineraryText,
             waypoints: waypoints
         };
+        planObj.departure = document.getElementById("planStartStation")?.value || planObj.destination || "";
         plans.push(planObj);
         saveToStorage();
 
@@ -2114,7 +2116,10 @@ function bind3DSimButton(planData) {
                 if (i === wps.length - 1) return planData.destination || "目的地";
                 return "経由地" + i;
             });
-            const enrichedPlan = Object.assign({}, planData, { waypointLabels: labels });
+            const enrichedPlan = Object.assign({}, planData, {
+                waypointLabels: labels,
+                departure: planData.departure || document.getElementById("planStartStation")?.value || ""
+            });
             open3DRouteSimulation(enrichedPlan);
         });
     }
@@ -3646,7 +3651,7 @@ window.renderHomePlans = function () {
 
         card.querySelector(".sim3d-launch-mini-btn").addEventListener("click", (e) => {
             e.stopPropagation();
-            open3DRouteSimulation({ destination: plan.destination, lat: plan.lat, lon: plan.lon });
+            open3DRouteSimulation(plan);
         });
         card.querySelector(".home-plan-item-info").addEventListener("click", () => viewItineraryDetails(plan.id));
         card.querySelector(".arrow-icon").addEventListener("click", () => viewItineraryDetails(plan.id));
