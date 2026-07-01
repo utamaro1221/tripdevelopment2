@@ -57,38 +57,32 @@ function checkAndIncrementDailyLimit(apiType) {
 
     return true;
 }
-
-app.get('/api/travel/weather', apiLimiter, async (req, res) => {
-    const { latitude, longitude } = req.query;
-
-    if (!latitude || !longitude) {
-        return res.status(400).json({ error: '経緯度情報 (latitude, longitude) が必要です。' });
-    }
-
-    const apiKey = process.env.OPENWEATHER_API_KEY;
-    if (!apiKey) {
-        return res.status(500).json({ error: 'サーバー側の天気APIキー (OPENWEATHER_API_KEY) が設定されていません。' });
-    }
-
-    if (!checkAndIncrementDailyLimit('weather')) {
-        return res.status(429).json({ error: '天気APIの1日の利用上限に達しました。明日またお試しください。' });
-    }
-
+app.get('/api/travel/hotels', async (req, res) => {
     try {
-        const url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&lang=ja&appid=${apiKey}`;
-        const response = await fetch(url);
+        const keyword = req.query.keyword;
+        const applicationId = process.env.RAKUTEN_APPLICATION_ID;
 
-        if (!response.ok) {
-            throw new Error(`Weather API returned status ${response.status}`);
+        if (!applicationId) {
+            return res.status(500).json({ error: "サーバー側の楽天トラベル アプリID (RAKUTEN_APPLICATION_ID) が設定されていません。" });
         }
 
+        const url = new URL('https://app.rakuten.co.jp/services/api/Travel/KeywordHotelSearch/20170426');
+        url.searchParams.append('format', 'json');
+        url.searchParams.append('keyword', keyword || '京都');
+        url.searchParams.append('applicationId', applicationId);
+
+        const response = await fetch(url.toString());
         const data = await response.json();
+
+        if (!response.ok) {
+            return res.status(response.status).json({ error: "wrong_parameter_or_api_error" });
+        }
+
         res.json(data);
-    } catch (err) {
-        res.status(500).json({ error: '天気情報の取得に失敗しました。' });
+    } catch (error) {
+        res.status(500).json({ error: "internal_server_error" });
     }
 });
-
 app.get('/api/travel/hotels', apiLimiter, async (req, res) => {
     const { keyword } = req.query;
 
