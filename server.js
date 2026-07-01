@@ -57,32 +57,7 @@ function checkAndIncrementDailyLimit(apiType) {
 
     return true;
 }
-app.get('/api/travel/hotels', async (req, res) => {
-    try {
-        const keyword = req.query.keyword;
-        const applicationId = process.env.RAKUTEN_APPLICATION_ID;
 
-        if (!applicationId) {
-            return res.status(500).json({ error: "サーバー側の楽天トラベル アプリID (RAKUTEN_APPLICATION_ID) が設定されていません。" });
-        }
-
-        const url = new URL('https://app.rakuten.co.jp/services/api/Travel/KeywordHotelSearch/20170426');
-        url.searchParams.append('format', 'json');
-        url.searchParams.append('keyword', keyword || '京都');
-        url.searchParams.append('applicationId', applicationId);
-
-        const response = await fetch(url.toString());
-        const data = await response.json();
-
-        if (!response.ok) {
-            return res.status(response.status).json({ error: "wrong_parameter_or_api_error" });
-        }
-
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: "internal_server_error" });
-    }
-});
 app.get('/api/travel/hotels', apiLimiter, async (req, res) => {
     const { keyword } = req.query;
 
