@@ -90,10 +90,10 @@ app.get('/api/travel/weather', apiLimiter, async (req, res) => {
 });
 
 app.get('/api/travel/hotels', apiLimiter, async (req, res) => {
-    const { latitude, longitude } = req.query;
+    const { keyword } = req.query;
 
-    if (!latitude || !longitude) {
-        return res.status(400).json({ error: '経緯度情報 (latitude, longitude) が必要です。' });
+    if (!keyword) {
+        return res.status(400).json({ error: 'キーワード (keyword) が必要です。' });
     }
 
     const appId = process.env.RAKUTEN_APPLICATION_ID;
@@ -106,13 +106,10 @@ app.get('/api/travel/hotels', apiLimiter, async (req, res) => {
     }
 
     try {
-        const url = new URL('https://app.rakuten.co.jp/services/api/Travel/SimpleHotelSearch/20170426');
+        const url = new URL('https://app.rakuten.co.jp/services/api/Travel/KeywordHotelSearch/20170426');
         url.searchParams.append('format', 'json');
         url.searchParams.append('applicationId', appId);
-        url.searchParams.append('latitude', latitude);
-        url.searchParams.append('longitude', longitude);
-        url.searchParams.append('searchRadius', '3');
-        url.searchParams.append('datumType', '1');
+        url.searchParams.append('keyword', keyword);
         url.searchParams.append('hits', '5');
 
         const response = await fetch(url.toString(), {
