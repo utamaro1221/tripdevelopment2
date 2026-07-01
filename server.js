@@ -79,13 +79,13 @@ app.get('/api/travel/hotels', apiLimiter, async (req, res) => {
         const url = new URL('https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426');
         url.searchParams.append('format', 'json');
         url.searchParams.append('applicationId', appId);
-        url.searchParams.append('accessKey', accessKey); // 新仕様で必須
+        url.searchParams.append('accessKey', accessKey); // 新仕様の必須キー
         url.searchParams.append('keyword', keyword);
         url.searchParams.append('hits', '5');
 
         const response = await fetch(url.toString(), {
             headers: {
-                'Referer': process.env.APP_URL || 'http://localhost:3000'
+                'Referer': 'https://utamaro1221.github.io' // Renderからの通信を通すために明記
             }
         });
         const data = await response.json();
