@@ -96,9 +96,9 @@ app.get('/api/travel/hotels', apiLimiter, async (req, res) => {
         return res.status(400).json({ error: '経緯度情報 (latitude, longitude) が必要です。' });
     }
 
-    const appId = process.env.RAKUTEN_APP_ID;
+    const appId = process.env.RAKUTEN_APPLICATION_ID;
     if (!appId) {
-        return res.status(500).json({ error: 'サーバー側の楽天トラベル アプリID (RAKUTEN_APP_ID) が設定されていません。' });
+        return res.status(500).json({ error: 'サーバー側の楽天トラベル アプリID (RAKUTEN_APPLICATION_ID) が設定されていません。' });
     }
 
     if (!checkAndIncrementDailyLimit('rakuten')) {
