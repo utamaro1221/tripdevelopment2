@@ -2008,7 +2008,7 @@ window.generateTravelPlan = async function (event) {
                 rating: p.rating ? `${p.rating} / 5.0` : "評価なし",
                 price: p.priceLevel ? "¥".repeat(p.priceLevel) : "料金情報なし",
                 address: p.formattedAddress || "",
-                img: p.photos?.[0] ? `/api/travel/photo?name=${p.photos[0].name}&maxWidthPx=400` : "",
+                img: p.photos?.[0]?.name ? `${getApiUrl('/api/travel/photo')}?name=${encodeURIComponent(p.photos[0].name)}&maxWidthPx=400` : "",
                 url: ""
             }));
             showToast("✨ 楽天トラベルAPIから周辺のホテル情報を取得しました！");
