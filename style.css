@@ -85,7 +85,7 @@ body {
     font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: var(--app-font-size);
     overflow: hidden;
-    height: 100vh;
+    height: 100dvh;
     width: 100vw;
     transition: background-color var(--transition-speed), font-size 0.2s;
 }
@@ -275,7 +275,7 @@ body {
     /* offset top header */
     margin-bottom: 90px;
     /* offset bottom bar */
-    height: calc(100vh - 150px);
+    height: calc(100dvh - 150px);
     overflow: hidden;
     background-color: var(--bg-color);
     transition: background-color var(--transition-speed);
@@ -333,7 +333,8 @@ body {
     justify-content: center;
     align-items: center;
     padding: 24px;
-    overflow: hidden;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom));
+    overflow-y: auto;
 }
 
 /* Filter Bar styles */
@@ -2010,7 +2011,7 @@ body {
     position: fixed;
     inset: 0;
     width: 100vw;
-    height: 100vh;
+    height: 100dvh;
     background-color: #0c111d;
     /* 深みのあるブラックアウト */
     z-index: 99999;
@@ -2532,7 +2533,7 @@ body {
 }
 
 .chat-drawer-footer {
-    padding: 16px 20px;
+    padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
     background-color: var(--card-bg);
     border-top: 1px solid var(--border-color);
 }
@@ -3591,7 +3592,7 @@ body.theme-mc-dark .compat-unique { color: #ddd6fe; }
     top: 0;
     left: 0;
     width: 100vw;
-    height: 100vh;
+    height: 100dvh;
     z-index: 9999;
     background: #0f172a;
     display: flex;
@@ -3718,7 +3719,7 @@ body.theme-mc-dark .compat-unique { color: #ddd6fe; }
     align-items: center;
     justify-content: center;
     gap: 12px;
-    padding: 14px 20px;
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
     background: rgba(15, 23, 42, 0.98);
     border-top: 1px solid rgba(255, 255, 255, 0.06);
 }

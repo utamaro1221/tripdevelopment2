@@ -3,7 +3,7 @@
     top: 0;
     left: 0;
     width: 100vw;
-    height: 100vh;
+    height: 100dvh;
     z-index: 9999;
     background-color: #0f172a;
     font-family: system-ui, -apple-system, sans-serif;
@@ -82,7 +82,7 @@
 
 .sim3d-hud {
     position: absolute;
-    bottom: 110px;
+    bottom: calc(110px + env(safe-area-inset-bottom));
     left: 20px;
     right: 20px;
     display: grid;
@@ -127,7 +127,7 @@
 
 .sim3d-progress-track {
     position: absolute;
-    bottom: 92px;
+    bottom: calc(92px + env(safe-area-inset-bottom));
     left: 20px;
     right: 20px;
     height: 6px;
@@ -149,7 +149,7 @@
 
 .sim3d-controls {
     position: absolute;
-    bottom: 20px;
+    bottom: calc(20px + env(safe-area-inset-bottom));
     left: 20px;
     right: 20px;
     background: rgba(15, 23, 42, 0.85);
@@ -263,7 +263,7 @@
     }
 
     .sim3d-hud {
-        bottom: 140px;
+        bottom: calc(140px + env(safe-area-inset-bottom));
         gap: 8px;
     }
 
@@ -272,7 +272,7 @@
     }
 
     .sim3d-progress-track {
-        bottom: 124px;
+        bottom: calc(124px + env(safe-area-inset-bottom));
     }
 
     .sim3d-controls {
