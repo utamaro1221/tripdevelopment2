@@ -2113,6 +2113,14 @@ window.generateTravelPlan = async function (event) {
 
         calculateStandStats();
 
+        const title = `${planObj.destination}の旅 (${planObj.nights}泊${planObj.nights + 1}日)`;
+        const startDate = new Date(`${planObj.date}T09:00:00`);
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + planObj.nights);
+        endDate.setHours(18, 0, 0, 0);
+        downloadICS(title, planObj.itineraryText, startDate, endDate);
+        bindCalendarButton(planObj);
+
         bind3DSimButton(planObj);
 
     } catch (error) {
@@ -2140,6 +2148,22 @@ function bind3DSimButton(planData) {
                 departure: planData.departure || document.getElementById("planStartStation")?.value || ""
             });
             open3DRouteSimulation(enrichedPlan);
+        });
+    }
+}
+
+function bindCalendarButton(planData) {
+    const btn = document.getElementById("addToCalendarBtn");
+    if (btn) {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener("click", () => {
+            const title = `${planData.destination}の旅 (${planData.nights}泊${planData.nights + 1}日)`;
+            const startDate = new Date(`${planData.date}T09:00:00`);
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + planData.nights);
+            endDate.setHours(18, 0, 0, 0);
+            downloadICS(title, planData.itineraryText, startDate, endDate);
         });
     }
 }
@@ -2943,6 +2967,7 @@ window.viewItineraryDetails = function (planId) {
 
     document.getElementById("planResults").classList.remove("hidden");
 
+    bindCalendarButton(plan);
     bind3DSimButton(plan);
 };
 

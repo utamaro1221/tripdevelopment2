@@ -371,10 +371,15 @@
                             <!-- State 4: Results (AI & Rakuten Hotels) -->
                             <div class="ai-results-view hidden" id="planResults">
                                 <div
-                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; flex-wrap: wrap;">
                                     <h3 style="margin-bottom: 0;">提案された旅行プラン</h3>
-                                    <button class="btn-primary" style="padding: 6px 14px; font-size: 0.8rem;"
-                                        onclick="backToPlanForm()">再入力</button>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn-primary" id="addToCalendarBtn" style="padding: 6px 14px; font-size: 0.8rem; display: flex; align-items: center; gap: 4px;">
+                                            <span class="material-icons" style="font-size: 1rem;">calendar_today</span>カレンダー追加
+                                        </button>
+                                        <button class="btn-primary" style="padding: 6px 14px; font-size: 0.8rem;"
+                                            onclick="backToPlanForm()">再入力</button>
+                                    </div>
                                 </div>
 
                                 <div class="ai-plan-card">
@@ -808,6 +813,7 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script src="calendar.js"></script>
     <script type="module" src="script.js?v=1.2.9"></script>
 </body>
 
