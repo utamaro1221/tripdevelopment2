@@ -1986,7 +1986,31 @@ window.generateTravelPlan = async function (event) {
         let isHotelFallback = false;
         try {
             // 選択された観光地(activePlanTarget)の緯度(lat)・経度(lon)を中継サーバーに渡してホテルを検索します
-            hotels = await fetchRakutenHotels(activePlanTarget.lat, activePlanTarget.lon, activePlanTarget.name);
+            const placesRes = await safeFetchJson(getApiUrl('/api/travel/places'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.rating,places.priceLevel,places.photos'
+                },
+                body: JSON.stringify({
+                    textQuery: `${activePlanTarget.name} 周辺 ホテル`,
+                    locationBias: {
+                        circle: {
+                            center: { latitude: activePlanTarget.lat, longitude: activePlanTarget.lon },
+                            radius: 5000
+                        }
+                    },
+                    maxResultCount: 5
+                })
+            });
+            hotels = (placesRes.places || []).map(p => ({
+                name: p.displayName?.text || "ホテル",
+                rating: p.rating ? `${p.rating} / 5.0` : "評価なし",
+                price: p.priceLevel ? "¥".repeat(p.priceLevel) : "料金情報なし",
+                address: p.formattedAddress || "",
+                img: p.photos?.[0] ? `/api/travel/photo?name=${p.photos[0].name}&maxWidthPx=400` : "",
+                url: ""
+            }));
             showToast("✨ 楽天トラベルAPIから周辺のホテル情報を取得しました！");
         } catch (err) {
             // API呼び出しでエラーが起きた場合は、従来のモックデータにフォールバック（自動切り替え）
