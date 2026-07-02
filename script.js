@@ -2015,7 +2015,7 @@ window.generateTravelPlan = async function (event) {
         } catch (err) {
             // API呼び出しでエラーが起きた場合は、従来のモックデータにフォールバック（自動切り替え）
             console.warn("ホテル情報の取得に失敗したため、モックデータにフォールバックします。", err);
-            hotels = mockHotels[targetPref] || [];
+            hotels = (mockHotels[targetPref] || []).map(item => ({ ...item, address: item.desc }));
             isHotelFallback = true;
             if (err.message && err.message.includes("429")) {
                 showToast("⚠️ 本日のホテル検索制限に達したため、モックホテルを表示します。");
@@ -2055,12 +2055,11 @@ window.generateTravelPlan = async function (event) {
                     <div class="hotel-info">
                         <div>
                             <h4>${h.name}</h4>
-                            <div class="hotel-rating">⭐ ${h.rating} / 楽天トラベルユーザー評価</div>
-                            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">${h.desc}</p>
+                            <div class="hotel-rating">⭐ ${h.rating}</div>
+                            ${h.address ? `<p style="font-size:0.8rem;color:#64748b;">${h.address}</p>` : ''}
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span class="hotel-price">${h.price}</span>
-                            <!-- 楽天トラベルの宿詳細ページ（h.url）へリンクします -->
+                            ${h.price && h.price !== '料金情報なし' ? `<p>${h.price}</p>` : ''}
                             <a href="${h.url || 'https://travel.rakuten.co.jp/'}" target="_blank" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; text-decoration: none;">空室確認・予約</a>
                         </div>
                     </div>
@@ -2909,7 +2908,7 @@ window.viewItineraryDetails = function (planId) {
     document.getElementById("planError").classList.add("hidden");
 
     // ホテル推薦をこの府県に合わせて表示
-    const hotels = mockHotels[plan.prefecture] || [];
+    const hotels = (mockHotels[plan.prefecture] || []).map(item => ({ ...item, address: item.desc }));
     const hotelList = document.getElementById("hotelList");
     hotelList.innerHTML = "";
 
@@ -2923,11 +2922,11 @@ window.viewItineraryDetails = function (planId) {
             <div class="hotel-info">
                 <div>
                     <h4>${h.name}</h4>
-                    <div class="hotel-rating">⭐ ${h.rating} / 楽天トラベルユーザー評価</div>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">${h.desc}</p>
+                    <div class="hotel-rating">⭐ ${h.rating}</div>
+                    ${h.address ? `<p style="font-size:0.8rem;color:#64748b;">${h.address}</p>` : ''}
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span class="hotel-price">${h.price}</span>
+                    ${h.price && h.price !== '料金情報なし' ? `<p>${h.price}</p>` : ''}
                     <a href="https://travel.rakuten.co.jp/" target="_blank" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; text-decoration: none;">空室確認・予約</a>
                 </div>
             </div>
