@@ -2009,7 +2009,7 @@ window.generateTravelPlan = async function (event) {
                 price: p.priceLevel ? "¥".repeat(p.priceLevel) : "料金情報なし",
                 address: p.formattedAddress || "",
                 img: p.photos?.[0]?.name ? `${getApiUrl('/api/travel/photo')}?name=${encodeURIComponent(p.photos[0].name)}&maxWidthPx=400` : "",
-                url: `https://travel.rakuten.co.jp/keyword/${encodeURIComponent(p.displayName?.text || '')}/?f_teikei=from_hotelSearch`
+                url: `https://travel.rakuten.co.jp/search/name/?f_name=${encodeURIComponent(p.displayName?.text || '')}&f_name_type=3`
             }));
             showToast("✨ 楽天トラベルAPIから周辺のホテル情報を取得しました！");
         } catch (err) {
