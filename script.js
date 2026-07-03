@@ -1084,7 +1084,13 @@ window.applyFilters = function () {
     nextPoolIndex = 0;
     renderStack();
     if (currentCardPool.length === 0) {
-        fetchAndDisplayNewPlaces();
+        const existingNames = kinkiPlaces.map(p => p.name);
+        fetchGeminiPlaces(existingNames).then(newPlaces => {
+            if (newPlaces && newPlaces.length > 0) {
+                kinkiPlaces.unshift(...newPlaces);
+                applyFilters();
+            }
+        }).catch(() => {});
     }
 };
 
@@ -4101,15 +4107,9 @@ const chatPref = document.getElementById("chatPrefecture");
 if (filterPref && chatPref) {
     filterPref.addEventListener("change", () => {
         chatPref.value = filterPref.value;
-        if (visibleSpots.length === 0) {
-            fetchAndDisplayNewPlaces();
-        }
     });
     chatPref.addEventListener("change", () => {
         filterPref.value = chatPref.value;
-        if (visibleSpots.length === 0) {
-            fetchAndDisplayNewPlaces();
-        }
         applyFilters();
     });
 }
