@@ -1807,6 +1807,25 @@ window.generatePlacesWithAI = async function () {
 
         if (newPlaces && newPlaces.length > 0) {
             kinkiPlaces.unshift(...newPlaces);
+            for (const place of newPlaces) {
+                try {
+                    const searchRes = await safeFetchJson(getApiUrl('/api/travel/places'), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Goog-FieldMask': 'places.photos,places.displayName'
+                        },
+                        body: JSON.stringify({
+                            textQuery: place.name + ' ' + place.prefecture,
+                            maxResultCount: 1
+                        })
+                    });
+                    const photo = searchRes?.places?.[0]?.photos?.[0]?.name;
+                    if (photo) {
+                        place.img = getApiUrl('/api/travel/photo') + '?name=' + encodeURIComponent(photo) + '&maxWidthPx=800';
+                    }
+                } catch (e) {}
+            }
             showToast("✨ AIが新しい観光スポットを " + newPlaces.length + " 件追加しました！");
             isGeneratingPlaces = false;
             applyFilters();
