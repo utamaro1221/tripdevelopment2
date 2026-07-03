@@ -184,6 +184,7 @@ window.toggleNameDisplayMode = function () {
 // ==========================================
 // 1. 観光スポットデータ定義 (近畿地方限定)
 // ==========================================
+let isGeneratingPlaces = false;
 const kinkiPlaces = [
     {
         id: 0,
@@ -1083,9 +1084,6 @@ window.applyFilters = function () {
 
     nextPoolIndex = 0;
     renderStack();
-    if (currentCardPool.length === 0) {
-        generatePlacesWithAI();
-    }
 };
 
 window.startPersonalizedSearch = function () {
@@ -1756,6 +1754,7 @@ ${excludeStr}
 
 // AIでの観光地追加ボタンのアクション
 window.generatePlacesWithAI = async function () {
+    isGeneratingPlaces = true;
     const stack = document.getElementById("card-stack");
     const container = document.getElementById("swipeActionsContainer");
     if (container) container.classList.add("hidden");
@@ -1809,11 +1808,13 @@ window.generatePlacesWithAI = async function () {
         if (newPlaces && newPlaces.length > 0) {
             kinkiPlaces.unshift(...newPlaces);
             showToast("✨ AIが新しい観光スポットを " + newPlaces.length + " 件追加しました！");
+            isGeneratingPlaces = false;
             applyFilters();
         } else {
             throw new Error("Empty list returned");
         }
     } catch (err) {
+        isGeneratingPlaces = false;
         clearInterval(progressInterval);
         console.error(err);
         let errorMsgToShow = err.message;
@@ -4101,6 +4102,9 @@ const chatPref = document.getElementById("chatPrefecture");
 if (filterPref && chatPref) {
     filterPref.addEventListener("change", () => {
         chatPref.value = filterPref.value;
+        if (currentCardPool.length === 0 && !isGeneratingPlaces) {
+            generatePlacesWithAI();
+        }
     });
     chatPref.addEventListener("change", () => {
         filterPref.value = chatPref.value;
