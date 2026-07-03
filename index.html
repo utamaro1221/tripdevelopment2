@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Japan Wander - AI旁E���Eランナ�E</title>
+    <title>Japan Wander - AI旅行プランナー</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -63,7 +63,7 @@
         <!-- Onboarding Panel -->
         <div id="onboarding-panel" class="onboarding-panel hidden">
             <h2 id="authModalTitle">ログイン</h2>
-            <p>旁E�E好みスワイプ�E析や、AIプラン生�Eをお楽しみください、E/p>
+            <p>旅の好みスワイプ分析や、AIプラン生成をお楽しみください。</p>
 
             <form id="authForm" onsubmit="handleAuthSubmit(event)" style="width: 100%; max-width: 320px;">
                 <div class="form-group" style="margin-bottom: 12px; text-align: left;">
@@ -73,8 +73,8 @@
                         style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #ffffff;">
                 </div>
                 <div class="form-group" style="margin-bottom: 16px; text-align: left;">
-                    <label for="authPassword" style="color: #94a3b8; font-size: 0.8rem;">パスワーチE/label>
-                    <input type="password" id="authPassword" class="form-input" placeholder="6斁E��以丁E required
+                    <label for="authPassword" style="color: #94a3b8; font-size: 0.8rem;">パスワード</label>
+                    <input type="password" id="authPassword" class="form-input" placeholder="6文字以上" required
                         autocomplete="current-password"
                         style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #ffffff;">
                 </div>
@@ -84,7 +84,7 @@
 
             <div
                 style="text-align: center; margin: 12px 0; color: #64748b; font-size: 0.75rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 12px; width: 100%; max-width: 320px;">
-                また�E他アカウントでサインイン
+                または他アカウントでサインイン
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 320px;">
@@ -106,16 +106,16 @@
                 <button type="button" class="btn-primary"
                     style="background-color: transparent; color: #ffffff; border: 2px solid #ffffff; box-shadow: none; padding: 12px;"
                     onclick="signInAsGuestSplash()">
-                    ゲストとして利用する (匿吁E
+                    ゲストとして利用する (匿名)
                 </button>
                 <div class="guest-restriction-note"
                     style="color: #94a3b8; font-size: 0.75rem; margin-top: 8px; text-align: center;">
-                    ※ ゲスト�E閲覧・保存�Eみ。�Eラン共有にはログインが忁E��でぁE
+                    ※ ゲストは閲覧・保存のみ。プラン共有にはログインが必要です
                 </div>
             </div>
 
             <div style="margin-top: 12px; text-align: center; font-size: 0.8rem;">
-                <span id="authToggleText" style="color: #94a3b8;">アカウントをお持ちでなぁE��すか�E�E/span>
+                <span id="authToggleText" style="color: #94a3b8;">アカウントをお持ちでないですか？</span>
                 <a href="#" id="authToggleLink" onclick="toggleAuthMode(event)"
                     style="color: var(--primary-color); text-decoration: underline; font-weight: bold; margin-left: 6px;">新規登録</a>
             </div>
@@ -142,19 +142,19 @@
                 <ul>
                     <li class="sidebar-item active" onclick="switchView('home', this)">
                         <span class="material-icons">home</span>
-                        <span>ホ�Eム</span>
+                        <span>ホーム</span>
                     </li>
                     <li class="sidebar-item" onclick="switchView('swipe', this)">
                         <span class="material-icons">swipe</span>
-                        <span>探ぁE/span>
+                        <span>探す</span>
                     </li>
                     <li class="sidebar-item" onclick="switchView('plan', this)">
                         <span class="material-icons">event_note</span>
-                        <span>予宁E/span>
+                        <span>予定</span>
                     </li>
                     <li class="sidebar-item" onclick="switchView('mypage', this)">
                         <span class="material-icons">account_circle</span>
-                        <span>マイペ�Eジ</span>
+                        <span>マイページ</span>
                     </li>
                 </ul>
             </nav>
@@ -172,7 +172,7 @@
             </button>
             <h1 class="header-title" id="headerTitle">Japan Wander</h1>
             <div style="display: flex; align-items: center;">
-                <button id="rubi-switch" class="ruby-toggle-btn">漢字�Eみ</button>
+                <button id="rubi-switch" class="ruby-toggle-btn">漢字のみ</button>
                 <div class="header-avatar" onclick="switchView('settings')">
                     <img id="headerUserAvatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=traveler" alt="Avatar">
                 </div>
@@ -182,83 +182,83 @@
         <!-- Main Content Area -->
         <main class="app-content">
 
-            <!-- VIEW: SWIPE (探ぁE検索) -->
+            <!-- VIEW: SWIPE (探す/検索) -->
             <div id="view-swipe" class="view hidden">
                 <!-- Recommendation Banner -->
                 <div id="personalizedRecommendationBanner" class="recommendation-banner hidden">
                     <span class="banner-content">
                         <span class="material-icons-outlined"
                             style="vertical-align: middle; margin-right: 6px;">lightbulb</span>
-                        嗜好特化レコメンド中: <strong><span id="recommendationGenreName">温泉�E癒やぁE/span></strong> 優允E
+                        嗜好特化レコメンド中: <strong><span id="recommendationGenreName">温泉・癒やし</span></strong> 優先
                     </span>
-                    <button class="btn-close-banner" onclick="disableRecommendationMode()">標準に戻ぁE/button>
+                    <button class="btn-close-banner" onclick="disableRecommendationMode()">標準に戻す</button>
                 </div>
 
                 <!-- Filtering Bar -->
                 <div class="filter-bar">
                     <select class="filter-select" id="filterPrefecture" onchange="applyFilters()">
                         <option value="all">都道府県: すべて</option>
-                        <option value="北海遁E>北海遁E/option>
-                        <option value="青森">青森省E/option>
-                        <option value="岩扁E>岩手県</option>
-                        <option value="宮埁E>宮城県</option>
-                        <option value="秋田">秋田省E/option>
-                        <option value="山形">山形省E/option>
-                        <option value="福島">福島省E/option>
-                        <option value="茨埁E>茨城県</option>
-                        <option value="栁E��">栁E��省E/option>
-                        <option value="群馬">群馬省E/option>
-                        <option value="埼玁E>埼玉県</option>
-                        <option value="十E��">十E��省E/option>
+                        <option value="北海道">北海道</option>
+                        <option value="青森">青森県</option>
+                        <option value="岩手">岩手県</option>
+                        <option value="宮城">宮城県</option>
+                        <option value="秋田">秋田県</option>
+                        <option value="山形">山形県</option>
+                        <option value="福島">福島県</option>
+                        <option value="茨城">茨城県</option>
+                        <option value="栃木">栃木県</option>
+                        <option value="群馬">群馬県</option>
+                        <option value="埼玉">埼玉県</option>
+                        <option value="千葉">千葉県</option>
                         <option value="東京">東京都</option>
-                        <option value="神奈巁E>神奈川県</option>
-                        <option value="新潁E>新潟県</option>
-                        <option value="富山">富山省E/option>
-                        <option value="石巁E>石川県</option>
-                        <option value="福亁E>福井県</option>
-                        <option value="山梨">山梨省E/option>
-                        <option value="長釁E>長野県</option>
-                        <option value="岐�E">岐�E省E/option>
-                        <option value="静岡">静岡省E/option>
-                        <option value="愛知">愛知省E/option>
-                        <option value="三重">三重省E/option>
-                        <option value="滋賀">滋賀省E/option>
-                        <option value="京都">京都庁E/option>
-                        <option value="大阪">大阪庁E/option>
-                        <option value="兵庫">兵庫省E/option>
-                        <option value="奈良">奈良省E/option>
-                        <option value="和歌山">和歌山省E/option>
-                        <option value="鳥叁E>鳥取県</option>
-                        <option value="島根">島根省E/option>
-                        <option value="岡山">岡山省E/option>
-                        <option value="庁E��">庁E��省E/option>
-                        <option value="山口">山口省E/option>
-                        <option value="徳島">徳島省E/option>
-                        <option value="香巁E>香川県</option>
-                        <option value="愛媁E>愛媛県</option>
-                        <option value="高知">高知省E/option>
-                        <option value="福岡">福岡省E/option>
-                        <option value="佐賀">佐賀省E/option>
-                        <option value="長崁E>長崎県</option>
-                        <option value="熊本">熊本省E/option>
-                        <option value="大刁E>大刁E��</option>
-                        <option value="宮崁E>宮崎県</option>
-                        <option value="鹿児島">鹿児島省E/option>
-                        <option value="沖縁E>沖縁E��</option>
+                        <option value="神奈川">神奈川県</option>
+                        <option value="新潟">新潟県</option>
+                        <option value="富山">富山県</option>
+                        <option value="石川">石川県</option>
+                        <option value="福井">福井県</option>
+                        <option value="山梨">山梨県</option>
+                        <option value="長野">長野県</option>
+                        <option value="岐阜">岐阜県</option>
+                        <option value="静岡">静岡県</option>
+                        <option value="愛知">愛知県</option>
+                        <option value="三重">三重県</option>
+                        <option value="滋賀">滋賀県</option>
+                        <option value="京都">京都府</option>
+                        <option value="大阪">大阪府</option>
+                        <option value="兵庫">兵庫県</option>
+                        <option value="奈良">奈良県</option>
+                        <option value="和歌山">和歌山県</option>
+                        <option value="鳥取">鳥取県</option>
+                        <option value="島根">島根県</option>
+                        <option value="岡山">岡山県</option>
+                        <option value="広島">広島県</option>
+                        <option value="山口">山口県</option>
+                        <option value="徳島">徳島県</option>
+                        <option value="香川">香川県</option>
+                        <option value="愛媛">愛媛県</option>
+                        <option value="高知">高知県</option>
+                        <option value="福岡">福岡県</option>
+                        <option value="佐賀">佐賀県</option>
+                        <option value="長崎">長崎県</option>
+                        <option value="熊本">熊本県</option>
+                        <option value="大分">大分県</option>
+                        <option value="宮崎">宮崎県</option>
+                        <option value="鹿児島">鹿児島県</option>
+                        <option value="沖縄">沖縄県</option>
                     </select>
                     <select class="filter-select" id="filterSeason" onchange="applyFilters()">
                         <option value="all">時期: すべて</option>
                         <option value="春">春</option>
-                        <option value="夁E>夁E/option>
-                        <option value="私E>私E/option>
+                        <option value="夏">夏</option>
+                        <option value="秋">秋</option>
                         <option value="冬">冬</option>
                     </select>
                     <div class="category-filters" id="categoryFilters">
                         <button class="filter-pill active" onclick="selectCategoryFilter('all', this)">✨ すべて</button>
-                        <button class="filter-pill" onclick="selectCategoryFilter('history', this)">🏛�E�E歴史・斁E��</button>
+                        <button class="filter-pill" onclick="selectCategoryFilter('history', this)">🏛️ 歴史・文化</button>
                         <button class="filter-pill" onclick="selectCategoryFilter('nature', this)">🌳 自然・アウトドア</button>
                         <button class="filter-pill" onclick="selectCategoryFilter('food', this)">🍔 グルメ</button>
-                        <button class="filter-pill" onclick="selectCategoryFilter('healing', this)">♨�E�E温泉�E癒やぁE/button>
+                        <button class="filter-pill" onclick="selectCategoryFilter('healing', this)">♨️ 温泉・癒やし</button>
                     </div>
                 </div>
 
@@ -271,27 +271,27 @@
                 <div class="swipe-actions-container" id="swipeActionsContainer">
                     <button class="swipe-action-btn btn-swipe-anmari" onclick="swipeTopCard('anmari')">
                         <span class="material-icons-outlined">close</span>
-                        <span>興味なぁE/span>
+                        <span>興味なし</span>
                     </button>
                     <button class="swipe-action-btn btn-swipe-like" onclick="swipeTopCard('like')">
                         <span class="material-icons-outlined">favorite</span>
-                        <span>ぁE��ね</span>
+                        <span>いいね</span>
                     </button>
                 </div>
             </div>
 
-            <!-- VIEW: PLAN (予宁E -->
+            <!-- VIEW: PLAN (予定) -->
             <div id="view-plan" class="view hidden">
                 <div class="plan-view-container">
                     <div class="plan-header">
-                        <h2>旁E���Eランの作�E</h2>
-                        <p>「いぁE�E」したスポットを選択して、AIに最適化された旁E��計画を提案してもらぁE��しょぁE��E/p>
+                        <h2>旅行プランの作成</h2>
+                        <p>「いいね」したスポットを選択して、AIに最適化された旅行計画を提案してもらいましょう。</p>
                     </div>
 
                     <div class="plan-grid">
                         <!-- Left: Liked Places List -->
                         <div class="liked-places-panel">
-                            <h3>ぁE��ねリスチE/h3>
+                            <h3>いいねリスト</h3>
                             <div class="liked-list" id="likedList">
                                 <!-- Liked items inserted here -->
                             </div>
@@ -304,11 +304,11 @@
                                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
                                     <span class="material-icons"
                                         style="color: var(--primary-color);">auto_awesome</span>
-                                    <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800;">AIの先回り�E動提桁E/h3>
+                                    <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800;">AIの先回り自動提案</h3>
                                 </div>
                                 <p
                                     style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
-                                    あなた�E「いぁE�E」履歴と診断プロフィールを�E析して、最適なルートを先回りして作�Eしました、E
+                                    あなたの「いいね」履歴と診断プロフィールを分析して、最適なルートを先回りして作成しました。
                                 </p>
                                 <div id="proactiveSuggestionsList" class="proactive-suggestions-list">
                                     <!-- Suggestions will be dynamically inserted here -->
@@ -319,7 +319,7 @@
                                     <p
                                         style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; justify-content: center; gap: 4px;">
                                         <span class="material-icons" style="font-size: 1rem;">info</span>
-                                        <span>左のリストから特定�Eスポットを選んで手動でプランを作ることもできます、E/span>
+                                        <span>左のリストから特定のスポットを選んで手動でプランを作ることもできます。</span>
                                     </p>
                                 </div>
                             </div>
@@ -329,14 +329,14 @@
                                 <h3 id="planTargetName">スポット名</h3>
 
                                 <div class="form-group">
-                                    <label for="planStartStation">出発地�E�最寁E��駁E��E/label>
+                                    <label for="planStartStation">出発地（最寄り駅）</label>
                                     <input type="text" id="planStartStation" class="form-input"
-                                        placeholder="出発する最寁E��駁E��入劁E>
+                                        placeholder="出発する最寄り駅を入力">
                                 </div>
 
                                 <div class="form-row-2">
                                     <div class="form-group">
-                                        <label for="planDate">日稁E(ぁE��行くぁE</label>
+                                        <label for="planDate">日程 (いつ行くか)</label>
                                         <input type="date" id="planDate" class="form-input" required
                                             onkeydown="event.preventDefault()"
                                             onclick="if(typeof this.showPicker === 'function') this.showPicker()">
@@ -344,55 +344,55 @@
                                     <div class="form-group">
                                         <label for="planNights">泊数 (何泊か)</label>
                                         <select id="planNights" class="form-select">
-                                            <option value="1">1況E日</option>
-                                            <option value="2">2況E日</option>
-                                            <option value="3">3況E日</option>
-                                            <option value="4">4況E日</option>
+                                            <option value="1">1泊2日</option>
+                                            <option value="2">2泊3日</option>
+                                            <option value="3">3泊4日</option>
+                                            <option value="4">4泊5日</option>
                                         </select>
                                     </div>
                                 </div>
 
                                 <div class="form-row-2">
                                     <div class="form-group">
-                                        <label for="planPeople">人数 (何人ぁE</label>
+                                        <label for="planPeople">人数 (何人か)</label>
                                         <input type="number" id="planPeople" class="form-input" min="1" value="2"
                                             required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="planBudget">予箁E(総顁E</label>
+                                        <label for="planBudget">予算 (総額)</label>
                                         <select id="planBudget" class="form-select">
-                                            <option value="30000">3丁E�E以冁E/option>
-                                            <option value="50000">5丁E�E以冁E/option>
-                                            <option value="100000">10丁E�E以冁E/option>
-                                            <option value="200000">20丁E�E以丁E/option>
+                                            <option value="30000">3万円以内</option>
+                                            <option value="50000">5万円以内</option>
+                                            <option value="100000">10万円以内</option>
+                                            <option value="200000">20万円以上</option>
                                         </select>
                                     </div>
                                 </div>
 
                                 <div class="form-group">
-                                    <label>重視�EインチE(何を重視してぁE��ぁE</label>
+                                    <label>重視ポイント (何を重視しているか)</label>
                                     <div class="priority-pills" id="priorityPills">
                                         <span class="priority-pill active" onclick="togglePriorityPill(this)"
                                             data-val="グルメ">グルメ</span>
                                         <span class="priority-pill" onclick="togglePriorityPill(this)"
-                                            data-val="観光�E歴史">観光�E歴史</span>
+                                            data-val="観光・歴史">観光・歴史</span>
                                         <span class="priority-pill" onclick="togglePriorityPill(this)"
-                                            data-val="自然・癒やぁE>自然・癒やぁE/span>
+                                            data-val="自然・癒やし">自然・癒やし</span>
                                         <span class="priority-pill" onclick="togglePriorityPill(this)"
-                                            data-val="アクチE��ビティ">アクチE��チE/span>
+                                            data-val="アクティビティ">アクティブ</span>
                                         <span class="priority-pill" onclick="togglePriorityPill(this)"
-                                            data-val="ショチE��ング">買ぁE��</span>
+                                            data-val="ショッピング">買い物</span>
                                     </div>
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="planOthers">そ�E仁E(備老E�E要望)</label>
+                                    <label for="planOthers">その他 (備考・要望)</label>
                                     <textarea id="planOthers" class="form-textarea" rows="2"
-                                        placeholder="侁E 近辺で有名な甘味処に行きたい、バリアフリーを重視したい、など"></textarea>
+                                        placeholder="例: 近辺で有名な甘味処に行きたい、バリアフリーを重視したい、など"></textarea>
                                 </div>
 
                                 <div class="generator-actions" style="justify-content: flex-end;">
-                                    <button type="submit" class="btn-primary">AI旁E���Eランを生成すめE/button>
+                                    <button type="submit" class="btn-primary">AI旅行プランを生成する</button>
                                 </div>
                             </form>
 
@@ -404,7 +404,7 @@
                                 </div>
                                 <h4 style="margin-top: 16px;">AIプランを生成中...</h4>
                                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
-                                    楽天トラベルのホテル惁E��を取得してぁE��ぁE/p>
+                                    楽天トラベルのホテル情報を取得しています</p>
 
                                 <!-- Shinkansen Progress Bar -->
                                 <div class="progress-container">
@@ -422,35 +422,37 @@
                             <div class="ai-results-view hidden" id="planResults">
                                 <div
                                     style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; flex-wrap: wrap;">
-                                    <h3 style="margin-bottom: 0;">提案された旁E���Eラン</h3>
+                                    <h3 style="margin-bottom: 0;">提案された旅行プラン</h3>
                                     <div style="display: flex; gap: 8px;">
-                                        <button class="btn-primary" id="addToCalendarBtn" style="padding: 6px 14px; font-size: 0.8rem; display: flex; align-items: center; gap: 4px;">
-                                            <span class="material-icons" style="font-size: 1rem;">calendar_today</span>カレンダー追加
+                                        <button class="btn-primary" id="addToCalendarBtn"
+                                            style="padding: 6px 14px; font-size: 0.8rem; display: flex; align-items: center; gap: 4px;">
+                                            <span class="material-icons"
+                                                style="font-size: 1rem;">calendar_today</span>カレンダー追加
                                         </button>
                                         <button class="btn-primary" style="padding: 6px 14px; font-size: 0.8rem;"
-                                            onclick="backToPlanForm()">再�E劁E/button>
+                                            onclick="backToPlanForm()">再入力</button>
                                     </div>
                                 </div>
 
                                 <div class="ai-plan-card">
-                                    <h3>📅 日程�Eプラン提桁E/h3>
+                                    <h3>📅 日程・プラン提案</h3>
                                     <div class="ai-plan-text" id="aiPlanText"></div>
                                 </div>
 
                                 <div class="ai-plan-card">
-                                    <h3>🚇 アクセス・移動ルーチE/h3>
+                                    <h3>🚇 アクセス・移動ルート</h3>
                                     <div class="ai-plan-text" id="aiPlanTransitText"></div>
                                 </div>
 
                                 <div class="ai-plan-card">
-                                    <h3>🗺�E�E3Dルートシミュレーション</h3>
+                                    <h3>🗺️ 3Dルートシミュレーション</h3>
                                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
-                                        目皁E��までのルートを3Dマップ上でシミュレーションできます、E/p>
+                                        目的地までのルートを3Dマップ上でシミュレーションできます。</p>
                                     <button class="btn-primary"
                                         style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;"
                                         id="launch3DSimBtn">
                                         <span class="material-icons" style="font-size: 1.1rem;">route</span>
-                                        3Dルートシミュレーションを開姁E
+                                        3Dルートシミュレーションを開始
                                     </button>
                                 </div>
 
@@ -465,25 +467,25 @@
                             <!-- State 5: API Error View -->
                             <div class="api-error-card hidden" id="planError">
                                 <span class="material-icons error-icon">error_outline</span>
-                                <h3>ホテル惁E��の取得に時間がかかってぁE��ぁE/h3>
-                                <p>もう一度お試しください、E/p>
-                                <button class="btn-retry" onclick="retryPlanGeneration()">再読み込み (再試衁E</button>
+                                <h3>ホテル情報の取得に時間がかかっています</h3>
+                                <p>もう一度お試しください。</p>
+                                <button class="btn-retry" onclick="retryPlanGeneration()">再読み込み (再試行)</button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- VIEW: HOME (ホ�Eム) -->
+            <!-- VIEW: HOME (ホーム) -->
             <div id="view-home" class="view">
                 <!-- Home Empty State (Plans = 0) -->
                 <div id="home-empty-state" class="home-empty-state hidden">
                     <div class="cta-card">
                         <div class="cta-icon">✨</div>
-                        <h3>次の旁E��計画しましょぁE/h3>
-                        <p>AIがあなたにぴったりの旁E���Eランを作�Eします、E/p>
+                        <h3>次の旅を計画しましょう</h3>
+                        <p>AIがあなたにぴったりの旅行プランを作成します。</p>
                         <button id="homeCtaBtn" class="btn-primary btn-large" onclick="handleHomeCta()">
-                            AIに次の旁E��を相諁E��めE
+                            AIに次の旅行を相談する
                         </button>
                     </div>
                 </div>
@@ -493,17 +495,17 @@
                     <div class="hero-overlay"></div>
                     <div class="hero-content">
                         <div class="hero-countdown">
-                            <span class="hero-label">次の旁E��まで</span>
+                            <span class="hero-label">次の旅行まで</span>
                             <h2 id="heroCountdownDays">-- 日</h2>
                             <span id="heroCountdownDest" class="hero-dest">予定を登録してね</span>
                         </div>
                         <div class="hero-weather">
-                            <div id="heroWeatherLoc" class="weather-loc">目皁E��の天氁E/div>
+                            <div id="heroWeatherLoc" class="weather-loc">目的地の天気</div>
                             <div class="weather-details">
-                                <span id="heroWeatherIcon" class="weather-icon">🌤�E�E/span>
+                                <span id="heroWeatherIcon" class="weather-icon">🌤️</span>
                                 <span id="heroWeatherTemp" class="weather-temp">--°C</span>
                             </div>
-                            <div id="heroWeatherDesc" class="weather-desc">予定を登録すると表示されまぁE/div>
+                            <div id="heroWeatherDesc" class="weather-desc">予定を登録すると表示されます</div>
                         </div>
                     </div>
                 </div>
@@ -511,7 +513,7 @@
                 <!-- Saved Spots Section (Horizontal Scroll of Thumbnails) -->
                 <div class="home-section">
                     <div class="section-header">
-                        <h3 class="section-title">保存したスポッチE<span id="savedSpotsCount" class="badge">0</span></h3>
+                        <h3 class="section-title">保存したスポット <span id="savedSpotsCount" class="badge">0</span></h3>
                         <button class="btn-text" onclick="openModal('recent-likes')">すべて見る</button>
                     </div>
                     <div class="saved-spots-scroll" id="savedSpotsScroll">
@@ -522,7 +524,7 @@
                 <!-- Upcoming Plans Section -->
                 <div class="home-section" id="homePlansSection">
                     <div class="section-header">
-                        <h3 class="section-title">旁E��予宁E<span id="homePlansCount" class="badge">0</span></h3>
+                        <h3 class="section-title">旅行予定 <span id="homePlansCount" class="badge">0</span></h3>
                     </div>
                     <div class="home-plans-list" id="homePlansList">
                         <!-- Plans will be dynamically inserted here -->
@@ -533,7 +535,7 @@
                 <div class="home-ai-chat-bar-container">
                     <div class="home-ai-chat-bar" onclick="openChatDrawer()">
                         <span class="material-icons ai-chat-icon">support_agent</span>
-                        <span class="ai-chat-placeholder">今日はどんな旁E��したぁE���Eですか�E�E/span>
+                        <span class="ai-chat-placeholder">今日はどんな旅がしたい気分ですか？</span>
                         <button class="btn-ai-chat-go">
                             <span class="material-icons">arrow_forward</span>
                         </button>
@@ -541,7 +543,7 @@
                 </div>
             </div>
 
-            <!-- VIEW: MYPAGE (マイペ�Eジ) -->
+            <!-- VIEW: MYPAGE (マイページ) -->
             <div id="view-mypage" class="view hidden">
                 <div class="mypage-header-card">
                     <div class="mypage-profile">
@@ -560,12 +562,12 @@
                 </div>
 
                 <div class="mypage-sections-container">
-                    <!-- Section: Diagnosis (旁E��イプ診断) -->
+                    <!-- Section: Diagnosis (旅タイプ診断) -->
                     <div class="mypage-section diagnosis-section">
-                        <h3 class="section-title">📊 あなた�E旁E��イプ診断</h3>
+                        <h3 class="section-title">📊 あなたの旅タイプ診断</h3>
                         <div class="stand-badge-container">
                             <div class="stand-name-title">TRAVEL TYPE CARD</div>
-                            <div class="stand-name-val" id="standName">未決定�E旁E��</div>
+                            <div class="stand-name-val" id="standName">未決定の旅人</div>
                             <div class="stand-rank-val" id="standRank">診断評価: -</div>
                         </div>
                         <div class="chart-container">
@@ -578,7 +580,7 @@
                             <h4
                                 style="font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: var(--primary-color); display: flex; align-items: center; gap: 6px;">
                                 <span class="material-icons" style="font-size: 1.2rem;">analytics</span>
-                                <span>詳細トラベルプロフィール刁E��</span>
+                                <span>詳細トラベルプロフィール分析</span>
                             </h4>
 
                             <div class="pref-grid">
@@ -586,7 +588,7 @@
                                     <div class="pref-group-title">
                                         <span class="material-icons"
                                             style="font-size: 1rem; color: var(--primary-color);">people</span>
-                                        <span>👥 同行老E��性</span>
+                                        <span>👥 同行者属性</span>
                                     </div>
                                     <div id="companionPrefBars" class="pref-bars-list"></div>
                                 </div>
@@ -613,7 +615,7 @@
                                     <div class="pref-group-title">
                                         <span class="material-icons"
                                             style="font-size: 1rem; color: #f43f5e;">explore</span>
-                                        <span>🎯 目皁E�Eシーン</span>
+                                        <span>🎯 目的・シーン</span>
                                     </div>
                                     <div id="purposePrefBars" class="pref-bars-list"></div>
                                 </div>
@@ -625,7 +627,7 @@
                             <button class="btn-primary" onclick="startPersonalizedSearch()">
                                 <span class="material-icons"
                                     style="font-size: 1.1rem; vertical-align: middle; margin-right: 6px;">star</span>
-                                嗜好特化レコメンド検索を開姁E
+                                嗜好特化レコメンド検索を開始
                             </button>
                         </div>
                     </div>
@@ -637,15 +639,15 @@
                         <div id="shareLoggedOutState" class="empty-stack-view" style="padding: 30px 20px;">
                             <span class="material-icons"
                                 style="font-size: 3rem; opacity: 0.5; color: var(--primary-color);">people_outline</span>
-                            <h3>共有コミュニティの利用にはログインが忁E��でぁE/h3>
+                            <h3>共有コミュニティの利用にはログインが必要です</h3>
                             <p style="font-size: 0.85rem; margin-bottom: 8px;">
-                                他�Eトラベラーの旁E���Eランを参老E��したり、�E身のプランをシェアするにはアカウント連携を行ってください、E/p>
+                                他のトラベラーの旅行プランを参考にしたり、自身のプランをシェアするにはアカウント連携を行ってください。</p>
                             <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 16px;">※
-                                ゲストモード（匿名ログイン�E��E場合�E閲覧・共有が制限されます、E/p>
+                                ゲストモード（匿名ログイン）の場合は閲覧・共有が制限されます。</p>
                             <button class="btn-primary" onclick="logoutUser()">
                                 <span class="material-icons"
                                     style="font-size: 1.1rem; vertical-align: middle; margin-right: 6px;">login</span>
-                                ログイン・新規登録して始めめE
+                                ログイン・新規登録して始める
                             </button>
                         </div>
 
@@ -672,13 +674,13 @@
 
                     <!-- Section: Stats (興味なし履歴) -->
                     <div class="mypage-section stats-section">
-                        <h3 class="section-title">�E 興味なしにした件数</h3>
+                        <h3 class="section-title">😐 興味なしにした件数</h3>
                         <div class="interest-stats-card" onclick="openModal('anmari')">
                             <div style="display: flex; align-items: center; gap: 12px;">
-                                <span class="interest-stats-icon" style="font-size: 1.8rem;">�E</span>
+                                <span class="interest-stats-icon" style="font-size: 1.8rem;">😐</span>
                                 <div class="interest-stats-info" style="display: flex; flex-direction: column;">
                                     <span class="interest-stats-label"
-                                        style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">「�E味なし」に設定したスポッチE/span>
+                                        style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">「興味なし」に設定したスポット</span>
                                     <span class="interest-stats-count"
                                         style="font-size: 1.2rem; font-weight: 800; color: var(--text-color);"><span
                                             id="anmariCount">0</span> 件</span>
@@ -689,33 +691,33 @@
                         </div>
                         <p class="interest-stats-hint"
                             style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; line-height: 1.4;">※
-                            興味なしにしたスポット�E15日後に自動的にクリーンアチE�Eされます、E/p>
+                            興味なしにしたスポットは15日後に自動的にクリーンアップされます。</p>
                     </div>
                 </div>
             </div>
 
-            <!-- VIEW: SETTINGS (設宁E -->
+            <!-- VIEW: SETTINGS (設定) -->
             <div id="view-settings" class="view hidden">
                 <div class="settings-back-header"
                     style="max-width: 700px; width: 100%; margin: 20px auto 10px auto; padding: 0 20px;">
                     <button class="btn-back" onclick="switchView('mypage')"
                         style="background: none; border: none; color: var(--primary-color); cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.95rem;">
                         <span class="material-icons" style="font-size: 1.2rem;">arrow_back</span>
-                        <span>マイペ�Eジに戻めE/span>
+                        <span>マイページに戻る</span>
                     </button>
                 </div>
                 <div class="plan-header" style="max-width: 700px; width: 100%; margin: 0 auto 20px auto;">
-                    <h2>アプリ設宁E/h2>
-                    <p>アカウント情報めE��ザイン、表示サイズの調整を行います、E/p>
+                    <h2>アプリ設定</h2>
+                    <p>アカウント情報やデザイン、表示サイズの調整を行います。</p>
                 </div>
 
                 <div id="view-settings-container">
                     <!-- Section: Account Settings -->
                     <div class="settings-section">
-                        <h3>👤 アカウント設宁E/h3>
+                        <h3>👤 アカウント設定</h3>
 
                         <div class="form-group">
-                            <label for="settingsUsername">ユーザー吁E/label>
+                            <label for="settingsUsername">ユーザー名</label>
                             <input type="text" id="settingsUsername" class="form-input" value="トラベラー"
                                 oninput="updateSettingsFromUI()">
                         </div>
@@ -756,10 +758,10 @@
 
                     <!-- Section: Display Settings -->
                     <div class="settings-section">
-                        <h3>🎨 チE��イン設宁E/h3>
+                        <h3>🎨 デザイン設定</h3>
 
                         <div class="form-group">
-                            <label>カラーチE�EチE/label>
+                            <label>カラーテーマ</label>
                             <div class="theme-options">
                                 <button class="theme-btn active" id="btnThemeMcBlue" onclick="changeTheme('mc-blue')">
                                     <span style="background-color: #007cff;"></span>
@@ -767,11 +769,11 @@
                                 </button>
                                 <button class="theme-btn" id="btnThemeMcEmerald" onclick="changeTheme('mc-emerald')">
                                     <span style="background-color: #10b981;"></span>
-                                    エメラルチE
+                                    エメラルド
                                 </button>
                                 <button class="theme-btn" id="btnThemeMcAmber" onclick="changeTheme('mc-amber')">
                                     <span style="background-color: #f59e0b;"></span>
-                                    アンバ�E
+                                    アンバー
                                 </button>
                                 <button class="theme-btn" id="btnThemeMcDark" onclick="changeTheme('mc-dark')">
                                     <span style="background-color: #3b82f6;"></span>
@@ -781,7 +783,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label>斁E��サイズ調整</label>
+                            <label>文字サイズ調整</label>
                             <div class="size-slider-group">
                                 <span style="font-size: 0.8rem; opacity: 0.6;">A-</span>
                                 <input type="range" class="size-slider" id="textSizeSlider" min="80" max="120"
@@ -792,12 +794,12 @@
                         </div>
                         </divz <!-- Section: System Settings -->
                         <div class="settings-section">
-                            <h3>🌐 シスチE��設宁E/h3>
+                            <h3>🌐 システム設定</h3>
 
                             <div class="form-group">
-                                <label for="settingsLang">表示言誁E/label>
+                                <label for="settingsLang">表示言語</label>
                                 <select id="settingsLang" class="form-select" onchange="changeLanguage(this.value)">
-                                    <option value="ja">日本誁E/option>
+                                    <option value="ja">日本語</option>
                                     <option value="en">English (Simulation)</option>
                                 </select>
                             </div>
@@ -815,7 +817,7 @@
         <div class="modal-sheet" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <span class="modal-title" id="modalTitle"></span>
-                <button class="modal-close" onclick="closeModal()">✁E/button>
+                <button class="modal-close" onclick="closeModal()">✕</button>
             </div>
             <div class="modal-body" id="modalBody"></div>
         </div>
@@ -828,76 +830,77 @@
         <div class="chat-drawer-header">
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span class="material-icons" style="color: var(--primary-color);">support_agent</span>
-                <span class="chat-drawer-title">AI旁E��相諁E��口</span>
+                <span class="chat-drawer-title">AI旅行相談窓口</span>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
                 <button id="chatEditModeBtn" onclick="toggleChatEditMode()"
                     style="font-size:0.75rem; padding:4px 10px; border-radius:99px; border:1px solid var(--border-color); background:transparent; color:var(--text-muted); cursor:pointer;">
-                    ✏︁Eプラン編雁E��ーチE
+                    ✏️ プラン編集モード
                 </button>
-                <button class="chat-drawer-close" onclick="closeChatDrawer()">✁E/button>
+                <button class="chat-drawer-close" onclick="closeChatDrawer()">✕</button>
             </div>
         </div>
         <div class="chat-drawer-body" id="chatDrawerBody">
             <div class="chat-bubble chat-bubble-ai">
-                <div class="chat-avatar">🤁E/div>
+                <div class="chat-avatar">🤖</div>
                 <div class="chat-text">
-                    こんにちは�E�旅行�Eランナ�EのAI相諁E��です。何でもお気軽にご相諁E��ださい�E�E
+                    こんにちは！旅行プランナーのAI相談員です。何でもお気軽にご相談ください！
                 </div>
             </div>
         </div>
         <div class="chat-drawer-footer">
             <form id="chatBotForm" onsubmit="handleSendChatMessage(event)"
                 style="display: flex; width: 100%; gap: 8px; margin: 0;">
-                <select class="filter-select" id="chatPrefecture" style="width: auto; max-width: 100px; flex-shrink: 0; margin-right: 0; padding: 6px 20px 6px 8px; font-size: 0.8rem; height: 38px;">
+                <select class="filter-select" id="chatPrefecture"
+                    style="width: auto; max-width: 100px; flex-shrink: 0; margin-right: 0; padding: 6px 20px 6px 8px; font-size: 0.8rem; height: 38px;">
                     <option value="all">全国</option>
-                    <option value="北海遁E>北海遁E/option>
-                    <option value="青森">青森省E/option>
-                    <option value="岩扁E>岩手県</option>
-                    <option value="宮埁E>宮城県</option>
-                    <option value="秋田">秋田省E/option>
-                    <option value="山形">山形省E/option>
-                    <option value="福島">福島省E/option>
-                    <option value="茨埁E>茨城県</option>
-                    <option value="栁E��">栁E��省E/option>
-                    <option value="群馬">群馬省E/option>
-                    <option value="埼玁E>埼玉県</option>
-                    <option value="十E��">十E��省E/option>
+                    <option value="北海道">北海道</option>
+                    <option value="青森">青森県</option>
+                    <option value="岩手">岩手県</option>
+                    <option value="宮城">宮城県</option>
+                    <option value="秋田">秋田県</option>
+                    <option value="山形">山形県</option>
+                    <option value="福島">福島県</option>
+                    <option value="茨城">茨城県</option>
+                    <option value="栃木">栃木県</option>
+                    <option value="群馬">群馬県</option>
+                    <option value="埼玉">埼玉県</option>
+                    <option value="千葉">千葉県</option>
                     <option value="東京">東京都</option>
-                    <option value="神奈巁E>神奈川県</option>
-                    <option value="新潁E>新潟県</option>
-                    <option value="富山">富山省E/option>
-                    <option value="石巁E>石川県</option>
-                    <option value="福亁E>福井県</option>
-                    <option value="山梨">山梨省E/option>
-                    <option value="長釁E>長野県</option>
-                    <option value="岐�E">岐�E省E/option>
-                    <option value="静岡">静岡省E/option>
-                    <option value="愛知">愛知省E/option>
-                    <option value="三重">三重省E/option>
-                    <option value="滋賀">滋賀省E/option>
-                    <option value="京都">京都庁E/option>
-                    <option value="大阪">大阪庁E/option>
-                    <option value="兵庫">兵庫省E/option>
-                    <option value="奈良">奈良省E/option>
-                    <option value="和歌山">和歌山省E/option>
-                    <option value="鳥叁E>鳥取県</option>
-                    <option value="島根">島根省E/option>
-                    <option value="岡山">岡山省E/option>
-                    <option value="庁E��">庁E��省E/option>
-                    <option value="山口">山口省E/option>
-                    <option value="徳島">徳島省E/option>
-                    <option value="香巁E>香川県</option>
-                    <option value="愛媁E>愛媛県</option>
-                    <option value="高知">高知省E/option>
-                    <option value="福岡">福岡省E/option>
-                    <option value="佐賀">佐賀省E/option>
-                    <option value="長崁E>長崎県</option>
-                    <option value="熊本">熊本省E/option>
-                    <option value="大刁E>大刁E��</option>
-                    <option value="宮崁E>宮崎県</option>
-                    <option value="鹿児島">鹿児島省E/option>
-                    <option value="沖縁E>沖縁E��</option>
+                    <option value="神奈川">神奈川県</option>
+                    <option value="新潟">新潟県</option>
+                    <option value="富山">富山県</option>
+                    <option value="石川">石川県</option>
+                    <option value="福井">福井県</option>
+                    <option value="山梨">山梨県</option>
+                    <option value="長野">長野県</option>
+                    <option value="岐阜">岐阜県</option>
+                    <option value="静岡">静岡県</option>
+                    <option value="愛知">愛知県</option>
+                    <option value="三重">三重県</option>
+                    <option value="滋賀">滋賀県</option>
+                    <option value="京都">京都府</option>
+                    <option value="大阪">大阪府</option>
+                    <option value="兵庫">兵庫県</option>
+                    <option value="奈良">奈良県</option>
+                    <option value="和歌山">和歌山県</option>
+                    <option value="鳥取">鳥取県</option>
+                    <option value="島根">島根県</option>
+                    <option value="岡山">岡山県</option>
+                    <option value="広島">広島県</option>
+                    <option value="山口">山口県</option>
+                    <option value="徳島">徳島県</option>
+                    <option value="香川">香川県</option>
+                    <option value="愛媛">愛媛県</option>
+                    <option value="高知">高知県</option>
+                    <option value="福岡">福岡県</option>
+                    <option value="佐賀">佐賀県</option>
+                    <option value="長崎">長崎県</option>
+                    <option value="熊本">熊本県</option>
+                    <option value="大分">大分県</option>
+                    <option value="宮崎">宮崎県</option>
+                    <option value="鹿児島">鹿児島県</option>
+                    <option value="沖縄">沖縄県</option>
                 </select>
                 <input type="text" id="chatInput" class="form-input" placeholder="質問を入力してください..." required
                     autocomplete="off">
@@ -914,7 +917,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <script src="calendar.js"></script>
-    <script type="module" src="script.js?v=1.3.2"></script>
+    <script type="module" src="script.js?v=1.3.1"></script>
 </body>
 
 </html>
