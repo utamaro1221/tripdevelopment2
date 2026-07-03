@@ -1084,7 +1084,7 @@ window.applyFilters = function () {
     nextPoolIndex = 0;
     renderStack();
     if (currentCardPool.length === 0) {
-        fetchAndDisplayNewPlaces();
+        generatePlacesWithAI();
     }
 };
 
@@ -2148,7 +2148,7 @@ function bind3DSimButton(planData) {
         btn.parentNode.replaceChild(newBtn, btn);
         newBtn.addEventListener("click", () => {
             const wps = planData.waypoints || [];
-            const labels = wps.map(function(wp, i) {
+            const labels = wps.map(function (wp, i) {
                 if (i === 0) return "出発地";
                 if (i === wps.length - 1) return planData.destination || "目的地";
                 return "経由地" + i;
@@ -4107,4 +4107,3 @@ if (filterPref && chatPref) {
         applyFilters();
     });
 }
-
