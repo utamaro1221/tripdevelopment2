@@ -4099,9 +4099,15 @@ const chatPref = document.getElementById("chatPrefecture");
 if (filterPref && chatPref) {
     filterPref.addEventListener("change", () => {
         chatPref.value = filterPref.value;
+        if (visibleSpots.length === 0) {
+            fetchAndDisplayNewPlaces();
+        }
     });
     chatPref.addEventListener("change", () => {
         filterPref.value = chatPref.value;
+        if (visibleSpots.length === 0) {
+            fetchAndDisplayNewPlaces();
+        }
         applyFilters();
     });
 }
