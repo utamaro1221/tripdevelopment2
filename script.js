@@ -1084,13 +1084,7 @@ window.applyFilters = function () {
     nextPoolIndex = 0;
     renderStack();
     if (currentCardPool.length === 0) {
-        const existingNames = kinkiPlaces.map(p => p.name);
-        fetchGeminiPlaces(existingNames).then(newPlaces => {
-            if (newPlaces && newPlaces.length > 0) {
-                kinkiPlaces.unshift(...newPlaces);
-                applyFilters();
-            }
-        }).catch(() => {});
+        fetchAndDisplayNewPlaces();
     }
 };
 
