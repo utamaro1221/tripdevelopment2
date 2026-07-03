@@ -14,7 +14,7 @@ function downloadICS(title, description, startDate, endDate) {
     const dtstamp = formatDateToICS(new Date()) + 'Z';
     const dtstart = formatDateToICS(start);
     const dtend = formatDateToICS(end);
-    const uid = Date.now() + '@kinkiwander.com';
+    const uid = Date.now() + '@japanwander.com';
     const cleanDescription = description
         .replace(/\\/g, '\\\\')
         .replace(/,/g, '\\,')
@@ -23,7 +23,7 @@ function downloadICS(title, description, startDate, endDate) {
     const icsContent = [
         'BEGIN:VCALENDAR',
         'VERSION:2.0',
-        'PRODID:-//Kinki Wander//Travel Planner//EN',
+        'PRODID:-//Japan Wander//Travel Planner//EN',
         'CALSCALE:GREGORIAN',
         'METHOD:PUBLISH',
         'BEGIN:VEVENT',

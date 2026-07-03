@@ -697,7 +697,11 @@ if (!sharedPlans || sharedPlans.length === 0) {
 // アカウント・UI設定の読み込み
 let userName = localStorage.getItem("kw_username") || "トラベラー";
 let userAvatar = localStorage.getItem("kw_avatar") || "traveler";
-let headerTitle = localStorage.getItem("kw_headertitle") || "Kinki Wander";
+let headerTitle = localStorage.getItem("kw_headertitle");
+if (headerTitle === "Kinki Wander" || !headerTitle) {
+    headerTitle = "Japan Wander";
+    localStorage.setItem("kw_headertitle", "Japan Wander");
+}
 let currentTheme = localStorage.getItem("kw_theme") || "mc-blue";
 let currentFontSize = localStorage.getItem("kw_fontsize") || "100";
 let currentLanguage = localStorage.getItem("kw_lang") || "ja";
@@ -840,9 +844,9 @@ function updateAuthUI(user) {
         // 未ログイン状態
         userName = localStorage.getItem("kw_username") || "トラベラー";
         if (nameEl) nameEl.textContent = userName;
-        if (statusEl) statusEl.textContent = "近畿エリア探索中";
+        if (statusEl) statusEl.textContent = "全国エリア探索中";
         if (myPageName) myPageName.textContent = userName;
-        if (myPageStatus) myPageStatus.textContent = "近畿エリア探索中";
+        if (myPageStatus) myPageStatus.textContent = "全国エリア探索中";
 
         if (settingsUserStatus) {
             settingsUserStatus.innerHTML = `
@@ -1045,18 +1049,19 @@ function showToast(message) {
 window.applyFilters = function () {
     const seasonSelect = document.getElementById("filterSeason");
     const catSelect = document.getElementById("filterCategory");
+    const prefSelect = document.getElementById("filterPrefecture");
 
     activeFilters.season = seasonSelect ? seasonSelect.value : "all";
+    activeFilters.prefecture = prefSelect ? prefSelect.value : "all";
     if (catSelect) {
         activeFilters.category = catSelect.value;
     }
 
-    // フィルタ条件に合致するスポットプールを作成
     currentCardPool = kinkiPlaces.filter(place => {
         const matchSeason = (activeFilters.season === "all" || place.season === activeFilters.season);
+        const matchPref = (activeFilters.prefecture === "all" || place.prefecture === activeFilters.prefecture);
         const matchCat = (activeFilters.category === "all" || place.category === activeFilters.category);
 
-        // すでに「いいね」または「興味なし」に入っているものは除く (リセットされない限り)
         const isAlreadySelected = likes.some(l => l.id === place.id) || anmaris.some(a => a.id === place.id);
 
         let matchRecommendation = true;
@@ -1066,7 +1071,7 @@ window.applyFilters = function () {
             matchRecommendation = matchesGenre(place, highestIndex);
         }
 
-        return matchSeason && matchCat && !isAlreadySelected && matchRecommendation;
+        return matchSeason && matchPref && matchCat && !isAlreadySelected && matchRecommendation;
     });
 
     if (recommendationMode) {
@@ -1518,11 +1523,11 @@ async function fetchGeminiItinerary(name, pref, date, nightsText, people, budget
     const standRank = document.getElementById("standRank")?.textContent || "";
 
     const promptText = `
-あなたは旅行プランナーです。ユーザーの「旅行スタンド（Travel Stand）」の特性を最大限に活かした、近畿地方の魅力的で具体的な旅行プランを作成してください。
+あなたは旅行プランナーです。ユーザーの「旅行スタンド（Travel Stand）」の特性を最大限に活かした、目的地（${pref}）およびその周辺の魅力的で具体的な旅行プランを作成してください。
 
 【旅行情報】
 目的地: ${name} (${pref})
-出発地（最寄り駅）: ${startStation || '大阪・梅田付近'}
+出発地（最寄り駅）: ${startStation || '東京駅'}
 日付: ${date} 〜
 期間: ${nightsText}
 人数: ${people}名
@@ -1534,7 +1539,7 @@ async function fetchGeminiItinerary(name, pref, date, nightsText, people, budget
 【回答ルール】
 1. タイトルは「【${name}を巡る ${nightsText} 旅行プラン】」から始めてください。
 2. スケジュール提案は「■ 1日目:」「■ 2日目:」「■ 最終日:」などの形式で、具体的かつ時間（例: 午前、昼食、午後、夜間）を分けて記載してください。
-3. ユーザーの旅行スタンド（例: 温泉の守護神、美食の支配者など）のコンセプトや特性に寄り添った、オリジナリティあふれる特別な体験・店舗・アクティビティ（実在または近畿ならではの魅力的な提案）を必ず1箇位置くなどして、旅行スタンドに言及した上で含めてください。
+3. ユーザーの旅行スタンド（例: 温泉の守護神、美食の支配者など）のコンセプトや特性に寄り添った、オリジナリティあふれる特別な体験・店舗・アクティビティ（実在または目的地ならではの魅力的な提案）を必ず1箇位置くなどして、旅行スタンドに言及した上で含めてください。
 4. 口調は丁寧で、旅のワクワク感を高めるような魅力的な表現にしてください。
 5. itineraryText の内容は純粋な日本語のテキスト（改行と通常の記号「・」「■」のみ）で出力し、マークダウンの装飾記号（** や *）は一切含めないでください。
 6. 各スポットに付与する季節タグ（season tag）は、プラン全体で提案している季節と必ず一致させること。もし特定の季節に限定されないスポットの場合は『通年』または『通年おすすめ』というタグを出力すること。
@@ -1543,11 +1548,11 @@ async function fetchGeminiItinerary(name, pref, date, nightsText, people, budget
   "itineraryText": "（上記ルールに従った旅行プランのプレーンテキスト）",
   "waypoints": [
     {"lat": 出発地の緯度, "lng": 出発地の経度, "name": "出発地名", "description": "出発地の一言紹介（30文字以内）"},
-    {"lat": 経由地1の緯度, "lng": 経由地1の経度, "name": "経由地1の名前", "description": "ここの見どころを一言（30文字以内）", "season": "季節タグ（例: 春、夏、秋、冬、通年、通年おすすめのいずれか）"},
+    {"lat": 経由地1の緯度, "lng": 経由地1の経度, "name": "経由地1の名前", "description": "こここでの見どころを一言（30文字以内）", "season": "季節タグ（例: 春、夏、秋、冬、通年、通年おすすめのいずれか）"},
     {"lat": 目的地の緯度, "lng": 目的地の経度, "name": "目的地名", "description": "目的地の魅力を一言（30文字以内）", "season": "季節タグ（例: 春、夏、秋、冬、通年、通年おすすめのいずれか）"}
   ]
 }
-waypointsは最低3つ以上のオブジェクトを含み、配列の最初の要素（インデックス0）は必ず出発地（${startStation || '大阪・梅田付近'}）の正確な座標にしてください。最後の要素が目的地（${name}）の実際の緯度経度、その間に旅程上の主要経由地を含めてください。
+waypointsは最低3つ以上のオブジェクトを含み、配列の最初の要素（インデックス0）は必ず出発地（${startStation || '東京駅'}）の正確な座標にしてください。最後の要素が目的地（${name}）の実際の緯度経度、その間に旅程上の主要経由地を含めてください。
 `;
 
     const requestBody = {
@@ -1665,8 +1670,11 @@ async function fetchGeminiPlaces(excludeNames) {
     const url = getApiUrl("/api/travel/generate");
     const excludeStr = excludeNames.length > 0 ? `ただし、以下の観光地はすでに登録済みまたはスワイプ済みであるため、絶対に含めないでください: ${excludeNames.join(", ")}` : "";
 
+    const selectedPrefecture = document.getElementById('filterPrefecture').value;
+    const prefInstruction = selectedPrefecture === 'all' ? '日本全国の観光スポットの中から提案してください。' : `日本全国の観光スポットの中から、選択された都道府県（${selectedPrefecture}）に絞って提案してください。`;
+
     const promptText = `
-近畿地方（大阪府、京都府、兵庫県、奈良県、滋賀県、和歌山県）にある、スワイプ型旅行アプリで表示する魅力的な観光スポット（名所、歴史的建造物、温泉、グルメ街、自然など）を新たに「5件」考案し、日本語のJSON形式で出力してください。
+${prefInstruction}スワイプ型旅行アプリで表示する魅力的な観光スポット（名所、歴史的建造物、温泉、グルメ街、自然など）を新たに「5件」考案し、日本語のJSON形式で出力してください。
 
 ${excludeStr}
 
@@ -1674,21 +1682,21 @@ ${excludeStr}
 [
   {
     "name": "観光地名（例: 清水寺）",
-    "prefecture": "都府県名（例: 京都）※「都」「府」「県」は付けないでください（京都、大阪、兵庫、奈良、滋賀、和歌山）",
+    "prefecture": "都道府県名（例: 京都、東京、北海道）※「都」「府」「県」は付けないでください。ただし「北海道」はそのまま「北海道」としてください",
     "season": "おすすめの時期（春、夏、秋、冬、通年、通年おすすめのいずれか。各スポットに付与する季節タグ（season tag）は、プラン全体で提案している季節と必ず一致させること。もし特定の季節に限定されないスポットの場合は『通年』または『通年おすすめ』を出力すること）",
     "category": "カテゴリ名（history, nature, food, healing のいずれか）",
     "description": "観光地の魅力を伝える魅力的な紹介文（2〜3文程度、100文字以内で、思わず行きたくなるような文章）",
-    "tags": ["タグ1", "タグ2", "タグ3"] ※ 観光地に関連する「自然」「グルメ」「歴史」「観光」「リラックス」「アクティブ」「癒やし」などのタグを3つ設定してください,
-    "companion": ["同行者タグ1", "同行者タグ2"] ※ "一人旅", "カップル", "友人グループ", "子連れ" から適したものを複数選択して配列で設定してください,
-    "budget": "予算目安" ※ "低予算", "スタンダード", "ラグジュアリー" のいずれか1つを設定してください,
-    "transport": "移動手段" ※ "自家用車", "公共交通機関", "徒歩" のいずれか1つを設定してください,
-    "purpose": "目的" ※ "リフレッシュ", "アクティビティ", "グルメ", "歴史探訪" のいずれか1つを設定してください,
+    "tags": ["タグ1", "タグ2", "タグ3"],
+    "companion": ["同行者タグ1", "同行者タグ2"],
+    "budget": "予算目安",
+    "transport": "移動手段",
+    "purpose": "目的",
     "lat": 観光地の緯度（実在する大体の座標の数値）,
     "lon": 観光地の経度（実在する大体の座標の数値）
   }
 ]
 
-※ JSON以外の説明文やマークダウンのデコレーション（\`\`\`json 等）は一切含めず、純粋なJSON文字列のみを返してください。
+※ JSON以外の説明文やマークダウンのデコレーションは一切含めず、純粋なJSON文字列のみを返してください。
 `;
 
     const requestBody = {
@@ -1757,7 +1765,7 @@ window.generatePlacesWithAI = async function () {
                 <span class="material-icons boat-icon">sailing</span>
             </div>
             <h3 style="margin-top: 16px;">AIが新しい観光地を探索中...</h3>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">近畿地方の魅力的なスポットを生成しています</p>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">日本全国の魅力的なスポットを生成しています</p>
             <!-- Shinkansen Progress Bar -->
             <div class="progress-container">
                 <div class="progress-bar-track">
@@ -2718,7 +2726,7 @@ window.updateSettingsFromUI = function () {
     const headerTitleInput = document.getElementById("settingsHeaderTitle");
 
     userName = usernameInput ? usernameInput.value.trim() || "トラベラー" : "トラベラー";
-    headerTitle = headerTitleInput ? headerTitleInput.value.trim() || "Kinki Wander" : "Kinki Wander";
+    headerTitle = headerTitleInput ? headerTitleInput.value.trim() || "Japan Wander" : "Japan Wander";
     // APIキーはサーバー側で管理されるため、フロントからの入力取得は廃止します
     rakutenAppId = "server";
     geminiApiKey = "server";
@@ -3462,6 +3470,16 @@ window.handleSendChatMessage = async function (event) {
 
     input.value = "";
     appendChatBubble("user", messageText);
+
+    const prefSelect = document.getElementById("chatPrefecture");
+    let apiMessageText = messageText;
+    if (prefSelect && prefSelect.value !== "all") {
+        const prefVal = prefSelect.value;
+        if (!messageText.includes(prefVal)) {
+            apiMessageText = `${prefVal} ${messageText}`;
+        }
+    }
+
     if (messageText.includes("プラン作成") || messageText.includes("プランを作って") || messageText.includes("プランを立てて") || messageText.includes("プラン生成")) {
         if (activePlanTarget === null || activePlanTarget === undefined) {
             appendChatBubble("ai", "プランを作成するために、まずは気になるスポットを選択して目的地に設定してください！");
@@ -3494,19 +3512,19 @@ ${targetPlan.itineraryText}
 
 【ルール】
 - ユーザーの指示に従い行程テキストを書き換える
-- 近畿地方のスポットのみ提案すること
+- 提案された地域または日本全国のスポットを提案すること
 - 返答は必ず以下のJSON形式のみで返すこと：
 {"message": "変更内容の説明（50文字以内）", "updatedItinerary": "書き換え後の行程テキスト全文"}
 
-ユーザーの指示: ${messageText}`;
+ユーザーの指示: ${apiMessageText}`;
         } else {
             fullPrompt = `ユーザー名: ${userName}
 旅行の好みパラメータ: ${prefStatsStr}
 旅行スタンド: ${standName} (${standRank})
 
-あなたは旅行プランナーのAI相談員です。近畿地方（大阪府、京都府、兵庫県、奈良県、滋賀県、和歌山県）のスポットのみ提案してください。回答は100〜150文字程度で簡潔に。
+あなたは旅行プランナーのAI相談員です。日本全国47都道府県のスポットを提案してください。回答は100〜150文字程度で簡潔に。
 
-ユーザーからの相談: ${messageText}`;
+ユーザーからの相談: ${apiMessageText}`;
         }
 
         chatHistory.push({ role: "user", parts: [{ text: fullPrompt }] });
@@ -4075,4 +4093,16 @@ window.rejectProactiveSuggestion = function (sugId) {
 
     showToast("😐 提案ルートを却下しました。");
 };
+
+const filterPref = document.getElementById("filterPrefecture");
+const chatPref = document.getElementById("chatPrefecture");
+if (filterPref && chatPref) {
+    filterPref.addEventListener("change", () => {
+        chatPref.value = filterPref.value;
+    });
+    chatPref.addEventListener("change", () => {
+        filterPref.value = chatPref.value;
+        applyFilters();
+    });
+}
 
