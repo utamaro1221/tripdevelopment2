@@ -1050,18 +1050,18 @@ window.applyFilters = function () {
     const seasonSelect = document.getElementById("filterSeason");
     const catSelect = document.getElementById("filterCategory");
     const prefSelect = document.getElementById("filterPrefecture");
+    const selectedPref = prefSelect ? prefSelect.value : "all";
 
     activeFilters.season = seasonSelect ? seasonSelect.value : "all";
-    activeFilters.prefecture = prefSelect ? prefSelect.value : "all";
+    activeFilters.prefecture = selectedPref;
     if (catSelect) {
         activeFilters.category = catSelect.value;
     }
 
     currentCardPool = kinkiPlaces.filter(place => {
         const matchSeason = (activeFilters.season === "all" || place.season === activeFilters.season);
-        const matchPref = (activeFilters.prefecture === "all" || place.prefecture === activeFilters.prefecture);
         const matchCat = (activeFilters.category === "all" || place.category === activeFilters.category);
-
+        const matchPref = (selectedPref === "all" || place.prefecture === selectedPref);
         const isAlreadySelected = likes.some(l => l.id === place.id) || anmaris.some(a => a.id === place.id);
 
         let matchRecommendation = true;
@@ -1071,11 +1071,10 @@ window.applyFilters = function () {
             matchRecommendation = matchesGenre(place, highestIndex);
         }
 
-        return matchSeason && matchPref && matchCat && !isAlreadySelected && matchRecommendation;
+        return matchSeason && matchCat && matchPref && !isAlreadySelected && matchRecommendation;
     });
 
     if (recommendationMode) {
-        // AI推奨モードの場合、マッチ度順にソート
         currentCardPool.forEach(place => {
             place.tempCompatibilityScore = calculateCompatibilityScore(place);
         });
@@ -1084,6 +1083,9 @@ window.applyFilters = function () {
 
     nextPoolIndex = 0;
     renderStack();
+    if (currentCardPool.length === 0) {
+        fetchAndDisplayNewPlaces();
+    }
 };
 
 window.startPersonalizedSearch = function () {
