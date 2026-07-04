@@ -370,9 +370,10 @@ body {
 #card-stack {
     position: relative;
     width: 90%;
-    height: 70%;
+    height: calc(100vh - 320px);
     max-width: 400px;
-    overflow: hidden;
+    overflow: visible;
+    margin-top: 8px;
 }
 
 .swipe-card {
