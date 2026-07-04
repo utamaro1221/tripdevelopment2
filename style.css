@@ -80,11 +80,12 @@ body.theme-mc-dark {
 }
 
 html, body {
-    width: 100%;
-    overflow-x: hidden;
-    position: relative;
+    width: 100vw !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
     margin: 0;
     padding: 0;
+    position: relative;
 }
 
 body {
@@ -351,10 +352,13 @@ body {
     gap: 10px;
     z-index: 10;
     width: 90%;
-    max-width: 420px;
     justify-content: center;
     margin: 12px auto 0 auto;
     flex-shrink: 0;
+    max-width: 100% !important;
+    flex-wrap: wrap !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
 }
 
 .filter-select {
@@ -4002,16 +4006,20 @@ body.theme-mc-dark .compat-unique {
 
 .mobile-header,
 header,
+.app-sidebar,
 .app-container,
-.app-content {
-    max-width: 100vw;
-}
-
+.app-content,
+.view,
+#view-swipe,
+#view-plan,
+#view-home,
+#view-mypage,
+#view-settings,
 .plan-form,
 .spot-card,
 .swipe-card,
-.view-plan,
 .plan-view-container,
 .planning-panel {
-    max-width: 100%;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
 }
