@@ -3593,6 +3593,20 @@ window.selectCategoryFilter = function (category, element) {
     applyFilters();
 };
 
+window.resetAllFilters = function () {
+    const prefSelect = document.getElementById("filterPrefecture");
+    const seasonSelect = document.getElementById("filterSeason");
+    if (prefSelect) prefSelect.value = "all";
+    if (seasonSelect) seasonSelect.value = "all";
+    document.querySelectorAll("#categoryFilters .filter-pill").forEach(el => el.classList.remove("active"));
+    const allPill = document.querySelector("#categoryFilters .filter-pill");
+    if (allPill) allPill.classList.add("active");
+    activeFilters.category = "all";
+    activeFilters.season = "all";
+    activeFilters.prefecture = "all";
+    applyFilters();
+};
+
 window.renderSavedSpotsHome = function () {
     const scrollContainer = document.getElementById("savedSpotsScroll");
     if (!scrollContainer) return;
