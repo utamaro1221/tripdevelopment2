@@ -371,6 +371,9 @@ body {
     outline: none;
     cursor: pointer;
     transition: border-color 0.2s, box-shadow 0.2s;
+    min-width: 110px;
+    flex: 1 1 auto;
+    max-width: 160px;
 }
 
 .filter-select:focus {
