@@ -196,13 +196,6 @@
 
                 <!-- Filtering Bar -->
                 <div class="filter-bar">
-                    <div class="category-filters" id="categoryFilterRow" style="display: none;">
-                        <button class="filter-pill active" onclick="selectCategoryFilter('all', this)">✨ すべて</button>
-                        <button class="filter-pill" onclick="selectCategoryFilter('history', this)">🏛️ 歴史・文化</button>
-                        <button class="filter-pill" onclick="selectCategoryFilter('nature', this)">🌳 自然・アウトドア</button>
-                        <button class="filter-pill" onclick="selectCategoryFilter('food', this)">🍔 グルメ</button>
-                        <button class="filter-pill" onclick="selectCategoryFilter('healing', this)">♨️ 温泉・癒やし</button>
-                    </div>
                     <select class="filter-select" id="filterPrefecture" onchange="applyFilters()">
                         <option value="all">都道府県: すべて</option>
                         <option value="北海道">北海道</option>
@@ -260,8 +253,14 @@
                         <option value="秋">秋</option>
                         <option value="冬">冬</option>
                     </select>
-                    <button class="filter-select" id="filterResetBtn" onclick="resetAllFilters()">すべて</button>
                     <button class="filter-select filter-btn" onclick="toggleTagDropdown()">🏷️ タグ</button>
+                    <div class="category-filters" id="categoryFilterRow" style="display: none;">
+                        <button class="filter-pill active" onclick="selectCategoryFilter('all', this)">✨ すべて</button>
+                        <button class="filter-pill" onclick="selectCategoryFilter('history', this)">🏛️ 歴史・文化</button>
+                        <button class="filter-pill" onclick="selectCategoryFilter('nature', this)">🌳 自然・アウトドア</button>
+                        <button class="filter-pill" onclick="selectCategoryFilter('food', this)">🍔 グルメ</button>
+                        <button class="filter-pill" onclick="selectCategoryFilter('healing', this)">♨️ 温泉・癒やし</button>
+                    </div>
                 </div>
 
                 <!-- Card Stack -->
