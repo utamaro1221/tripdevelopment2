@@ -66,7 +66,7 @@ const imageObserver = new IntersectionObserver((entries, observer) => {
                 fetchPlacePhoto(placeName).then(url => {
                     if (url) {
                         imgEl.src = url;
-                        const place = kinkiPlaces.find(p => p.name === placeName);
+                        const place = [...kinkiPlaces, ...(currentCardPool || [])].find(p => p.name === placeName);
                         if (place) place.img = url;
                     }
                 });
@@ -1796,7 +1796,8 @@ window.generatePlacesWithAI = async function () {
     }, 80);
 
     try {
-        const existingNames = kinkiPlaces.map(p => p.name);
+        const allExisting = [...kinkiPlaces, ...currentCardPool.filter(c => !kinkiPlaces.some(k => k.id === c.id))];
+        const existingNames = allExisting.map(p => p.name);
         const newPlaces = await fetchGeminiPlaces(existingNames);
 
         clearInterval(progressInterval);
@@ -3056,12 +3057,18 @@ window.renderShareView = function () {
     const myPlansContainer = document.getElementById("myPlansToShare");
     if (!sharedListContainer || !myPlansContainer) return;
 
-    // 1. みんなの投稿プランを描画
+    const communityFilterEl = document.getElementById("communityPrefFilter");
+    const selectedCommunityPref = communityFilterEl ? communityFilterEl.value : "all";
+
     sharedListContainer.innerHTML = "";
-    if (sharedPlans.length === 0) {
-        sharedListContainer.innerHTML = `<div class="modal-empty">投稿されたプランはありません。</div>`;
+    const filteredSharedPlans = selectedCommunityPref === "all"
+        ? sharedPlans
+        : sharedPlans.filter(sp => sp.prefecture === selectedCommunityPref);
+
+    if (filteredSharedPlans.length === 0) {
+        sharedListContainer.innerHTML = `<div class="modal-empty">${selectedCommunityPref === "all" ? "投稿されたプランはありません。" : `${selectedCommunityPref}の投稿プランはありません。`}</div>`;
     } else {
-        sharedPlans.forEach(sp => {
+        filteredSharedPlans.forEach(sp => {
             const nightsText = `${sp.nights}泊${sp.nights + 1}日`;
             const reactions = sp.reactions || { like: 0, heart: 0, fire: 0, wow: 0 };
             const standStatsArr = sp.standStats ? JSON.stringify(sp.standStats) : "null";
@@ -3260,8 +3267,8 @@ window.useSharedPlan = function (sharedPlanId) {
         people: sp.people,
         budget: sp.budget,
         itineraryText: sp.itineraryText,
-        lat: kinkiPlaces.find(p => p.name === sp.destination)?.lat || 34.6873,
-        lon: kinkiPlaces.find(p => p.name === sp.destination)?.lon || 135.5262
+        lat: [...kinkiPlaces, ...currentCardPool].find(p => p.name === sp.destination)?.lat || 35.6762,
+        lon: [...kinkiPlaces, ...currentCardPool].find(p => p.name === sp.destination)?.lon || 139.6503
     };
 
     plans.push(newPlan);
@@ -3855,8 +3862,8 @@ window.renderProactiveSuggestions = function () {
                         purpose: detailedPrefs.purpose ? Object.entries(detailedPrefs.purpose).sort((a, b) => b[1] - a[1])[0][0] : "リフレッシュ"
                     });
                 } else if (spots.length === 1) {
-                    // 同府県の他スポットを探す
-                    let otherSpot = kinkiPlaces.find(p => p.prefecture === pref && p.id !== spots[0].id && !dismissedSuggestions.includes(p.name));
+                    const allPlacesPool = [...kinkiPlaces, ...currentCardPool.filter(c => !kinkiPlaces.some(k => k.id === c.id))];
+                    let otherSpot = allPlacesPool.find(p => p.prefecture === pref && p.id !== spots[0].id && !dismissedSuggestions.includes(p.name));
                     if (otherSpot) {
                         candidates.push({
                             title: `${spots[0].name}と${otherSpot.name}を巡る ${pref}満喫プラン`,
@@ -3886,37 +3893,47 @@ window.renderProactiveSuggestions = function () {
         }
     }
 
-    // 候補が足りない（またはいいねが無い）場合、デフォルトの人気提案を追加
     if (candidates.length < 2) {
-        let defaultPairs = [
-            {
-                title: "【AI推奨】秋の京都歴史・自然巡り周遊ルート",
-                spots: [kinkiPlaces[0], kinkiPlaces[11]], // 清水寺 & 伏見稲荷
-                prefecture: "京都",
-                season: "秋",
-                companion: "カップル",
-                budget: "スタンダード",
-                transport: "公共交通機関",
-                purpose: "歴史探訪"
-            },
-            {
-                title: "【AI推奨】有馬温泉と六甲山絶景ドライブ",
-                spots: [kinkiPlaces[1], kinkiPlaces[25]], // 有馬温泉 & 六甲山テラス
-                prefecture: "兵庫",
-                season: "冬",
-                companion: "カップル",
-                budget: "スタンダード",
-                transport: "自家用車",
-                purpose: "リフレッシュ"
-            }
-        ];
+        const selectedPref = (document.getElementById('filterPrefecture')?.value || 'all');
+        const allPlacesPool = [...kinkiPlaces, ...currentCardPool.filter(c => !kinkiPlaces.some(k => k.id === c.id))];
+        const prefFiltered = selectedPref === 'all' ? allPlacesPool : allPlacesPool.filter(p => p.prefecture === selectedPref);
+        const available = prefFiltered.filter(p => !dismissedSuggestions.includes(p.name));
 
-        defaultPairs.forEach(p => {
-            const keyName = p.spots.map(s => s.name).join("-");
-            if (!dismissedSuggestions.includes(keyName) && candidates.length < 2) {
-                candidates.push(p);
+        if (available.length >= 2) {
+            const s1 = available[0];
+            const s2 = available.find(p => p.prefecture === s1.prefecture && p.id !== s1.id) || available[1];
+            const prefLabel = selectedPref === 'all' ? '全国' : selectedPref;
+            const defaultKey = s1.name + "-" + s2.name;
+            if (!dismissedSuggestions.includes(defaultKey) && candidates.length < 2) {
+                candidates.push({
+                    title: `【AI推奨】${prefLabel}のおすすめスポット周遊ルート`,
+                    spots: [s1, s2],
+                    prefecture: s1.prefecture,
+                    season: s1.season,
+                    companion: detailedPrefs.companion ? Object.entries(detailedPrefs.companion).sort((a, b) => b[1] - a[1])[0][0] : "カップル",
+                    budget: detailedPrefs.budget ? Object.entries(detailedPrefs.budget).sort((a, b) => b[1] - a[1])[0][0] : "スタンダード",
+                    transport: detailedPrefs.transport ? Object.entries(detailedPrefs.transport).sort((a, b) => b[1] - a[1])[0][0] : "公共交通機関",
+                    purpose: detailedPrefs.purpose ? Object.entries(detailedPrefs.purpose).sort((a, b) => b[1] - a[1])[0][0] : "リフレッシュ"
+                });
             }
-        });
+        }
+        if (available.length >= 4 && candidates.length < 2) {
+            const s3 = available[2];
+            const s4 = available.find(p => p.prefecture === s3.prefecture && p.id !== s3.id) || available[3];
+            const defaultKey2 = s3.name + "-" + s4.name;
+            if (!dismissedSuggestions.includes(defaultKey2)) {
+                candidates.push({
+                    title: `【AI推奨】${s3.prefecture}の自然と文化を巡る旅`,
+                    spots: [s3, s4],
+                    prefecture: s3.prefecture,
+                    season: s3.season,
+                    companion: detailedPrefs.companion ? Object.entries(detailedPrefs.companion).sort((a, b) => b[1] - a[1])[0][0] : "一人旅",
+                    budget: detailedPrefs.budget ? Object.entries(detailedPrefs.budget).sort((a, b) => b[1] - a[1])[0][0] : "スタンダード",
+                    transport: detailedPrefs.transport ? Object.entries(detailedPrefs.transport).sort((a, b) => b[1] - a[1])[0][0] : "公共交通機関",
+                    purpose: detailedPrefs.purpose ? Object.entries(detailedPrefs.purpose).sort((a, b) => b[1] - a[1])[0][0] : "リフレッシュ"
+                });
+            }
+        }
     }
 
     // 候補の表示 (最大2件)
@@ -4124,9 +4141,11 @@ if (filterPref && chatPref) {
         if (currentCardPool.length === 0 && !isGeneratingPlaces) {
             generatePlacesWithAI();
         }
+        renderProactiveSuggestions();
     });
     chatPref.addEventListener("change", () => {
         filterPref.value = chatPref.value;
         applyFilters();
+        renderProactiveSuggestions();
     });
-}
+}
