@@ -73,8 +73,16 @@ body.theme-mc-dark {
     --shadow-premium: 0 16px 48px -8px rgba(0, 0, 0, 0.4);
 }
 
-* {
+*, *::before, *::after {
     box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    width: 100%;
+    overflow-x: hidden;
+    position: relative;
     margin: 0;
     padding: 0;
 }
@@ -86,7 +94,6 @@ body {
     font-size: var(--app-font-size);
     overflow: hidden;
     height: 100dvh;
-    width: 100vw;
     transition: background-color var(--transition-speed), font-size 0.2s;
 }
 
@@ -3991,4 +3998,20 @@ body.theme-mc-dark .compat-unique {
 .ruby-toggle-btn:hover {
     border-color: var(--primary-color);
     background-color: rgba(var(--primary-color-rgb), 0.05);
+}
+
+.mobile-header,
+header,
+.app-container,
+.app-content {
+    max-width: 100vw;
+}
+
+.plan-form,
+.spot-card,
+.swipe-card,
+.view-plan,
+.plan-view-container,
+.planning-panel {
+    max-width: 100%;
 }
