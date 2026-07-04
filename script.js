@@ -1084,7 +1084,7 @@ window.applyFilters = function () {
     nextPoolIndex = 0;
     renderStack();
     if (currentCardPool.length === 0) {
-        fetchAndDisplayNewPlaces();
+        fetchGeminiPlaces();
     }
 };
 
