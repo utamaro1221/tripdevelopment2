@@ -1084,7 +1084,15 @@ window.applyFilters = function () {
     nextPoolIndex = 0;
     renderStack();
     if (currentCardPool.length === 0) {
-        fetchGeminiPlaces();
+        const existingNames = kinkiPlaces.map(p => p.name);
+        fetchGeminiPlaces(existingNames).then(newPlaces => {
+            if (newPlaces && newPlaces.length > 0) {
+                kinkiPlaces.unshift(...newPlaces);
+                applyFilters();
+            }
+        }).catch(err => {
+            console.error("自動観光スポット取得に失敗しました:", err);
+        });
     }
 };
 
@@ -1668,7 +1676,7 @@ async function fetchRakutenHotels(lat, lon, keyword) {
 }
 
 // Gemini APIを中継サーバー経由で呼び出し、AIを用いて新しい観光地を生成する関数
-async function fetchGeminiPlaces(excludeNames) {
+async function fetchGeminiPlaces(excludeNames = []) {
     const url = getApiUrl("/api/travel/generate");
     const excludeStr = excludeNames.length > 0 ? `ただし、以下の観光地はすでに登録済みまたはスワイプ済みであるため、絶対に含めないでください: ${excludeNames.join(", ")}` : "";
 
