@@ -2700,7 +2700,7 @@ body {
     /* Hide scrollbar in Webkit browsers */
 }
 
-.filter-pill {
+.filter-pill, .filter-btn {
     white-space: nowrap;
     padding: 8px 16px;
     background-color: var(--card-bg);
@@ -2716,13 +2716,13 @@ body {
     gap: 4px;
 }
 
-.filter-pill:hover {
+.filter-pill:hover, .filter-btn:hover {
     border-color: var(--primary-color);
     color: var(--primary-color);
     transform: translateY(-1px);
 }
 
-.filter-pill.active {
+.filter-pill.active, .filter-btn.active {
     background-color: var(--primary-color);
     border-color: var(--primary-color);
     color: #ffffff;

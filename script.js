@@ -3586,9 +3586,14 @@ ${targetPlan.itineraryText}
 // ==========================================
 // 15. New Custom Helper Functions
 // ==========================================
-window.selectCategoryFilter = function (category, element) {
-    document.querySelectorAll("#categoryFilterRow .filter-pill").forEach(el => el.classList.remove("active"));
-    element.classList.add("active");
+window.filterByCategory = function (category) {
+    document.querySelectorAll("#categoryFilterRow .filter-btn").forEach(el => {
+        if (el.getAttribute("data-category") === category) {
+            el.classList.add("active");
+        } else {
+            el.classList.remove("active");
+        }
+    });
     activeFilters.category = category;
     applyFilters();
 };
@@ -3598,8 +3603,8 @@ window.resetAllFilters = function () {
     const seasonSelect = document.getElementById("filterSeason");
     if (prefSelect) prefSelect.value = "all";
     if (seasonSelect) seasonSelect.value = "all";
-    document.querySelectorAll("#categoryFilterRow .filter-pill").forEach(el => el.classList.remove("active"));
-    const allPill = document.querySelector("#categoryFilterRow .filter-pill");
+    document.querySelectorAll("#categoryFilterRow .filter-btn").forEach(el => el.classList.remove("active"));
+    const allPill = document.querySelector("#categoryFilterRow .filter-btn[data-category='all']");
     if (allPill) allPill.classList.add("active");
     activeFilters.category = "all";
     activeFilters.season = "all";
