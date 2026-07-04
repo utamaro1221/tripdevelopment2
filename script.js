@@ -725,6 +725,8 @@ let isSplashAnimationFinished = false;
 let isAuthStateResolved = false;
 let chatEditMode = false;
 let chatHistory = [];
+const geminiCache = { places: {}, itineraries: {} };
+let fallbackAlertShown = false;
 
 window.tryEnteringApp = function () {
     if (!isSplashAnimationFinished || !isAuthStateResolved) return;
@@ -1518,6 +1520,11 @@ function selectPlanTarget(item, element) {
 }
 
 async function fetchGeminiItinerary(name, pref, date, nightsText, people, budget, priorities, others, startStation) {
+    const cacheKey = JSON.stringify({ name, pref, date, nightsText, people, budget, priorities, others, startStation });
+    if (geminiCache.itineraries[cacheKey]) {
+        return geminiCache.itineraries[cacheKey];
+    }
+
     const url = getApiUrl("/api/travel/generate");
     const standName = document.getElementById("standName")?.textContent || "トラベラー・スター";
     const standRank = document.getElementById("standRank")?.textContent || "";
@@ -1574,10 +1581,24 @@ waypointsは最低3つ以上のオブジェクトを含み、配列の最初の�
         if (!jsonMatch) {
             throw new Error("JSON not found in Gemini response");
         }
-        return JSON.parse(jsonMatch[0]);
+        const result = JSON.parse(jsonMatch[0]);
+        geminiCache.itineraries[cacheKey] = result;
+        return result;
     } catch (error) {
         console.error("Gemini APIでの旅行プラン生成に失敗しました:", error);
-        throw error;
+        if (typeof fallbackAlertShown === 'undefined' || !fallbackAlertShown) {
+            fallbackAlertShown = true;
+            alert("現在AIのアクセスが集中しているため、標準の代替プランを表示します。");
+        }
+        const fallback = {
+            itineraryText: `【${name}を巡る 1泊2日 定番旅行プラン】\n■ 1日目:\n・午前: ${startStation || '東京駅'}を出発し、${name}へ向けて移動します。\n・午後: ${name}に到着後、周辺の人気スポットを観光します。\n・夕方: 地元の宿にチェックインし、名物料理と温泉で旅の疲れを癒やします。\n■ 2日目:\n・午前: 宿を出発し、豊かな自然や歴史的な街並みを散策します。\n・午後: 地元の特産品を揃えた市場でお土産を購入し、美味しいランチを味わいます。\n・夕方: 帰路につき、${startStation || '東京駅'}に到着します。お疲れ様でした！`,
+            waypoints: [
+                { lat: 35.6762, lng: 139.6503, name: startStation || "東京駅", description: "出発地" },
+                { lat: 35.0, lng: 135.7, name: name, description: `${name}のメインスポット`, season: "通年" }
+            ]
+        };
+        geminiCache.itineraries[cacheKey] = fallback;
+        return fallback;
     }
 }
 
@@ -1667,10 +1688,13 @@ async function fetchRakutenHotels(lat, lon, keyword) {
 
 // Gemini APIを中継サーバー経由で呼び出し、AIを用いて新しい観光地を生成する関数
 async function fetchGeminiPlaces(excludeNames) {
+    const selectedPrefecture = document.getElementById('filterPrefecture').value;
+    const cacheKey = selectedPrefecture;
+    if (geminiCache.places[cacheKey]) {
+        return geminiCache.places[cacheKey];
+    }
     const url = getApiUrl("/api/travel/generate");
     const excludeStr = excludeNames.length > 0 ? `ただし、以下の観光地はすでに登録済みまたはスワイプ済みであるため、絶対に含めないでください: ${excludeNames.join(", ")}` : "";
-
-    const selectedPrefecture = document.getElementById('filterPrefecture').value;
     const prefInstruction = selectedPrefecture === 'all' ? '日本全国の観光スポットの中から提案してください。' : `日本全国の観光スポットの中から、選択された都道府県（${selectedPrefecture}）に絞って提案してください。`;
 
     const promptText = `
@@ -1728,7 +1752,7 @@ ${excludeStr}
         const newPlaces = JSON.parse(jsonMatch[0]);
 
         const baseId = Date.now();
-        return newPlaces.map((place, idx) => {
+        const result = newPlaces.map((place, idx) => {
             return {
                 id: baseId + idx,
                 name: place.name,
@@ -1746,9 +1770,97 @@ ${excludeStr}
                 img: `https://loremflickr.com/500/350/japan,sightseeing,${encodeURIComponent(place.name)}`
             };
         });
+        geminiCache.places[cacheKey] = result;
+        return result;
     } catch (error) {
         console.error("Gemini APIでの観光地取得に失敗しました:", error);
-        throw error;
+        if (typeof fallbackAlertShown === 'undefined' || !fallbackAlertShown) {
+            fallbackAlertShown = true;
+            alert("現在AIのアクセスが集中しているため、標準の代替プランを表示します。");
+        }
+        const baseId = Date.now();
+        return [
+            {
+                id: baseId + 1,
+                name: "浅草寺",
+                prefecture: "東京",
+                season: "通年",
+                category: "history",
+                description: "東京最古の寺院。雷門や仲見世通りを歩けば、江戸の情緒と活気が肌で感じられます。外国人観光客にも大人気の定番スポット。",
+                tags: ["歴史", "観光", "グルメ"],
+                companion: ["一人旅", "カップル", "子連れ"],
+                budget: "低予算",
+                transport: "公共交通機関",
+                purpose: "歴史探訪",
+                lat: 35.7148,
+                lon: 139.7967,
+                img: "https://loremflickr.com/500/350/japan,asakusa,temple"
+            },
+            {
+                id: baseId + 2,
+                name: "富士山五合目",
+                prefecture: "山梨",
+                season: "夏",
+                category: "nature",
+                description: "日本の象徴、富士山の五合目へ。雲海に浮かぶ絶景と清涼な空気が非日常の体験を約束します。ハイキングの出発点としても最適。",
+                tags: ["自然", "アクティブ", "観光"],
+                companion: ["友人グループ", "カップル", "一人旅"],
+                budget: "スタンダード",
+                transport: "自家用車",
+                purpose: "アクティビティ",
+                lat: 35.3606,
+                lon: 138.7278,
+                img: "https://loremflickr.com/500/350/japan,fujisan,mountain"
+            },
+            {
+                id: baseId + 3,
+                name: "道後温泉",
+                prefecture: "愛媛",
+                season: "冬",
+                category: "healing",
+                description: "日本最古の温泉として名高い、3000年の歴史を誇る名湯。千と千尋のモデルともいわれる趣ある建物と、体の芯から温まる泉質が魅力。",
+                tags: ["癒やし", "歴史", "リラックス"],
+                companion: ["カップル", "一人旅"],
+                budget: "スタンダード",
+                transport: "公共交通機関",
+                purpose: "リフレッシュ",
+                lat: 33.8517,
+                lon: 132.7857,
+                img: "https://loremflickr.com/500/350/japan,onsen,hotspring"
+            },
+            {
+                id: baseId + 4,
+                name: "札幌大通公園",
+                prefecture: "北海道",
+                season: "冬",
+                category: "nature",
+                description: "さっぽろ雪まつりの会場として世界的に有名な大通公園。四季それぞれの顔を持ち、ライラックまつりや秋のハーベスト等イベントも充実。",
+                tags: ["自然", "観光", "グルメ"],
+                companion: ["友人グループ", "子連れ", "カップル"],
+                budget: "低予算",
+                transport: "公共交通機関",
+                purpose: "リフレッシュ",
+                lat: 43.0596,
+                lon: 141.3564,
+                img: "https://loremflickr.com/500/350/japan,sapporo,park"
+            },
+            {
+                id: baseId + 5,
+                name: "那覇国際通り",
+                prefecture: "沖縄",
+                season: "夏",
+                category: "food",
+                description: "沖縄最大の繁華街。島唄や泡盛、ゴーヤチャンプルーなど琉球文化を体感しながらショッピングと食べ歩きが楽しめます。",
+                tags: ["グルメ", "観光", "都市"],
+                companion: ["友人グループ", "カップル", "子連れ"],
+                budget: "低予算",
+                transport: "徒歩",
+                purpose: "グルメ",
+                lat: 26.2172,
+                lon: 127.6889,
+                img: "https://loremflickr.com/500/350/japan,okinawa,naha"
+            }
+        ];
     }
 }
 
