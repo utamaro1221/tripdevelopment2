@@ -62,7 +62,7 @@ const imageObserver = new IntersectionObserver((entries, observer) => {
             const placeName = card.dataset.placeName;
             const imgEl = card.querySelector('img');
 
-            if (placeName && imgEl && imgEl.src.includes('unsplash.com')) {
+            if (placeName && imgEl && (imgEl.src.includes('unsplash.com') || imgEl.src.includes('loremflickr.com'))) {
                 fetchPlacePhoto(placeName).then(url => {
                     if (url) {
                         imgEl.src = url;
@@ -1753,7 +1753,7 @@ ${excludeStr}
                 purpose: place.purpose || "リフレッシュ",
                 lat: place.lat,
                 lon: place.lon,
-                img: `https://loremflickr.com/500/350/japan,sightseeing,${encodeURIComponent(place.name)}`
+                img: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=500&auto=format&fit=crop"
             };
         });
     } catch (error) {
