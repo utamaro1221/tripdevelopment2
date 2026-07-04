@@ -330,25 +330,23 @@ body {
 /* VIEW: SWIPE (検索)                  */
 /* ------------------------------------- */
 #view-swipe {
-    flex-direction: column;
-    justify-content: flex-start;
+    justify-content: center;
     align-items: center;
-    padding-top: 20px;
+    padding: 24px;
     padding-bottom: calc(90px + env(safe-area-inset-bottom));
     overflow-y: auto;
-    gap: 16px;
 }
 
 /* Filter Bar styles */
 .filter-bar {
-    position: relative;
+    position: absolute;
+    top: 20px;
     display: flex;
     gap: 10px;
     z-index: 10;
     width: 90%;
     max-width: 420px;
     justify-content: center;
-    flex-shrink: 0;
 }
 
 .filter-select {
@@ -372,9 +370,9 @@ body {
 #card-stack {
     position: relative;
     width: 90%;
-    flex: 1;
+    height: 70%;
     max-width: 400px;
-    max-height: calc(100vh - 230px);
+    max-height: 460px;
     overflow: visible;
 }
 
