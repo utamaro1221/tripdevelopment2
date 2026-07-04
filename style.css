@@ -349,16 +349,16 @@ body {
 .filter-bar {
     position: relative;
     display: flex;
-    gap: 16px;
-    z-index: 10;
-    width: 90%;
+    align-items: center;
     justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    z-index: 10;
+    width: 100%;
     margin: 12px auto 0 auto;
     flex-shrink: 0;
     max-width: 100% !important;
-    flex-wrap: wrap !important;
     box-sizing: border-box !important;
-    overflow-x: hidden !important;
 }
 
 .filter-select {
