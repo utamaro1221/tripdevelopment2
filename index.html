@@ -253,13 +253,15 @@
                         <option value="秋">秋</option>
                         <option value="冬">冬</option>
                     </select>
-                    <button class="filter-select filter-btn" onclick="toggleTagDropdown()">🏷️ タグ</button>
-                    <div id="categoryFilterRow" class="filter-bar" style="display:none;">
-                        <button class="filter-btn active" data-category="all" onclick="filterByCategory('all')">✨ すべて</button>
-                        <button class="filter-btn" data-category="history" onclick="filterByCategory('history')">🏛 歴史・文化</button>
-                        <button class="filter-btn" data-category="nature" onclick="filterByCategory('nature')">🌿 自然・アウトドア</button>
-                        <button class="filter-btn" data-category="food" onclick="filterByCategory('food')">🍔 グルメ</button>
-                        <button class="filter-btn" data-category="healing" onclick="filterByCategory('healing')">♨️ 温泉・癒やし</button>
+                    <div style="position:relative;">
+                        <button class="filter-select" onclick="toggleTagDropdown()" style="cursor:pointer;">🏷️ タグ</button>
+                        <div id="categoryFilterRow" style="display:none; position:absolute; top:100%; left:0; background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:8px; z-index:100; min-width:160px; flex-direction:column; gap:6px;">
+                            <button class="filter-btn active" data-category="all" onclick="filterByCategory('all');toggleTagDropdown()">✨ すべて</button>
+                            <button class="filter-btn" data-category="history" onclick="filterByCategory('history');toggleTagDropdown()">🏛 歴史・文化</button>
+                            <button class="filter-btn" data-category="nature" onclick="filterByCategory('nature');toggleTagDropdown()">🌿 自然・アウトドア</button>
+                            <button class="filter-btn" data-category="food" onclick="filterByCategory('food');toggleTagDropdown()">🍔 グルメ</button>
+                            <button class="filter-btn" data-category="healing" onclick="filterByCategory('healing');toggleTagDropdown()">♨️ 温泉・癒やし</button>
+                        </div>
                     </div>
                 </div>
 

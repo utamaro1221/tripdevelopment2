@@ -2944,10 +2944,14 @@ window.viewItineraryDetails = function (planId) {
     // いいねリストで該当スポットを選択状態にする
     renderLikedList();
 
-    document.getElementById("planFormPlaceholder").classList.add("hidden");
-    document.getElementById("planForm").classList.add("hidden");
-    document.getElementById("planLoading").classList.add("hidden");
-    document.getElementById("planError").classList.add("hidden");
+    const planFormPlaceholder = document.getElementById("planFormPlaceholder");
+    if (planFormPlaceholder) planFormPlaceholder.classList.add("hidden");
+    const planForm = document.getElementById("planForm");
+    if (planForm) planForm.classList.add("hidden");
+    const planLoading = document.getElementById("planLoading");
+    if (planLoading) planLoading.classList.add("hidden");
+    const planError = document.getElementById("planError");
+    if (planError) planError.classList.add("hidden");
 
     // ホテル推薦をこの府県に合わせて表示
     const hotels = (mockHotels[plan.prefecture] || []).map(item => ({ ...item, address: item.desc }));
