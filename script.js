@@ -66,7 +66,7 @@ const imageObserver = new IntersectionObserver((entries, observer) => {
                 fetchPlacePhoto(placeName).then(url => {
                     if (url) {
                         imgEl.src = url;
-                        const place = [...kinkiPlaces, ...(currentCardPool || [])].find(p => p.name === placeName);
+                        const place = kinkiPlaces.find(p => p.name === placeName);
                         if (place) place.img = url;
                     }
                 });
@@ -184,7 +184,6 @@ window.toggleNameDisplayMode = function () {
 // ==========================================
 // 1. 観光スポットデータ定義 (近畿地方限定)
 // ==========================================
-let isGeneratingPlaces = false;
 const kinkiPlaces = [
     {
         id: 0,
@@ -725,8 +724,6 @@ let isSplashAnimationFinished = false;
 let isAuthStateResolved = false;
 let chatEditMode = false;
 let chatHistory = [];
-const geminiCache = { places: {}, itineraries: {} };
-let fallbackAlertShown = false;
 
 window.tryEnteringApp = function () {
     if (!isSplashAnimationFinished || !isAuthStateResolved) return;
@@ -1086,6 +1083,9 @@ window.applyFilters = function () {
 
     nextPoolIndex = 0;
     renderStack();
+    if (currentCardPool.length === 0) {
+        fetchAndDisplayNewPlaces();
+    }
 };
 
 window.startPersonalizedSearch = function () {
@@ -1520,11 +1520,6 @@ function selectPlanTarget(item, element) {
 }
 
 async function fetchGeminiItinerary(name, pref, date, nightsText, people, budget, priorities, others, startStation) {
-    const cacheKey = JSON.stringify({ name, pref, date, nightsText, people, budget, priorities, others, startStation });
-    if (geminiCache.itineraries[cacheKey]) {
-        return geminiCache.itineraries[cacheKey];
-    }
-
     const url = getApiUrl("/api/travel/generate");
     const standName = document.getElementById("standName")?.textContent || "トラベラー・スター";
     const standRank = document.getElementById("standRank")?.textContent || "";
@@ -1581,24 +1576,10 @@ waypointsは最低3つ以上のオブジェクトを含み、配列の最初の�
         if (!jsonMatch) {
             throw new Error("JSON not found in Gemini response");
         }
-        const result = JSON.parse(jsonMatch[0]);
-        geminiCache.itineraries[cacheKey] = result;
-        return result;
+        return JSON.parse(jsonMatch[0]);
     } catch (error) {
         console.error("Gemini APIでの旅行プラン生成に失敗しました:", error);
-        if (typeof fallbackAlertShown === 'undefined' || !fallbackAlertShown) {
-            fallbackAlertShown = true;
-            alert("現在AIのアクセスが集中しているため、標準の代替プランを表示します。");
-        }
-        const fallback = {
-            itineraryText: `【${name}を巡る 1泊2日 定番旅行プラン】\n■ 1日目:\n・午前: ${startStation || '東京駅'}を出発し、${name}へ向けて移動します。\n・午後: ${name}に到着後、周辺の人気スポットを観光します。\n・夕方: 地元の宿にチェックインし、名物料理と温泉で旅の疲れを癒やします。\n■ 2日目:\n・午前: 宿を出発し、豊かな自然や歴史的な街並みを散策します。\n・午後: 地元の特産品を揃えた市場でお土産を購入し、美味しいランチを味わいます。\n・夕方: 帰路につき、${startStation || '東京駅'}に到着します。お疲れ様でした！`,
-            waypoints: [
-                { lat: 35.6762, lng: 139.6503, name: startStation || "東京駅", description: "出発地" },
-                { lat: 35.0, lng: 135.7, name: name, description: `${name}のメインスポット`, season: "通年" }
-            ]
-        };
-        geminiCache.itineraries[cacheKey] = fallback;
-        return fallback;
+        throw error;
     }
 }
 
@@ -1688,13 +1669,10 @@ async function fetchRakutenHotels(lat, lon, keyword) {
 
 // Gemini APIを中継サーバー経由で呼び出し、AIを用いて新しい観光地を生成する関数
 async function fetchGeminiPlaces(excludeNames) {
-    const selectedPrefecture = document.getElementById('filterPrefecture').value;
-    const cacheKey = selectedPrefecture;
-    if (geminiCache.places[cacheKey]) {
-        return geminiCache.places[cacheKey];
-    }
     const url = getApiUrl("/api/travel/generate");
     const excludeStr = excludeNames.length > 0 ? `ただし、以下の観光地はすでに登録済みまたはスワイプ済みであるため、絶対に含めないでください: ${excludeNames.join(", ")}` : "";
+
+    const selectedPrefecture = document.getElementById('filterPrefecture').value;
     const prefInstruction = selectedPrefecture === 'all' ? '日本全国の観光スポットの中から提案してください。' : `日本全国の観光スポットの中から、選択された都道府県（${selectedPrefecture}）に絞って提案してください。`;
 
     const promptText = `
@@ -1752,7 +1730,7 @@ ${excludeStr}
         const newPlaces = JSON.parse(jsonMatch[0]);
 
         const baseId = Date.now();
-        const result = newPlaces.map((place, idx) => {
+        return newPlaces.map((place, idx) => {
             return {
                 id: baseId + idx,
                 name: place.name,
@@ -1770,103 +1748,14 @@ ${excludeStr}
                 img: `https://loremflickr.com/500/350/japan,sightseeing,${encodeURIComponent(place.name)}`
             };
         });
-        geminiCache.places[cacheKey] = result;
-        return result;
     } catch (error) {
         console.error("Gemini APIでの観光地取得に失敗しました:", error);
-        if (typeof fallbackAlertShown === 'undefined' || !fallbackAlertShown) {
-            fallbackAlertShown = true;
-            alert("現在AIのアクセスが集中しているため、標準の代替プランを表示します。");
-        }
-        const baseId = Date.now();
-        return [
-            {
-                id: baseId + 1,
-                name: "浅草寺",
-                prefecture: "東京",
-                season: "通年",
-                category: "history",
-                description: "東京最古の寺院。雷門や仲見世通りを歩けば、江戸の情緒と活気が肌で感じられます。外国人観光客にも大人気の定番スポット。",
-                tags: ["歴史", "観光", "グルメ"],
-                companion: ["一人旅", "カップル", "子連れ"],
-                budget: "低予算",
-                transport: "公共交通機関",
-                purpose: "歴史探訪",
-                lat: 35.7148,
-                lon: 139.7967,
-                img: "https://loremflickr.com/500/350/japan,asakusa,temple"
-            },
-            {
-                id: baseId + 2,
-                name: "富士山五合目",
-                prefecture: "山梨",
-                season: "夏",
-                category: "nature",
-                description: "日本の象徴、富士山の五合目へ。雲海に浮かぶ絶景と清涼な空気が非日常の体験を約束します。ハイキングの出発点としても最適。",
-                tags: ["自然", "アクティブ", "観光"],
-                companion: ["友人グループ", "カップル", "一人旅"],
-                budget: "スタンダード",
-                transport: "自家用車",
-                purpose: "アクティビティ",
-                lat: 35.3606,
-                lon: 138.7278,
-                img: "https://loremflickr.com/500/350/japan,fujisan,mountain"
-            },
-            {
-                id: baseId + 3,
-                name: "道後温泉",
-                prefecture: "愛媛",
-                season: "冬",
-                category: "healing",
-                description: "日本最古の温泉として名高い、3000年の歴史を誇る名湯。千と千尋のモデルともいわれる趣ある建物と、体の芯から温まる泉質が魅力。",
-                tags: ["癒やし", "歴史", "リラックス"],
-                companion: ["カップル", "一人旅"],
-                budget: "スタンダード",
-                transport: "公共交通機関",
-                purpose: "リフレッシュ",
-                lat: 33.8517,
-                lon: 132.7857,
-                img: "https://loremflickr.com/500/350/japan,onsen,hotspring"
-            },
-            {
-                id: baseId + 4,
-                name: "札幌大通公園",
-                prefecture: "北海道",
-                season: "冬",
-                category: "nature",
-                description: "さっぽろ雪まつりの会場として世界的に有名な大通公園。四季それぞれの顔を持ち、ライラックまつりや秋のハーベスト等イベントも充実。",
-                tags: ["自然", "観光", "グルメ"],
-                companion: ["友人グループ", "子連れ", "カップル"],
-                budget: "低予算",
-                transport: "公共交通機関",
-                purpose: "リフレッシュ",
-                lat: 43.0596,
-                lon: 141.3564,
-                img: "https://loremflickr.com/500/350/japan,sapporo,park"
-            },
-            {
-                id: baseId + 5,
-                name: "那覇国際通り",
-                prefecture: "沖縄",
-                season: "夏",
-                category: "food",
-                description: "沖縄最大の繁華街。島唄や泡盛、ゴーヤチャンプルーなど琉球文化を体感しながらショッピングと食べ歩きが楽しめます。",
-                tags: ["グルメ", "観光", "都市"],
-                companion: ["友人グループ", "カップル", "子連れ"],
-                budget: "低予算",
-                transport: "徒歩",
-                purpose: "グルメ",
-                lat: 26.2172,
-                lon: 127.6889,
-                img: "https://loremflickr.com/500/350/japan,okinawa,naha"
-            }
-        ];
+        throw error;
     }
 }
 
 // AIでの観光地追加ボタンのアクション
 window.generatePlacesWithAI = async function () {
-    isGeneratingPlaces = true;
     const stack = document.getElementById("card-stack");
     const container = document.getElementById("swipeActionsContainer");
     if (container) container.classList.add("hidden");
@@ -1908,8 +1797,7 @@ window.generatePlacesWithAI = async function () {
     }, 80);
 
     try {
-        const allExisting = [...kinkiPlaces, ...currentCardPool.filter(c => !kinkiPlaces.some(k => k.id === c.id))];
-        const existingNames = allExisting.map(p => p.name);
+        const existingNames = kinkiPlaces.map(p => p.name);
         const newPlaces = await fetchGeminiPlaces(existingNames);
 
         clearInterval(progressInterval);
@@ -1920,33 +1808,12 @@ window.generatePlacesWithAI = async function () {
 
         if (newPlaces && newPlaces.length > 0) {
             kinkiPlaces.unshift(...newPlaces);
-            for (const place of newPlaces) {
-                try {
-                    const searchRes = await safeFetchJson(getApiUrl('/api/travel/places'), {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Goog-FieldMask': 'places.photos,places.displayName'
-                        },
-                        body: JSON.stringify({
-                            textQuery: place.name + ' ' + place.prefecture,
-                            maxResultCount: 1
-                        })
-                    });
-                    const photo = searchRes?.places?.[0]?.photos?.[0]?.name;
-                    if (photo) {
-                        place.img = getApiUrl('/api/travel/photo') + '?name=' + encodeURIComponent(photo) + '&maxWidthPx=800';
-                    }
-                } catch (e) {}
-            }
             showToast("✨ AIが新しい観光スポットを " + newPlaces.length + " 件追加しました！");
-            isGeneratingPlaces = false;
             applyFilters();
         } else {
             throw new Error("Empty list returned");
         }
     } catch (err) {
-        isGeneratingPlaces = false;
         clearInterval(progressInterval);
         console.error(err);
         let errorMsgToShow = err.message;
@@ -3169,18 +3036,12 @@ window.renderShareView = function () {
     const myPlansContainer = document.getElementById("myPlansToShare");
     if (!sharedListContainer || !myPlansContainer) return;
 
-    const communityFilterEl = document.getElementById("communityPrefFilter");
-    const selectedCommunityPref = communityFilterEl ? communityFilterEl.value : "all";
-
+    // 1. みんなの投稿プランを描画
     sharedListContainer.innerHTML = "";
-    const filteredSharedPlans = selectedCommunityPref === "all"
-        ? sharedPlans
-        : sharedPlans.filter(sp => sp.prefecture === selectedCommunityPref);
-
-    if (filteredSharedPlans.length === 0) {
-        sharedListContainer.innerHTML = `<div class="modal-empty">${selectedCommunityPref === "all" ? "投稿されたプランはありません。" : `${selectedCommunityPref}の投稿プランはありません。`}</div>`;
+    if (sharedPlans.length === 0) {
+        sharedListContainer.innerHTML = `<div class="modal-empty">投稿されたプランはありません。</div>`;
     } else {
-        filteredSharedPlans.forEach(sp => {
+        sharedPlans.forEach(sp => {
             const nightsText = `${sp.nights}泊${sp.nights + 1}日`;
             const reactions = sp.reactions || { like: 0, heart: 0, fire: 0, wow: 0 };
             const standStatsArr = sp.standStats ? JSON.stringify(sp.standStats) : "null";
@@ -3379,8 +3240,8 @@ window.useSharedPlan = function (sharedPlanId) {
         people: sp.people,
         budget: sp.budget,
         itineraryText: sp.itineraryText,
-        lat: [...kinkiPlaces, ...currentCardPool].find(p => p.name === sp.destination)?.lat || 35.6762,
-        lon: [...kinkiPlaces, ...currentCardPool].find(p => p.name === sp.destination)?.lon || 139.6503
+        lat: kinkiPlaces.find(p => p.name === sp.destination)?.lat || 34.6873,
+        lon: kinkiPlaces.find(p => p.name === sp.destination)?.lon || 135.5262
     };
 
     plans.push(newPlan);
@@ -3554,10 +3415,14 @@ function appendChatBubble(sender, text) {
 
     const bubble = document.createElement("div");
     bubble.className = `chat-bubble chat-bubble-${sender}`;
-    bubble.innerHTML = `
-        <div class="chat-avatar">${sender === 'user' ? '👤' : '🤖'}</div>
-        <div class="chat-text">${escapeHTML(text)}</div>
-    `;
+    const avatar = document.createElement("div");
+    avatar.className = "chat-avatar";
+    avatar.textContent = sender === 'user' ? '👤' : '🤖';
+    const chatText = document.createElement("div");
+    chatText.className = "chat-text";
+    chatText.textContent = text;
+    bubble.appendChild(avatar);
+    bubble.appendChild(chatText);
     body.appendChild(bubble);
     body.scrollTop = body.scrollHeight;
 }
@@ -3974,8 +3839,8 @@ window.renderProactiveSuggestions = function () {
                         purpose: detailedPrefs.purpose ? Object.entries(detailedPrefs.purpose).sort((a, b) => b[1] - a[1])[0][0] : "リフレッシュ"
                     });
                 } else if (spots.length === 1) {
-                    const allPlacesPool = [...kinkiPlaces, ...currentCardPool.filter(c => !kinkiPlaces.some(k => k.id === c.id))];
-                    let otherSpot = allPlacesPool.find(p => p.prefecture === pref && p.id !== spots[0].id && !dismissedSuggestions.includes(p.name));
+                    // 同府県の他スポットを探す
+                    let otherSpot = kinkiPlaces.find(p => p.prefecture === pref && p.id !== spots[0].id && !dismissedSuggestions.includes(p.name));
                     if (otherSpot) {
                         candidates.push({
                             title: `${spots[0].name}と${otherSpot.name}を巡る ${pref}満喫プラン`,
@@ -4005,47 +3870,37 @@ window.renderProactiveSuggestions = function () {
         }
     }
 
+    // 候補が足りない（またはいいねが無い）場合、デフォルトの人気提案を追加
     if (candidates.length < 2) {
-        const selectedPref = (document.getElementById('filterPrefecture')?.value || 'all');
-        const allPlacesPool = [...kinkiPlaces, ...currentCardPool.filter(c => !kinkiPlaces.some(k => k.id === c.id))];
-        const prefFiltered = selectedPref === 'all' ? allPlacesPool : allPlacesPool.filter(p => p.prefecture === selectedPref);
-        const available = prefFiltered.filter(p => !dismissedSuggestions.includes(p.name));
+        let defaultPairs = [
+            {
+                title: "【AI推奨】秋の京都歴史・自然巡り周遊ルート",
+                spots: [kinkiPlaces[0], kinkiPlaces[11]], // 清水寺 & 伏見稲荷
+                prefecture: "京都",
+                season: "秋",
+                companion: "カップル",
+                budget: "スタンダード",
+                transport: "公共交通機関",
+                purpose: "歴史探訪"
+            },
+            {
+                title: "【AI推奨】有馬温泉と六甲山絶景ドライブ",
+                spots: [kinkiPlaces[1], kinkiPlaces[25]], // 有馬温泉 & 六甲山テラス
+                prefecture: "兵庫",
+                season: "冬",
+                companion: "カップル",
+                budget: "スタンダード",
+                transport: "自家用車",
+                purpose: "リフレッシュ"
+            }
+        ];
 
-        if (available.length >= 2) {
-            const s1 = available[0];
-            const s2 = available.find(p => p.prefecture === s1.prefecture && p.id !== s1.id) || available[1];
-            const prefLabel = selectedPref === 'all' ? '全国' : selectedPref;
-            const defaultKey = s1.name + "-" + s2.name;
-            if (!dismissedSuggestions.includes(defaultKey) && candidates.length < 2) {
-                candidates.push({
-                    title: `【AI推奨】${prefLabel}のおすすめスポット周遊ルート`,
-                    spots: [s1, s2],
-                    prefecture: s1.prefecture,
-                    season: s1.season,
-                    companion: detailedPrefs.companion ? Object.entries(detailedPrefs.companion).sort((a, b) => b[1] - a[1])[0][0] : "カップル",
-                    budget: detailedPrefs.budget ? Object.entries(detailedPrefs.budget).sort((a, b) => b[1] - a[1])[0][0] : "スタンダード",
-                    transport: detailedPrefs.transport ? Object.entries(detailedPrefs.transport).sort((a, b) => b[1] - a[1])[0][0] : "公共交通機関",
-                    purpose: detailedPrefs.purpose ? Object.entries(detailedPrefs.purpose).sort((a, b) => b[1] - a[1])[0][0] : "リフレッシュ"
-                });
+        defaultPairs.forEach(p => {
+            const keyName = p.spots.map(s => s.name).join("-");
+            if (!dismissedSuggestions.includes(keyName) && candidates.length < 2) {
+                candidates.push(p);
             }
-        }
-        if (available.length >= 4 && candidates.length < 2) {
-            const s3 = available[2];
-            const s4 = available.find(p => p.prefecture === s3.prefecture && p.id !== s3.id) || available[3];
-            const defaultKey2 = s3.name + "-" + s4.name;
-            if (!dismissedSuggestions.includes(defaultKey2)) {
-                candidates.push({
-                    title: `【AI推奨】${s3.prefecture}の自然と文化を巡る旅`,
-                    spots: [s3, s4],
-                    prefecture: s3.prefecture,
-                    season: s3.season,
-                    companion: detailedPrefs.companion ? Object.entries(detailedPrefs.companion).sort((a, b) => b[1] - a[1])[0][0] : "一人旅",
-                    budget: detailedPrefs.budget ? Object.entries(detailedPrefs.budget).sort((a, b) => b[1] - a[1])[0][0] : "スタンダード",
-                    transport: detailedPrefs.transport ? Object.entries(detailedPrefs.transport).sort((a, b) => b[1] - a[1])[0][0] : "公共交通機関",
-                    purpose: detailedPrefs.purpose ? Object.entries(detailedPrefs.purpose).sort((a, b) => b[1] - a[1])[0][0] : "リフレッシュ"
-                });
-            }
-        }
+        });
     }
 
     // 候補の表示 (最大2件)
@@ -4250,14 +4105,9 @@ const chatPref = document.getElementById("chatPrefecture");
 if (filterPref && chatPref) {
     filterPref.addEventListener("change", () => {
         chatPref.value = filterPref.value;
-        if (currentCardPool.length === 0 && !isGeneratingPlaces) {
-            generatePlacesWithAI();
-        }
-        renderProactiveSuggestions();
     });
     chatPref.addEventListener("change", () => {
         filterPref.value = chatPref.value;
         applyFilters();
-        renderProactiveSuggestions();
     });
-}
+}
