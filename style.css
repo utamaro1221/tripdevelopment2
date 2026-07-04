@@ -2554,6 +2554,7 @@ body {
     line-height: 1.5;
     word-break: break-all;
     white-space: pre-wrap;
+    text-align: left;
 }
 
 .chat-bubble-ai .chat-text {
@@ -2561,6 +2562,7 @@ body {
     color: var(--text-color);
     border: 1px solid var(--border-color);
     border-top-left-radius: 4px;
+    text-align: left;
 }
 
 .chat-bubble-user .chat-text {
