@@ -3587,7 +3587,7 @@ ${targetPlan.itineraryText}
 // 15. New Custom Helper Functions
 // ==========================================
 window.selectCategoryFilter = function (category, element) {
-    document.querySelectorAll("#categoryFilters .filter-pill").forEach(el => el.classList.remove("active"));
+    document.querySelectorAll("#categoryFilterRow .filter-pill").forEach(el => el.classList.remove("active"));
     element.classList.add("active");
     activeFilters.category = category;
     applyFilters();
@@ -3598,13 +3598,19 @@ window.resetAllFilters = function () {
     const seasonSelect = document.getElementById("filterSeason");
     if (prefSelect) prefSelect.value = "all";
     if (seasonSelect) seasonSelect.value = "all";
-    document.querySelectorAll("#categoryFilters .filter-pill").forEach(el => el.classList.remove("active"));
-    const allPill = document.querySelector("#categoryFilters .filter-pill");
+    document.querySelectorAll("#categoryFilterRow .filter-pill").forEach(el => el.classList.remove("active"));
+    const allPill = document.querySelector("#categoryFilterRow .filter-pill");
     if (allPill) allPill.classList.add("active");
     activeFilters.category = "all";
     activeFilters.season = "all";
     activeFilters.prefecture = "all";
     applyFilters();
+};
+
+window.toggleTagDropdown = function() {
+    const row = document.getElementById("categoryFilterRow");
+    if (!row) return;
+    row.style.display = row.style.display === "none" || row.style.display === "" ? "flex" : "none";
 };
 
 window.renderSavedSpotsHome = function () {
