@@ -1050,7 +1050,17 @@ window.applyFilters = function () {
     const seasonSelect = document.getElementById("filterSeason");
     const catSelect = document.getElementById("filterCategory");
     const prefSelect = document.getElementById("filterPrefecture");
+    const tagSelect = document.getElementById("filterTag");
     const selectedPref = prefSelect ? prefSelect.value : "all";
+    const selectedTag = tagSelect ? tagSelect.value : "all";
+
+    const tagToCategoryMap = {
+        "歴史・文化": "history",
+        "自然・アウトドア": "nature",
+        "グルメ": "food",
+        "温泉・癒やし": "healing"
+    };
+    const selectedCategory = tagToCategoryMap[selectedTag] || "all";
 
     activeFilters.season = seasonSelect ? seasonSelect.value : "all";
     activeFilters.prefecture = selectedPref;
@@ -1062,6 +1072,7 @@ window.applyFilters = function () {
         const matchSeason = (activeFilters.season === "all" || place.season === activeFilters.season);
         const matchCat = (activeFilters.category === "all" || place.category === activeFilters.category);
         const matchPref = (selectedPref === "all" || place.prefecture === selectedPref);
+        const matchTag = (selectedCategory === "all" || place.category === selectedCategory);
         const isAlreadySelected = likes.some(l => l.id === place.id) || anmaris.some(a => a.id === place.id);
 
         let matchRecommendation = true;
@@ -1071,7 +1082,7 @@ window.applyFilters = function () {
             matchRecommendation = matchesGenre(place, highestIndex);
         }
 
-        return matchSeason && matchCat && matchPref && !isAlreadySelected && matchRecommendation;
+        return matchSeason && matchCat && matchPref && matchTag && !isAlreadySelected && matchRecommendation;
     });
 
     if (recommendationMode) {

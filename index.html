@@ -253,16 +253,13 @@
                         <option value="秋">秋</option>
                         <option value="冬">冬</option>
                     </select>
-                    <div style="position:relative;">
-                        <button class="filter-select" onclick="toggleTagDropdown()" style="cursor:pointer;">🏷️ タグ</button>
-                        <div id="categoryFilterRow" style="display:none; position:absolute; top:100%; left:0; background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:8px; z-index:100; min-width:160px; flex-direction:column; gap:6px;">
-                            <button class="filter-btn active" data-category="all" onclick="filterByCategory('all');toggleTagDropdown()">✨ すべて</button>
-                            <button class="filter-btn" data-category="history" onclick="filterByCategory('history');toggleTagDropdown()">🏛 歴史・文化</button>
-                            <button class="filter-btn" data-category="nature" onclick="filterByCategory('nature');toggleTagDropdown()">🌿 自然・アウトドア</button>
-                            <button class="filter-btn" data-category="food" onclick="filterByCategory('food');toggleTagDropdown()">🍔 グルメ</button>
-                            <button class="filter-btn" data-category="healing" onclick="filterByCategory('healing');toggleTagDropdown()">♨️ 温泉・癒やし</button>
-                        </div>
-                    </div>
+                    <select class="filter-select" id="filterTag" onchange="applyFilters()">
+                        <option value="all">✨ すべて</option>
+                        <option value="歴史・文化">🏛️ 歴史・文化</option>
+                        <option value="自然・アウトドア">🌳 自然・アウトドア</option>
+                        <option value="グルメ">🍔 グルメ</option>
+                        <option value="温泉・癒やし">♨️ 温泉・癒やし</option>
+                    </select>
                 </div>
 
                 <!-- Card Stack -->
