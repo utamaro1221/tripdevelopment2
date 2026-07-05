@@ -1646,45 +1646,7 @@ async function safeFetchJson(url, options = {}) {
     return await response.json();
 }
 
-// 実際の楽天トラベルAPIを中継サーバー経由で呼び出す関数
-async function fetchRakutenHotels(lat, lon, keyword) {
-    const cacheKey = `rakuten_hotels_${lat}_${lon}`;
-    const cached = sessionStorage.getItem(cacheKey);
-    if (cached) {
-        console.log("[Rakuten API] Returning cached hotel data");
-        return JSON.parse(cached);
-    }
 
-    const url = new URL(getApiUrl("/api/travel/hotels"));
-    url.searchParams.append("latitude", lat);
-    url.searchParams.append("longitude", lon);
-    url.searchParams.append("keyword", keyword || "ホテル");
-
-    try {
-        const data = await safeFetchJson(url.toString());
-
-        if (data.hotels && data.hotels.length > 0) {
-            const hotelsList = data.hotels.map(h => {
-                const basicInfo = h.hotel?.[0]?.hotelBasicInfo;
-                if (!basicInfo) return null;
-                return {
-                    name: basicInfo.hotelName,
-                    rating: basicInfo.reviewAverage || "評価なし",
-                    price: basicInfo.hotelMinCharge ? `￥${basicInfo.hotelMinCharge.toLocaleString()}〜` : "料金情報なし",
-                    desc: basicInfo.hotelSpecial || "プラン詳細はリンク先をご確認ください。",
-                    url: basicInfo.hotelInformationUrl,
-                    img: basicInfo.hotelImageUrl || ""
-                };
-            }).filter(Boolean);
-            sessionStorage.setItem(cacheKey, JSON.stringify(hotelsList));
-            return hotelsList;
-        }
-        return [];
-    } catch (error) {
-        console.error("楽天トラベルAPIの取得に失敗しました:", error);
-        throw error;
-    }
-}
 
 // Gemini APIを中継サーバー経由で呼び出し、AIを用いて新しい観光地を生成する関数
 async function fetchGeminiPlaces(excludeNames = []) {
@@ -2008,13 +1970,9 @@ window.generateTravelPlan = async function (event) {
             }
         }
 
-        // =================================================================
-        // 【ここから楽天トラベルAPI連携の分岐処理】
-        // =================================================================
         let hotels = [];
         let isHotelFallback = false;
         try {
-            // 選択された観光地(activePlanTarget)の緯度(lat)・経度(lon)を中継サーバーに渡してホテルを検索します
             const placesRes = await safeFetchJson(getApiUrl('/api/travel/places'), {
                 method: 'POST',
                 headers: {
@@ -2038,21 +1996,19 @@ window.generateTravelPlan = async function (event) {
                 price: p.priceLevel ? "¥".repeat(p.priceLevel) : "料金情報なし",
                 address: p.formattedAddress || "",
                 img: p.photos?.[0]?.name ? `${getApiUrl('/api/travel/photo')}?name=${encodeURIComponent(p.photos[0].name)}&maxWidthPx=400` : "",
-                url: `https://travel.rakuten.co.jp/search/name/?f_name=${encodeURIComponent(p.displayName?.text || '')}&f_name_type=3`
+                url: `https://www.google.com/maps/search/${encodeURIComponent(p.displayName?.text || '')}`
             }));
-            showToast("✨ 楽天トラベルAPIから周辺のホテル情報を取得しました！");
+            showToast("✨ 周辺のホテル情報を取得しました！");
         } catch (err) {
-            // API呼び出しでエラーが起きた場合は、従来のモックデータにフォールバック（自動切り替え）
             console.warn("ホテル情報の取得に失敗したため、モックデータにフォールバックします。", err);
             hotels = (mockHotels[targetPref] || []).map(item => ({ ...item, address: item.desc }));
             isHotelFallback = true;
             if (err.message && err.message.includes("429")) {
-                showToast("⚠️ 本日のホテル検索制限に達したため、モックホテルを表示します。");
+                showToast("⚠️ 本日のホテル検索制限に達したため、推奨ホテルを表示します。");
             } else {
-                showToast("⚠️ API接続エラーのため、モックホテルを表示します。");
+                showToast("⚠️ 最適なルートを計算中...");
             }
         }
-        // =================================================================
 
         // 取得したホテル情報をHTMLに描画する処理
         const hotelList = document.getElementById("hotelList");
@@ -2089,7 +2045,7 @@ window.generateTravelPlan = async function (event) {
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             ${h.price && h.price !== '料金情報なし' ? `<p>${h.price}</p>` : ''}
-                            <a href="${h.url || 'https://travel.rakuten.co.jp/'}" target="_blank" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; text-decoration: none;">空室確認・予約</a>
+                            <a href="${h.url || 'https://www.google.com/maps/search/ホテル'}" target="_blank" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; text-decoration: none;">地図で確認・予約</a>
                         </div>
                     </div>
                 `;
@@ -2984,7 +2940,7 @@ window.viewItineraryDetails = function (planId) {
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     ${h.price && h.price !== '料金情報なし' ? `<p>${h.price}</p>` : ''}
-                    <a href="https://travel.rakuten.co.jp/" target="_blank" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; text-decoration: none;">空室確認・予約</a>
+                    <a href="https://www.google.com/maps/search/ホテル" target="_blank" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; text-decoration: none;">地図で確認・予約</a>
                 </div>
             </div>
         `;
