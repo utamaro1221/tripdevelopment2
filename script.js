@@ -1848,6 +1848,45 @@ const transitAccessRoutes = {
 
 
 
+const STATIC_PLAN_CACHE = {
+    "京都": {
+        getItinerary: (name, nightsText, people, budget) => `【${name}を巡る ${nightsText} 旅行プラン】
+
+■ 1日目:
+午前: 京都駅到着後、市バスで清水寺へ。清水の舞台から京都市街を一望し、産寧坂・二寧坂の石畳をのんびり散策。
+昼食: 祇園四条エリアで京料理（湯豆腐・おばんざい）をゆっくり堪能。
+午後: 八坂神社・円山公園を経て、祇園白川の石畳でフォトジェニックな散策を楽しむ。
+夕食: 先斗町の名店で鴨川の夜景を眺めながら京懐石を堪能。
+夜間: ライトアップされた八坂神社周辺を散策して1日目終了。
+
+■ 2日目:
+午前: 嵐山エリアへ出発。竹林の小径を朝一番に訪れ幻想的な雰囲気を体感。天龍寺の曹源池庭園を鑑賞。
+昼食: 渡月橋を望む老舗で湯豆腐懐石を楽しむ。
+午後: 金閣寺（鹿苑寺）にて黄金に輝く建築美を堪能。龍安寺の石庭で禅の精神に触れる。
+夕食: 四条烏丸の創作京料理店でコース料理を楽しみ、旅の余韻に浸る。
+
+■ アクセスのポイント:
+・清水寺〜祇園エリアは徒歩でも巡れる距離です。
+・嵐山へは京福電鉄（嵐電）嵐山本線が便利です（四条大宮駅から約20分）。
+・金閣寺・龍安寺方面は市バス205号系統をご利用ください。
+・${nightsText}の旅程を${people}名様、予算${budget.toLocaleString()}円を目安にお楽しみください。`,
+        waypoints: [
+            { lat: 34.9859, lng: 135.7585, name: "京都駅", description: "旅のスタート地点" },
+            { lat: 34.9948, lng: 135.7850, name: "清水寺", description: "世界遺産の絶景スポット", season: "通年" },
+            { lat: 35.0036, lng: 135.7783, name: "祇園・八坂神社", description: "京都の象徴的な神社", season: "通年" },
+            { lat: 35.0170, lng: 135.6782, name: "嵐山・竹林の小径", description: "幻想的な竹林散策", season: "通年" },
+            { lat: 35.0394, lng: 135.7292, name: "金閣寺", description: "黄金に輝く世界遺産", season: "通年" }
+        ],
+        hotels: [
+            { name: "THE THOUSAND KYOTO", rating: "4.8 / 5.0", price: "¥¥¥", address: "京都府京都市下京区東塩小路町607", img: "", url: "https://www.google.com/maps/search/THE+THOUSAND+KYOTO" },
+            { name: "ホテルグランヴィア京都", rating: "4.5 / 5.0", price: "¥¥¥", address: "京都府京都市下京区烏丸通塩小路下ル東塩小路町901", img: "", url: "https://www.google.com/maps/search/ホテルグランヴィア京都" },
+            { name: "京都悠洛ホテル Mギャラリー", rating: "4.7 / 5.0", price: "¥¥¥¥", address: "京都府京都市東山区大和大路通三条下ル", img: "", url: "https://www.google.com/maps/search/京都悠洛ホテル" },
+            { name: "ウェスティン都ホテル京都", rating: "4.6 / 5.0", price: "¥¥¥¥", address: "京都府京都市東山区粟田口華頂町1番地", img: "", url: "https://www.google.com/maps/search/ウェスティン都ホテル京都" },
+            { name: "ホテルオークラ京都", rating: "4.4 / 5.0", price: "¥¥¥", address: "京都府京都市中京区河原町御池", img: "", url: "https://www.google.com/maps/search/ホテルオークラ京都" }
+        ]
+    }
+};
+
 window.generateTravelPlan = async function (event) {
     event.preventDefault();
     if (!activePlanTarget) return;
@@ -1887,8 +1926,65 @@ window.generateTravelPlan = async function (event) {
     const selectedNightsText = `${nightsVal}泊${nightsVal + 1}日`;
     let planObj = null;
     let succeeded = false;
+    let fastMode = false;
 
     try {
+        const cachedPlan = STATIC_PLAN_CACHE[targetPref];
+        if (cachedPlan) {
+            const itineraryText = cachedPlan.getItinerary(activePlanTarget.name, selectedNightsText, peopleVal, budgetVal);
+            const waypoints = [...cachedPlan.waypoints];
+
+            const hotelList = document.getElementById("hotelList");
+            hotelList.innerHTML = "";
+            cachedPlan.hotels.forEach(h => {
+                const card = document.createElement("div");
+                card.className = "hotel-card";
+                card.innerHTML = `
+                    <img src="${h.img || activePlanTarget.img || ''}" class="hotel-img" alt="${h.name}">
+                    <div class="hotel-info">
+                        <div>
+                            <h4>${h.name}</h4>
+                            <div class="hotel-rating">⭐ ${h.rating}</div>
+                            ${h.address ? `<p style="font-size:0.8rem;color:#64748b;">${h.address}</p>` : ''}
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            ${h.price && h.price !== '料金情報なし' ? `<p>${h.price}</p>` : ''}
+                            <a href="${h.url}" target="_blank" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; text-decoration: none;">地図で確認・予約</a>
+                        </div>
+                    </div>
+                `;
+                hotelList.appendChild(card);
+            });
+
+            planObj = {
+                id: Date.now(),
+                destination: activePlanTarget.name,
+                prefecture: targetPref,
+                date: dateVal,
+                nights: nightsVal,
+                people: peopleVal,
+                budget: budgetVal,
+                lat: activePlanTarget.lat,
+                lon: activePlanTarget.lon,
+                itineraryText: itineraryText,
+                waypoints: waypoints
+            };
+            planObj.departure = startStationVal || planObj.destination || "";
+            plans.push(planObj);
+            saveToStorage();
+
+            document.getElementById("aiPlanText").innerHTML = formatItineraryHtml(itineraryText);
+
+            const transitText = transitAccessRoutes[activePlanTarget.name] || "公共交通機関の情報が見つかりませんでした。詳細なルートはナビアプリ等でご確認ください。";
+            const transitEl = document.getElementById("aiPlanTransitText");
+            if (transitEl) transitEl.textContent = transitText;
+
+            showToast("⚡ 超高速キャッシュからプランを表示しました！");
+            fastMode = true;
+            succeeded = true;
+            return;
+        }
+
         let itineraryText = "";
         let waypoints = [];
 
@@ -2090,7 +2186,7 @@ window.generateTravelPlan = async function (event) {
         if (percent) percent.textContent = "100%";
 
         const elapsedTime = Date.now() - startTime;
-        const minDuration = 1400;
+        const minDuration = fastMode ? 400 : 1400;
         if (elapsedTime < minDuration) {
             await new Promise(resolve => setTimeout(resolve, minDuration - elapsedTime));
         }
