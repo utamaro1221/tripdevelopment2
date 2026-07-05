@@ -1858,14 +1858,11 @@ window.generateTravelPlan = async function (event) {
     const budgetVal = parseInt(document.getElementById("planBudget").value);
     const othersVal = document.getElementById("planOthers").value;
     const startStationVal = document.getElementById("planStartStation").value;
-    const simulateError = false;
 
-    // フォームを隠してローディング表示
     document.getElementById("planForm").classList.add("hidden");
     const loadingView = document.getElementById("planLoading");
     loadingView.classList.remove("hidden");
 
-    // progress bar reset
     let progressValue = 0;
     const fill = document.getElementById("planProgressBarFill");
     const train = document.getElementById("planProgressTrain");
@@ -1874,7 +1871,6 @@ window.generateTravelPlan = async function (event) {
     if (train) train.style.left = "0%";
     if (percent) percent.textContent = "0%";
 
-    // Ensure loading screen is visible to show off animations
     const startTime = Date.now();
 
     let progressInterval = setInterval(() => {
@@ -1887,25 +1883,29 @@ window.generateTravelPlan = async function (event) {
         }
     }, 80);
 
+    const targetPref = activePlanTarget.prefecture;
+    const selectedNightsText = `${nightsVal}泊${nightsVal + 1}日`;
+    let planObj = null;
+    let succeeded = false;
+
     try {
-        // デバッグ用の「APIエラーを再現」チェックボックスがONの場合
-        if (simulateError) {
-            throw new Error("Simulated API Error");
-        }
-
-        const targetPref = activePlanTarget.prefecture;
-        const selectedNightsText = `${nightsVal}泊${nightsVal + 1}日`;
-
         let itineraryText = "";
         let waypoints = [];
+
         try {
-            const geminiResult = await fetchGeminiItinerary(activePlanTarget.name, targetPref, dateVal, selectedNightsText, peopleVal, budgetVal, currentPriority, othersVal, startStationVal);
+            const geminiResult = await fetchGeminiItinerary(
+                activePlanTarget.name, targetPref, dateVal, selectedNightsText,
+                peopleVal, budgetVal, currentPriority, othersVal, startStationVal
+            );
             itineraryText = geminiResult.itineraryText || "";
             waypoints = Array.isArray(geminiResult.waypoints) ? geminiResult.waypoints : [];
             showToast("✨ AIがあなたの旅行スタンドに合わせた特製プランを生成しました！");
         } catch (apiErr) {
             console.warn("AIプラン生成に失敗したため、推奨テンプレートを表示します:", apiErr);
-            itineraryText = generateItineraryText(activePlanTarget.name, targetPref, dateVal, selectedNightsText, peopleVal, budgetVal, currentPriority, othersVal);
+            itineraryText = generateItineraryText(
+                activePlanTarget.name, targetPref, dateVal, selectedNightsText,
+                peopleVal, budgetVal, currentPriority, othersVal
+            );
             showToast("⚠️ AI生成制限のため、推奨テンプレートでプランを作成しました。");
         }
 
@@ -2010,7 +2010,6 @@ window.generateTravelPlan = async function (event) {
             }
         }
 
-        // 取得したホテル情報をHTMLに描画する処理
         const hotelList = document.getElementById("hotelList");
         hotelList.innerHTML = "";
 
@@ -2053,7 +2052,7 @@ window.generateTravelPlan = async function (event) {
             });
         }
 
-        const planObj = {
+        planObj = {
             id: Date.now(),
             destination: activePlanTarget.name,
             prefecture: targetPref,
@@ -2072,10 +2071,23 @@ window.generateTravelPlan = async function (event) {
 
         document.getElementById("aiPlanText").innerHTML = formatItineraryHtml(itineraryText);
 
-        // アクセス情報表示
         const transitText = transitAccessRoutes[activePlanTarget.name] || "公共交通機関の情報が見つかりませんでした。詳細なルートはナビアプリ等でご確認ください。";
         const transitEl = document.getElementById("aiPlanTransitText");
         if (transitEl) transitEl.textContent = transitText;
+
+        succeeded = true;
+
+    } catch (error) {
+        console.error("プラン生成中にエラーが発生しました:", error);
+        showToast("⚠️ プラン作成に失敗しました。");
+        document.getElementById("planError").classList.remove("hidden");
+
+    } finally {
+        clearInterval(progressInterval);
+
+        if (fill) fill.style.width = "100%";
+        if (train) train.style.left = "100%";
+        if (percent) percent.textContent = "100%";
 
         const elapsedTime = Date.now() - startTime;
         const minDuration = 1400;
@@ -2083,36 +2095,29 @@ window.generateTravelPlan = async function (event) {
             await new Promise(resolve => setTimeout(resolve, minDuration - elapsedTime));
         }
 
-        clearInterval(progressInterval);
-        if (fill) fill.style.width = "100%";
-        if (train) train.style.left = "100%";
-        if (percent) percent.textContent = "100%";
         await new Promise(resolve => setTimeout(resolve, 250));
 
         loadingView.classList.add("hidden");
-        document.getElementById("planResults").classList.remove("hidden");
+        loadingView.style.display = "none";
 
-        // ホーム画面のカウントダウン更新用
-        updateCountdown();
-        updateGridCounts();
+        if (succeeded) {
+            document.getElementById("planResults").classList.remove("hidden");
 
-        calculateStandStats();
+            updateCountdown();
+            updateGridCounts();
+            calculateStandStats();
 
-        const title = `${planObj.destination}の旅 (${planObj.nights}泊${planObj.nights + 1}日)`;
-        const startDate = new Date(`${planObj.date}T09:00:00`);
-        const endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + planObj.nights);
-        endDate.setHours(18, 0, 0, 0);
-        downloadICS(title, planObj.itineraryText, startDate, endDate);
-        bindCalendarButton(planObj);
-
-        bind3DSimButton(planObj);
-
-    } catch (error) {
-        clearInterval(progressInterval);
-        loadingView.classList.add("hidden");
-        document.getElementById("planError").classList.remove("hidden");
-        showToast("⚠️ プラン作成に失敗しました。");
+            if (planObj) {
+                const title = `${planObj.destination}の旅 (${planObj.nights}泊${planObj.nights + 1}日)`;
+                const startDate = new Date(`${planObj.date}T09:00:00`);
+                const endDate = new Date(startDate);
+                endDate.setDate(startDate.getDate() + planObj.nights);
+                endDate.setHours(18, 0, 0, 0);
+                downloadICS(title, planObj.itineraryText, startDate, endDate);
+                bindCalendarButton(planObj);
+                bind3DSimButton(planObj);
+            }
+        }
     }
 };
 
