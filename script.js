@@ -96,7 +96,7 @@ window.fetchPlacePhoto = async function (placeName) {
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ textQuery: placeName })
+            body: JSON.stringify({ textQuery: placeName, languageCode: "ja" })
         });
 
         if (!response.ok) throw new Error(`Places API Error: ${response.status}`);

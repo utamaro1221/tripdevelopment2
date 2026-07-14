@@ -118,7 +118,7 @@ app.post('/api/travel/generate', apiLimiter, async (req, res) => {
             if (content.parts) {
                 content.parts.forEach(part => {
                     if (typeof part.text === 'string') {
-                        part.text += "\n各スポットに付与する季節タグ（season tag）は、プラン全体で提案している季節と必ず一致させること。もし特定の季節に限定されないスポットの場合は『通年』または『通年おすすめ』というタグを出力すること。";
+                        part.text += "\n各スポットに付与する季節タグ（season tag）は、プラン全体で提案している季節と必ず一致させること。もし特定の季節に限定されないスポットの場合は『通年』または『通年おすすめ』というタグを出力すること。\nホテル名・施設名・住所・説明文などのすべての固有名詞・場所情報は、必ず日本語（漢字・ひらがな・カタカナ）で出力すること。英語表記（ローマ字含む）は絶対に使用しないこと。";
                     }
                 });
             }
@@ -178,7 +178,7 @@ app.post('/api/travel/places', apiLimiter, async (req, res) => {
                 'X-Goog-Api-Key': apiKey,
                 'X-Goog-FieldMask': fieldMask
             },
-            body: JSON.stringify(req.body)
+            body: JSON.stringify({ ...req.body, languageCode: req.body.languageCode || 'ja' })
         });
 
         let data;
