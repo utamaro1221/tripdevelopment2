@@ -167,8 +167,13 @@ app.post('/api/travel/places', apiLimiter, async (req, res) => {
         return res.status(500).json({ error: 'サーバー側の Google Places API キー (GOOGLE_PLACES_API_KEY) が設定されていません。' });
     }
 
+    if (!req.body || !req.body.textQuery) {
+        console.error("Places API Error: textQuery is missing in request body.");
+        return res.status(400).json({ error: 'リクエストボディに textQuery が必要です。' });
+    }
+
     try {
-        const url = 'https://places.googleapis.com/v1/places:searchText?language=ja';
+        const url = 'https://places.googleapis.com/v1/places:searchText';
         const fieldMask = req.headers['x-goog-fieldmask'] || 'places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.nationalPhoneNumber,places.photos';
 
         const response = await fetch(url, {
