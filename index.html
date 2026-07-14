@@ -72,11 +72,17 @@
                         autocomplete="username"
                         style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #ffffff;">
                 </div>
-                <div class="form-group" style="margin-bottom: 16px; text-align: left;">
+                <div class="form-group" style="margin-bottom: 8px; text-align: left;">
                     <label for="authPassword" style="color: #94a3b8; font-size: 0.8rem;">パスワード</label>
                     <input type="password" id="authPassword" class="form-input" placeholder="6文字以上" required
                         autocomplete="current-password"
                         style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #ffffff;">
+                </div>
+                <div style="text-align: right; margin-bottom: 16px;">
+                    <a href="#" id="forgotPasswordLink" onclick="handlePasswordReset(event)"
+                        style="color: #94a3b8; font-size: 0.75rem; text-decoration: none; transition: color 0.2s;"
+                        onmouseover="this.style.color='var(--primary-color)'"
+                        onmouseout="this.style.color='#94a3b8'">パスワードをお忘れですか？</a>
                 </div>
                 <button type="submit" class="btn-primary" style="width: 100%; padding: 12px;"
                     id="authSubmitBtn">ログイン</button>

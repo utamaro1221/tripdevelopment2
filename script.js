@@ -7,7 +7,8 @@ import {
     onAuthStateChanged,
     GoogleAuthProvider,
     signInWithPopup,
-    signInAnonymously
+    signInAnonymously,
+    sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 import {
@@ -3439,6 +3440,30 @@ window.signInAsGuest = async function () {
 
 window.signInAsGuestSplash = async function () {
     await signInAsGuest();
+};
+
+window.handlePasswordReset = async function (event) {
+    event.preventDefault();
+    const email = document.getElementById("authEmail").value.trim();
+    if (!email) {
+        showToast("⚠️ メールアドレスを入力してください。");
+        return;
+    }
+    try {
+        await sendPasswordResetEmail(auth, email);
+        showToast("✅ パスワード再設定メールを送信しました。メールをご確認ください。");
+    } catch (error) {
+        console.error("パスワードリセットエラー:", error);
+        let errorMsg = "パスワード再設定メールの送信に失敗しました。";
+        if (error.code === "auth/invalid-email") {
+            errorMsg = "⚠️ 無効なメールアドレス形式です。";
+        } else if (error.code === "auth/user-not-found") {
+            errorMsg = "⚠️ このメールアドレスは登録されていません。";
+        } else {
+            errorMsg = `エラー: ${error.message}`;
+        }
+        showToast(errorMsg);
+    }
 };
 
 // ==========================================
