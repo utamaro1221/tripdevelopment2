@@ -168,7 +168,7 @@ app.post('/api/travel/places', apiLimiter, async (req, res) => {
     }
 
     try {
-        const url = 'https://places.googleapis.com/v1/places:searchText';
+        const url = 'https://places.googleapis.com/v1/places:searchText?language=ja';
         const fieldMask = req.headers['x-goog-fieldmask'] || 'places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.nationalPhoneNumber,places.photos';
 
         const response = await fetch(url, {
