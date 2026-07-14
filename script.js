@@ -64,11 +64,10 @@ const imageObserver = new IntersectionObserver((entries, observer) => {
 
             if (placeName && imgEl && (imgEl.src.includes('unsplash.com') || imgEl.src.includes('loremflickr.com'))) {
                 fetchPlacePhoto(placeName).then(url => {
-                    if (url) {
-                        imgEl.src = url;
-                        const place = kinkiPlaces.find(p => p.name === placeName);
-                        if (place) place.img = url;
-                    }
+                    const resolvedUrl = (url && !url.includes('placehold.co')) ? url : NO_IMAGE_URL;
+                    imgEl.src = resolvedUrl;
+                    const place = kinkiPlaces.find(p => p.name === placeName);
+                    if (place) place.img = resolvedUrl;
                 });
             }
             observer.unobserve(card);
@@ -81,16 +80,16 @@ const imageObserver = new IntersectionObserver((entries, observer) => {
 // ==========================================
 // 🌟 本物の Google Places API を呼び出す関数
 // ==========================================
-window.fetchPlacePhoto = async function (placeName) {
-    if (!placeName) return "https://placehold.co/600x400?text=No+Image";
+const NO_IMAGE_URL = "https://placehold.co/800x600/e2e8f0/94a3b8?text=No+Image";
 
-    // すでに直接URLが指定されている場合はそのまま返す
+window.fetchPlacePhoto = async function (placeName) {
+    if (!placeName) return NO_IMAGE_URL;
+
     if (typeof placeName === 'string' && placeName.startsWith("http")) {
         return placeName;
     }
 
     try {
-        // あなたが構築した server.js の Places API エンドポイントを呼び出す
         const url = new URL("https://tripdevelopment2.onrender.com/api/travel/places");
 
         const response = await fetch(url, {
@@ -102,7 +101,6 @@ window.fetchPlacePhoto = async function (placeName) {
         if (!response.ok) throw new Error(`Places API Error: ${response.status}`);
         const data = await response.json();
 
-        // 写真データが見つかった場合、server.js 経由で取得するURLを生成
         if (data.places && data.places.length > 0 && data.places[0].photos && data.places[0].photos.length > 0) {
             const photoName = data.places[0].photos[0].name;
             return `https://tripdevelopment2.onrender.com/api/travel/photo?name=${encodeURIComponent(photoName)}&maxWidthPx=800`;
@@ -112,8 +110,7 @@ window.fetchPlacePhoto = async function (placeName) {
         console.error(`[API通信エラー] ${placeName} の写真取得に失敗:`, error);
     }
 
-    // エラー時や写真がなかった場合のプレースホルダー
-    return `https://placehold.co/800x600/f1f5f9/64748b?text=${encodeURIComponent(placeName)}`;
+    return NO_IMAGE_URL;
 };
 
 const nameDisplayModeMap = {
@@ -1283,7 +1280,7 @@ function createCardElement(data, isTopCard) {
 
     card.innerHTML = `
         <div class="card-img-container">
-            <img src="${data.img}" class="card-img" alt="${data.name}">
+            <img src="${data.img || NO_IMAGE_URL}" class="card-img" alt="${data.name}" onerror="this.onerror=null;this.src='${NO_IMAGE_URL}'">
             <span class="card-prefecture-badge">📍 ${data.prefecture}</span>
             ${getSeasonBadgeHtml(data.season)}
             ${isRecommended ? `<span class="card-match-badge"><span class="material-icons" style="font-size: 0.95rem; vertical-align: middle;">bolt</span>AIマッチ度 ${matchScore}%</span>` : ''}
@@ -1940,7 +1937,7 @@ window.generateTravelPlan = async function (event) {
                 const card = document.createElement("div");
                 card.className = "hotel-card";
                 card.innerHTML = `
-                    <img src="${h.img || activePlanTarget.img || ''}" class="hotel-img" alt="${h.name}">
+                    <img src="${h.img || activePlanTarget.img || NO_IMAGE_URL}" class="hotel-img" alt="${h.name}" onerror="this.onerror=null;this.src='${NO_IMAGE_URL}'">
                     <div class="hotel-info">
                         <div>
                             <h4>${h.name}</h4>
@@ -2131,7 +2128,7 @@ window.generateTravelPlan = async function (event) {
                 const card = document.createElement("div");
                 card.className = "hotel-card";
                 card.innerHTML = `
-                    <img src="${h.img || activePlanTarget.img}" class="hotel-img" alt="${h.name}">
+                    <img src="${h.img || activePlanTarget.img || NO_IMAGE_URL}" class="hotel-img" alt="${h.name}" onerror="this.onerror=null;this.src='${NO_IMAGE_URL}'">
                     <div class="hotel-info">
                         <div>
                             <h4>${h.name}</h4>
