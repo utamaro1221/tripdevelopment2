@@ -14,9 +14,18 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined" rel="stylesheet">
-    <script
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB3NKrrdzg7yCnn_ATcmWs-r5j4Z5PDcBg&v=weekly&libraries=geometry&loading=async"
-        async defer></script>
+    <!-- 
+      Google Maps JavaScript API 公式動的インポートブートストラップローダー
+      ※ セキュリティ注意: 本APIキーはブラウザで実行されるため、Google Cloud Console にて
+         必ず「HTTPリファラー制限 (例: https://utamaro1221.github.io/*, http://localhost:*)」および
+         「API制限 (Maps JavaScript API のみ)」を設定してください。
+    -->
+    <script>
+      ((g)=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.googleapis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ensure only one library request is made."):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
+        key: "AIzaSyB3NKrrdzg7yCnn_ATcmWs-r5j4Z5PDcBg",
+        v: "weekly"
+      });
+    </script>
 
     <link rel="stylesheet" href="style.css?v=1.2.6">
 </head>

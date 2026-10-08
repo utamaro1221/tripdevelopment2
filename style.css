@@ -385,10 +385,10 @@ body {
 /* Card Stack */
 #card-stack {
     position: relative;
-    width: 90%;
+    width: 92%;
     height: 520px;
     max-height: 520px;
-    max-width: 400px;
+    max-width: 450px;
     overflow: visible;
     margin: 12px auto 0 auto;
     flex-shrink: 0;
@@ -398,6 +398,7 @@ body {
 .spot-card {
     position: absolute;
     width: 100%;
+    max-width: 450px;
     height: 520px;
     max-height: 520px;
     background-color: var(--card-bg);
@@ -617,8 +618,8 @@ body {
     gap: 20px;
     margin-top: 24px;
     z-index: 10;
-    width: 100%;
-    max-width: 400px;
+    width: 92%;
+    max-width: 450px;
     justify-content: center;
 }
 

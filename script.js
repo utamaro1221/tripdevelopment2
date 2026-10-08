@@ -54,6 +54,47 @@ const auth = getAuth(app);
 window._auth = auth;
 
 // ==========================================
+// 🛡️ XSS防止・サニタイズユーティリティ (A7)
+// ==========================================
+function escapeHTML(str) {
+    if (str == null) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+window.escapeHTML = escapeHTML;
+
+function sanitizeUrl(url) {
+    if (!url || typeof url !== "string") return "#";
+    const trimmed = url.trim();
+    if (/^https?:\/\//i.test(trimmed)) {
+        return trimmed;
+    }
+    return "#";
+}
+window.sanitizeUrl = sanitizeUrl;
+
+// ==========================================
+// 🛡️ 認証ヘッダー取得ユーティリティ (A6)
+// ==========================================
+async function getAuthHeaders() {
+    const headers = { 'Content-Type': 'application/json' };
+    if (auth && auth.currentUser) {
+        try {
+            const token = await auth.currentUser.getIdToken();
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+        } catch (e) {
+            console.warn("Failed to get Firebase ID token:", e);
+        }
+    }
+    return headers;
+}
+window.getAuthHeaders = getAuthHeaders;
+
+// ==========================================
 // 🌟 429エラー対策: 画像の遅延読み込み (Lazy Loading) オブザーバー
 // ==========================================
 const imageObserver = new IntersectionObserver((entries, observer) => {
@@ -92,11 +133,12 @@ window.fetchPlacePhoto = async function (placeName) {
 
     try {
         const url = new URL("https://tripdevelopment2.onrender.com/api/travel/places");
+        const headers = await getAuthHeaders();
 
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ textQuery: placeName, languageCode: "ja" })
+            headers: headers,
+            body: JSON.stringify({ textQuery: placeName, purpose: "photo", languageCode: "ja" })
         });
 
         if (!response.ok) throw new Error(`Places API Error: ${response.status}`);
@@ -143,13 +185,14 @@ const nameDisplayModeMap = {
 let currentNameMode = 0;
 
 function getDisplayName(name) {
+    if (!name) return "";
     const modes = ["kanji", "ruby", "hiragana"];
     const mode = modes[currentNameMode];
     const data = nameDisplayModeMap[name];
     if (data) {
-        return data[mode] || name;
+        return data[mode] || escapeHTML(name);
     }
-    return name;
+    return escapeHTML(name);
 }
 
 function formatItineraryHtml(text) {
@@ -198,6 +241,646 @@ const kinkiPlaces = [
         budget: "スタンダード",
         transport: "公共交通機関",
         purpose: "歴史探訪"
+    },
+    {
+        id: 102,
+        name: "奥入瀬渓流",
+        prefecture: "青森",
+        season: "夏",
+        category: "nature",
+        description: "十和田湖から流れる清流沿いに約14km続く日本屈指の景勝地。苔むした岩や鬱蒼とした緑のトンネル、躍動感あふれる大小無数の滝が織りなす清涼な癒やしの散策路です。",
+        img: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=500&auto=format&fit=crop",
+        tags: ["自然", "リラックス", "アクティブ"],
+        lat: 40.5286,
+        lon: 140.9702,
+        companion: ["一人旅", "カップル", "友人グループ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "リフレッシュ"
+    },
+    {
+        id: 103,
+        name: "中尊寺金色堂",
+        prefecture: "岩手",
+        season: "秋",
+        category: "history",
+        description: "奥州藤原氏の栄華を今に伝える世界文化遺産。堂全体が金箔で覆われた極楽浄土の空間は圧巻の美しさで、秋の紅葉に包まれる参道「月見坂」の風情も見事です。",
+        img: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=500&auto=format&fit=crop",
+        tags: ["歴史", "観光", "リラックス"],
+        lat: 39.0016,
+        lon: 141.1001,
+        companion: ["一人旅", "カップル"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
+    },
+    {
+        id: 104,
+        name: "松島",
+        prefecture: "宮城",
+        season: "秋",
+        category: "nature",
+        description: "日本三景の一つに数えられる名勝。松島湾に浮かぶ大小260余りの島々が織りなす多島美は、遊覧船からのクルーズ観光や瑞巌寺周辺の歴史散策とともに存分に楽しめます。",
+        img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&auto=format&fit=crop",
+        tags: ["自然", "観光", "リラックス"],
+        lat: 38.3712,
+        lon: 141.0664,
+        companion: ["カップル", "友人グループ", "一人旅"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "観光"
+    },
+    {
+        id: 105,
+        name: "田沢湖",
+        prefecture: "秋田",
+        season: "夏",
+        category: "nature",
+        description: "水深423.4mと日本一の深さを誇る神秘的なカルデラ湖。瑠璃色に輝く透明な湖面と、湖畔にたたずむ黄金の「たつこ像」、周囲の山々が織りなす大自然のパノラマが魅力です。",
+        img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=500&auto=format&fit=crop",
+        tags: ["自然", "リラックス", "観光"],
+        lat: 39.7214,
+        lon: 140.6622,
+        companion: ["カップル", "一人旅", "友人グループ"],
+        budget: "低予算",
+        transport: "自家用車",
+        purpose: "リフレッシュ"
+    },
+    {
+        id: 106,
+        name: "銀山温泉",
+        prefecture: "山形",
+        season: "冬",
+        category: "healing",
+        description: "大正ロマンの風情が漂う木造多層建築の旅館が銀山川沿いに並ぶ温泉街。ガス灯が灯る夕暮れ時のノスタルジックな風景や、雪景色に包まれる冬の幻想的な夜は息をのむ美しさです。",
+        img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=500&auto=format&fit=crop",
+        tags: ["温泉・癒やし", "歴史", "リラックス"],
+        lat: 38.5705,
+        lon: 140.5306,
+        companion: ["カップル", "一人旅"],
+        budget: "ラグジュアリー",
+        transport: "公共交通機関",
+        purpose: "リフレッシュ"
+    },
+    {
+        id: 107,
+        name: "大内宿",
+        prefecture: "福島",
+        season: "秋",
+        category: "history",
+        description: "江戸時代の面影を色濃く残す茅葺き屋根の民家が街道沿いに並ぶ旧宿場町。名物のネギを箸代わりにして食べる「高遠そば」を味わいながら昔ながらの街道情緒を満喫できます。",
+        img: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=500&auto=format&fit=crop",
+        tags: ["歴史", "グルメ", "観光"],
+        lat: 37.3340,
+        lon: 139.8608,
+        companion: ["友人グループ", "カップル", "一人旅"],
+        budget: "スタンダード",
+        transport: "自家用車",
+        purpose: "歴史探訪"
+    },
+    {
+        id: 108,
+        name: "国営ひたち海浜公園",
+        prefecture: "茨城",
+        season: "春",
+        category: "nature",
+        description: "四季折々の花々が咲き誇る広大な国営公園。春には「みはらしの丘」一面を青一色に染めるネモフィラ、秋には鮮やかな紅葉のコキアが広がり、圧倒的な絶景を楽しめます。",
+        img: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=500&auto=format&fit=crop",
+        tags: ["自然", "観光", "アクティブ"],
+        lat: 36.4025,
+        lon: 140.5985,
+        companion: ["子連れ", "カップル", "友人グループ"],
+        budget: "低予算",
+        transport: "公共交通機関",
+        purpose: "アクティビティ"
+    },
+    {
+        id: 109,
+        name: "日光東照宮",
+        prefecture: "栃木",
+        season: "秋",
+        category: "history",
+        description: "徳川家康を祀る日本を代表する世界遺産。国宝・陽明門をはじめとする豪華絢爛な極彩色の彫刻美や、「見ざる・言わざる・聞かざる」の三猿、眠り猫など見どころが満載です。",
+        img: "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=500&auto=format&fit=crop",
+        tags: ["歴史", "観光", "自然"],
+        lat: 36.7580,
+        lon: 139.5989,
+        companion: ["一人旅", "カップル", "友人グループ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
+    },
+    {
+        id: 110,
+        name: "草津温泉",
+        prefecture: "群馬",
+        season: "冬",
+        category: "healing",
+        description: "日本屈指の自然湧出量を誇る名湯。温泉街の中心に位置する「湯畑」の立ち上る湯けむりと伝統の「湯もみ」ショー、効能豊かな強酸性の湯が心身をじんわりと癒やしてくれます。",
+        img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=500&auto=format&fit=crop",
+        tags: ["温泉・癒やし", "リラックス", "グルメ"],
+        lat: 36.6208,
+        lon: 138.5960,
+        companion: ["友人グループ", "カップル", "一人旅"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "リフレッシュ"
+    },
+    {
+        id: 111,
+        name: "川越一番街（小江戸川越）",
+        prefecture: "埼玉",
+        season: "秋",
+        category: "history",
+        description: "重厚な蔵造りの町家が立ち並ぶ「小江戸」の歴史街道。シンボルである「時の鐘」や菓子屋横丁など、江戸・明治の情緒に浸りながらサツマイモスイーツの食べ歩きが人気です。",
+        img: "https://images.unsplash.com/photo-1533050487297-09b450131914?w=500&auto=format&fit=crop",
+        tags: ["歴史", "グルメ", "観光"],
+        lat: 35.9238,
+        lon: 139.4827,
+        companion: ["カップル", "友人グループ", "一人旅"],
+        budget: "低予算",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
+    },
+    {
+        id: 112,
+        name: "成田山新勝寺",
+        prefecture: "千葉",
+        season: "冬",
+        category: "history",
+        description: "開山1000年以上の歴史を誇る全国屈指の霊場。広大な境内には重要文化財の堂塔がそびえ、レトロな表参道に並ぶ老舗うなぎ料理店での食事とともに参拝散策を楽しめます。",
+        img: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=500&auto=format&fit=crop",
+        tags: ["歴史", "グルメ", "観光"],
+        lat: 35.7865,
+        lon: 140.3182,
+        companion: ["一人旅", "カップル", "子連れ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
+    },
+    {
+        id: 113,
+        name: "浅草寺・雷門",
+        prefecture: "東京",
+        season: "春",
+        category: "history",
+        description: "都内最古の寺院で、巨大な赤提灯が掲げられた「雷門」が下町のランドマーク。活気あふれる仲見世通りでの伝統和菓子巡りや五重塔の眺めなど、江戸の伝統美が息づいています。",
+        img: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=500&auto=format&fit=crop",
+        tags: ["歴史", "観光", "グルメ"],
+        lat: 35.7148,
+        lon: 139.7967,
+        companion: ["友人グループ", "カップル", "一人旅"],
+        budget: "低予算",
+        transport: "公共交通機関",
+        purpose: "観光"
+    },
+    {
+        id: 114,
+        name: "横浜みなとみらい21",
+        prefecture: "神奈川",
+        season: "通年",
+        category: "city",
+        description: "爽やかな海風が吹き抜ける先進的なウォーターフロント都市。赤レンガ倉庫や大観覧車、ランドマークタワーが織りなす煌びやかな夜景とショッピング・グルメを満喫できます。",
+        img: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?w=500&auto=format&fit=crop",
+        tags: ["都市", "観光", "グルメ"],
+        lat: 35.4547,
+        lon: 139.6314,
+        companion: ["カップル", "友人グループ", "子連れ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "観光"
+    },
+    {
+        id: 115,
+        name: "清津峡渓谷トンネル",
+        prefecture: "新潟",
+        season: "夏",
+        category: "nature",
+        description: "日本三大峡谷の一つとして名高い柱状節理の雄大な渓谷。トンネル最奥の「パノラマステーション」の水盤に映り込む渓谷美はSNSでも大人気のアート空間です。",
+        img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=500&auto=format&fit=crop",
+        tags: ["自然", "観光", "リラックス"],
+        lat: 36.9587,
+        lon: 138.7494,
+        companion: ["カップル", "友人グループ", "一人旅"],
+        budget: "スタンダード",
+        transport: "自家用車",
+        purpose: "リフレッシュ"
+    },
+    {
+        id: 116,
+        name: "黒部ダム",
+        prefecture: "富山",
+        season: "夏",
+        category: "nature",
+        description: "北アルプスの大自然に囲まれた日本最大級のアーチ式ダム。毎秒10トン以上の水が霧状となって吹き出す大迫力の観光放水や立山黒部アルペンルートの大絶景が広がります。",
+        img: "https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=500&auto=format&fit=crop",
+        tags: ["自然", "アクティブ", "観光"],
+        lat: 36.5664,
+        lon: 137.6621,
+        companion: ["友人グループ", "一人旅", "子連れ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "アクティビティ"
+    },
+    {
+        id: 117,
+        name: "兼六園",
+        prefecture: "石川",
+        season: "春",
+        category: "nature",
+        description: "加賀百万石の美意識を受け継ぐ日本三名園の一つ。徽軫灯籠や霞ヶ池を中心に、春の桜、新緑のカキツバタ、秋の紅葉、冬の雪吊りと四季を通じて優美な庭園美を誇ります。",
+        img: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=500&auto=format&fit=crop",
+        tags: ["自然", "歴史", "リラックス"],
+        lat: 36.5621,
+        lon: 136.6627,
+        companion: ["一人旅", "カップル", "子連れ"],
+        budget: "低予算",
+        transport: "公共交通機関",
+        purpose: "リフレッシュ"
+    },
+    {
+        id: 118,
+        name: "東尋坊",
+        prefecture: "福井",
+        season: "夏",
+        category: "nature",
+        description: "日本海の荒波によって削り出された巨大な柱状節理の断崖絶壁。世界でも数カ所しかない地質学的名所であり、遊覧船からの見上げる絶壁や夕日の絶景は圧巻です。",
+        img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&auto=format&fit=crop",
+        tags: ["自然", "観光", "アクティブ"],
+        lat: 36.2372,
+        lon: 136.1264,
+        companion: ["友人グループ", "一人旅", "カップル"],
+        budget: "低予算",
+        transport: "自家用車",
+        purpose: "観光"
+    },
+    {
+        id: 119,
+        name: "河口湖（富士山絶景スポット）",
+        prefecture: "山梨",
+        season: "春",
+        category: "nature",
+        description: "雄大な富士山を湖面に映す「逆さ富士」で有名な富士五湖随一の観光名所。パノラマロープウェイや湖畔散策路から望む四季折々の富士山と桜・紅葉の対比が格別です。",
+        img: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=500&auto=format&fit=crop",
+        tags: ["自然", "観光", "リラックス"],
+        lat: 35.5050,
+        lon: 138.7700,
+        companion: ["カップル", "友人グループ", "子連れ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "リフレッシュ"
+    },
+    {
+        id: 120,
+        name: "上高地",
+        prefecture: "長野",
+        season: "夏",
+        category: "nature",
+        description: "北アルプスの麓に広がる日本を代表する山岳景勝地。シンボルの河童橋から望む穂高連峰の威容と、澄み渡る梓川のせせらぎが日常を忘れさせる極上の静寂を届けます。",
+        img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=500&auto=format&fit=crop",
+        tags: ["自然", "リラックス", "アクティブ"],
+        lat: 36.2486,
+        lon: 137.6375,
+        companion: ["一人旅", "カップル", "友人グループ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "リフレッシュ"
+    },
+    {
+        id: 121,
+        name: "白川郷合掌造り集落",
+        prefecture: "岐阜",
+        season: "冬",
+        category: "history",
+        description: "急勾配の茅葺き屋根が特徴的な合掌造り家屋が残る世界遺産の山村集落。冬の雪に包まれた幻想的なライトアップや、懐かしい日本の原風景が心に染み渡ります。",
+        img: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=500&auto=format&fit=crop",
+        tags: ["歴史", "自然", "観光"],
+        lat: 36.2566,
+        lon: 136.9066,
+        companion: ["カップル", "友人グループ", "一人旅"],
+        budget: "スタンダード",
+        transport: "自家用車",
+        purpose: "歴史探訪"
+    },
+    {
+        id: 122,
+        name: "三島スカイウォーク",
+        prefecture: "静岡",
+        season: "春",
+        category: "nature",
+        description: "日本最長400mの人道専用吊り橋。富士山と駿河湾の大パノラマを橋の上から同時に一望でき、ジップラインなど大自然を肌で感じるアクティビティも充実しています。",
+        img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=500&auto=format&fit=crop",
+        tags: ["自然", "アクティブ", "観光"],
+        lat: 35.1264,
+        lon: 138.9757,
+        companion: ["友人グループ", "子連れ", "カップル"],
+        budget: "スタンダード",
+        transport: "自家用車",
+        purpose: "アクティビティ"
+    },
+    {
+        id: 123,
+        name: "名古屋城",
+        prefecture: "愛知",
+        season: "春",
+        category: "history",
+        description: "金鯱が屋根に輝く尾張徳川家の名城。復元された本丸御殿の豪華絢爛な障壁画や伝統木造技術、金シャチ横丁での名古屋めし食べ歩きを心ゆくまで堪能できます。",
+        img: "https://images.unsplash.com/photo-1533050487297-09b450131914?w=500&auto=format&fit=crop",
+        tags: ["歴史", "観光", "グルメ"],
+        lat: 35.1848,
+        lon: 136.8997,
+        companion: ["一人旅", "友人グループ", "子連れ"],
+        budget: "低予算",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
+    },
+    {
+        id: 124,
+        name: "伊勢神宮（内宮・おはらい町）",
+        prefecture: "三重",
+        season: "通年",
+        category: "history",
+        description: "日本人の心のふるさととして親しまれる最高位の神社。五十鈴川の清流を渡る宇治橋や神聖な杜に佇む正宮の参拝後、おはらい町・おかげ横丁で名物赤福や伊勢うどんを楽しめます。",
+        img: "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=500&auto=format&fit=crop",
+        tags: ["歴史", "グルメ", "リラックス"],
+        lat: 34.4550,
+        lon: 136.7258,
+        companion: ["一人旅", "カップル", "友人グループ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
+    },
+    {
+        id: 125,
+        name: "鳥取砂丘",
+        prefecture: "鳥取",
+        season: "秋",
+        category: "nature",
+        description: "日本海沿岸に広がる日本最大級の海岸砂丘。風が作り出す美しい風紋や「馬の背」からの広大な海の眺望、ラクダ乗りやパラグライダーなど壮大な自然体験が魅力です。",
+        img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&auto=format&fit=crop",
+        tags: ["自然", "アクティブ", "観光"],
+        lat: 35.5398,
+        lon: 134.2255,
+        companion: ["友人グループ", "カップル", "子連れ"],
+        budget: "低予算",
+        transport: "自家用車",
+        purpose: "アクティビティ"
+    },
+    {
+        id: 126,
+        name: "出雲大社",
+        prefecture: "島根",
+        season: "秋",
+        category: "history",
+        description: "縁結びの神として知られる大国主大神を祀る日本屈指の古社。神楽殿の大注連縄は圧巻の大きさを誇り、全国から神々が集まる神在月にはひときわ厳かな空気に包まれます。",
+        img: "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=500&auto=format&fit=crop",
+        tags: ["歴史", "リラックス", "観光"],
+        lat: 35.4019,
+        lon: 132.6855,
+        companion: ["一人旅", "カップル", "友人グループ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
+    },
+    {
+        id: 127,
+        name: "倉敷美観地区",
+        prefecture: "岡山",
+        season: "春",
+        category: "history",
+        description: "白壁の土蔵と柳並木が倉敷川沿いに続く風情あふれる町並み。大原美術館の鑑賞や舟流し体験、町家を改装したお洒落なカフェ・倉敷デニムショップ巡りが楽しめます。",
+        img: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=500&auto=format&fit=crop",
+        tags: ["歴史", "観光", "グルメ"],
+        lat: 34.5956,
+        lon: 133.7716,
+        companion: ["カップル", "一人旅", "友人グループ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "観光"
+    },
+    {
+        id: 128,
+        name: "厳島神社（宮島）",
+        prefecture: "広島",
+        season: "秋",
+        category: "history",
+        description: "満潮時には海の上に浮かぶようにそびえる朱塗りの大鳥居と社殿が神秘的な世界文化遺産。野生の鹿が出迎える参道や名物のもみじ饅頭・焼き牡蠣の食べ歩きも魅力です。",
+        img: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=500&auto=format&fit=crop",
+        tags: ["歴史", "観光", "グルメ"],
+        lat: 34.2960,
+        lon: 132.3198,
+        companion: ["カップル", "友人グループ", "一人旅"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
+    },
+    {
+        id: 129,
+        name: "角島大橋",
+        prefecture: "山口",
+        season: "夏",
+        category: "nature",
+        description: "エメラルドグリーンの日本海をまたぐ全長1,780mの美しい橋。CMや映画のロケ地としても名高く、白い砂浜と澄んだ海を眺めながらの爽快なシーサイドドライブが楽しめます。",
+        img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&auto=format&fit=crop",
+        tags: ["自然", "観光", "アクティブ"],
+        lat: 34.3547,
+        lon: 130.8872,
+        companion: ["カップル", "友人グループ", "一人旅"],
+        budget: "低予算",
+        transport: "自家用車",
+        purpose: "アクティビティ"
+    },
+    {
+        id: 130,
+        name: "鳴門の渦潮",
+        prefecture: "徳島",
+        season: "春",
+        category: "nature",
+        description: "鳴門海峡の激しい潮流によって生まれる世界最大級の自然現象。観潮船で渦のすぐ近くまで迫る大迫力のクルーズや、大鳴門橋の遊歩道「渦の道」からの見下ろし体験が人気です。",
+        img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&auto=format&fit=crop",
+        tags: ["自然", "アクティブ", "観光"],
+        lat: 34.2389,
+        lon: 134.6402,
+        companion: ["友人グループ", "子連れ", "カップル"],
+        budget: "スタンダード",
+        transport: "自家用車",
+        purpose: "アクティビティ"
+    },
+    {
+        id: 131,
+        name: "金刀比羅宮",
+        prefecture: "香川",
+        season: "秋",
+        category: "history",
+        description: "「こんぴらさん」の愛称で信仰を集める海の守護神。本宮まで785段の石段を登り切った展望台からの讃岐平野の眺望と、参道沿いでの本場讃岐うどん巡りが旅の醍醐味です。",
+        img: "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=500&auto=format&fit=crop",
+        tags: ["歴史", "グルメ", "アクティブ"],
+        lat: 34.1843,
+        lon: 133.8203,
+        companion: ["一人旅", "友人グループ", "カップル"],
+        budget: "低予算",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
+    },
+    {
+        id: 132,
+        name: "道後温泉本館",
+        prefecture: "愛媛",
+        season: "冬",
+        category: "healing",
+        description: "3000年の歴史を誇る日本最古の温泉地を代表する木造三層楼のシンボル。公衆浴場として初の国指定重要文化財であり、夏目漱石ゆかりの湯と風情ある温泉街の散策に癒やされます。",
+        img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=500&auto=format&fit=crop",
+        tags: ["温泉・癒やし", "歴史", "リラックス"],
+        lat: 33.8520,
+        lon: 132.7847,
+        companion: ["一人旅", "カップル", "友人グループ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "リフレッシュ"
+    },
+    {
+        id: 133,
+        name: "桂浜",
+        prefecture: "高知",
+        season: "夏",
+        category: "nature",
+        description: "太平洋を望む弓状の美しい白砂青松の海岸。龍頭岬に立つ雄大な坂本龍馬像や、打ち寄せる豪快な波を眺めながら味わう藁焼きカツオのタタキなど土佐の魅力に浸れます。",
+        img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&auto=format&fit=crop",
+        tags: ["自然", "歴史", "グルメ"],
+        lat: 33.4975,
+        lon: 133.5744,
+        companion: ["一人旅", "カップル", "友人グループ"],
+        budget: "低予算",
+        transport: "自家用車",
+        purpose: "観光"
+    },
+    {
+        id: 134,
+        name: "太宰府天満宮",
+        prefecture: "福岡",
+        season: "春",
+        category: "history",
+        description: "学問の神様・菅原道真公を祀る全国天満宮の総本宮。御神木の「飛梅」をはじめ境内に咲き誇る梅の花や、参道で焼き立てを味わう名物「梅ヶ枝餅」の食べ歩きが人気です。",
+        img: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=500&auto=format&fit=crop",
+        tags: ["歴史", "グルメ", "観光"],
+        lat: 33.5215,
+        lon: 130.5349,
+        companion: ["友人グループ", "カップル", "一人旅"],
+        budget: "低予算",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
+    },
+    {
+        id: 135,
+        name: "吉野ヶ里歴史公園",
+        prefecture: "佐賀",
+        season: "秋",
+        category: "history",
+        description: "弥生時代最大級の環濠集落跡を復元した広大な国営歴史公園。物見やぐらや竪穴住居が建ち並び、古代日本の生活を体感できる勾玉づくりなどの体験も楽しめます。",
+        img: "https://images.unsplash.com/photo-1533050487297-09b450131914?w=500&auto=format&fit=crop",
+        tags: ["歴史", "観光", "自然"],
+        lat: 33.3243,
+        lon: 130.3848,
+        companion: ["子連れ", "友人グループ", "一人旅"],
+        budget: "低予算",
+        transport: "自家用車",
+        purpose: "歴史探訪"
+    },
+    {
+        id: 136,
+        name: "グラバー園",
+        prefecture: "長崎",
+        season: "春",
+        category: "history",
+        description: "長崎港を見下ろす南山手の丘に位置する異国情緒あふれる洋館群。日本最古の木造洋風建築・旧グラバー住宅や美しい庭園、石畳に埋め込まれたハートストーン探しが人気です。",
+        img: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=500&auto=format&fit=crop",
+        tags: ["歴史", "観光", "リラックス"],
+        lat: 32.7335,
+        lon: 129.8698,
+        companion: ["カップル", "一人旅", "友人グループ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "観光"
+    },
+    {
+        id: 137,
+        name: "熊本城",
+        prefecture: "熊本",
+        season: "春",
+        category: "history",
+        description: "名将・加藤清正が築いた「武者返し」の石垣で知られる日本三名城の一つ。復興を遂げた天守閣の威容や城彩苑での馬刺し・からし蓮根などの名物グルメを満喫できます。",
+        img: "https://images.unsplash.com/photo-1533050487297-09b450131914?w=500&auto=format&fit=crop",
+        tags: ["歴史", "観光", "グルメ"],
+        lat: 32.8062,
+        lon: 130.7058,
+        companion: ["一人旅", "カップル", "友人グループ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
+    },
+    {
+        id: 138,
+        name: "別府地獄めぐり",
+        prefecture: "大分",
+        season: "冬",
+        category: "healing",
+        description: "日本屈指の温泉湧出量を誇る別府の奇観を巡る名物観光。コバルトブルーの「海地獄」や真っ赤な「血の池地獄」など自然の神秘と、温泉の蒸気で作る地獄蒸し料理が格別です。",
+        img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=500&auto=format&fit=crop",
+        tags: ["温泉・癒やし", "グルメ", "観光"],
+        lat: 33.3157,
+        lon: 131.4770,
+        companion: ["友人グループ", "子連れ", "カップル"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "リフレッシュ"
+    },
+    {
+        id: 139,
+        name: "高千穂峡",
+        prefecture: "宮崎",
+        season: "夏",
+        category: "nature",
+        description: "阿蘇山の火山活動によって削られた柱状節理の深い渓谷。日本の滝百選「真名井の滝」を間近に見上げる貸しボート遊覧は、日本神話の舞台にふさわしい神秘の絶景です。",
+        img: "https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=500&auto=format&fit=crop",
+        tags: ["自然", "リラックス", "観光"],
+        lat: 32.7009,
+        lon: 131.3006,
+        companion: ["カップル", "一人旅", "友人グループ"],
+        budget: "スタンダード",
+        transport: "自家用車",
+        purpose: "リフレッシュ"
+    },
+    {
+        id: 140,
+        name: "桜島（湯之平展望所）",
+        prefecture: "鹿児島",
+        season: "通年",
+        category: "nature",
+        description: "錦江湾に浮かぶようにそびえる鹿児島のシンボルたる活火山。一般人が立ち入れる最高地点の展望所からは、荒々しい山肌と鹿児島市街・錦江湾のパノラマを一望できます。",
+        img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=500&auto=format&fit=crop",
+        tags: ["自然", "観光", "アクティブ"],
+        lat: 31.5900,
+        lon: 130.6570,
+        companion: ["一人旅", "友人グループ", "カップル"],
+        budget: "低予算",
+        transport: "自家用車",
+        purpose: "アクティビティ"
+    },
+    {
+        id: 141,
+        name: "沖縄美ら海水族館",
+        prefecture: "沖縄",
+        season: "夏",
+        category: "nature",
+        description: "世界最大級の大水槽「黒潮の海」で巨大なジンベエザメやナンヨウマンタが悠々と泳ぐ姿は圧巻。エメラルドグリーンの沖縄の美しい海をありのままに体感できる人気スポットです。",
+        img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&auto=format&fit=crop",
+        tags: ["自然", "観光", "リラックス"],
+        lat: 26.6943,
+        lon: 127.8779,
+        companion: ["子連れ", "カップル", "友人グループ"],
+        budget: "スタンダード",
+        transport: "自家用車",
+        purpose: "観光"
     },
     {
         id: 0,
@@ -618,6 +1301,1140 @@ const kinkiPlaces = [
 ];
 
 // ==========================================
+// 1-B. 都道府県別リアル名所プリセット & 動的生成ロジック
+// ==========================================
+const PREFECTURE_COORDINATES = {
+    "北海道": { lat: 43.064, lon: 141.346 },
+    "青森": { lat: 40.824, lon: 140.740 },
+    "岩手": { lat: 39.703, lon: 141.152 },
+    "宮城": { lat: 38.268, lon: 140.871 },
+    "秋田": { lat: 39.718, lon: 140.102 },
+    "山形": { lat: 38.240, lon: 140.363 },
+    "福島": { lat: 37.750, lon: 140.467 },
+    "茨城": { lat: 36.341, lon: 140.446 },
+    "栃木": { lat: 36.565, lon: 139.883 },
+    "群馬": { lat: 36.390, lon: 139.060 },
+    "埼玉": { lat: 35.856, lon: 139.648 },
+    "千葉": { lat: 35.607, lon: 140.123 },
+    "東京": { lat: 35.689, lon: 139.692 },
+    "神奈川": { lat: 35.447, lon: 139.642 },
+    "新潟": { lat: 37.902, lon: 139.023 },
+    "富山": { lat: 36.695, lon: 137.211 },
+    "石川": { lat: 36.594, lon: 136.625 },
+    "福井": { lat: 36.065, lon: 136.221 },
+    "山梨": { lat: 35.663, lon: 138.568 },
+    "長野": { lat: 36.651, lon: 138.181 },
+    "岐阜": { lat: 35.391, lon: 136.722 },
+    "静岡": { lat: 34.976, lon: 138.383 },
+    "愛知": { lat: 35.180, lon: 136.906 },
+    "三重": { lat: 34.730, lon: 136.508 },
+    "滋賀": { lat: 35.004, lon: 135.868 },
+    "京都": { lat: 35.021, lon: 135.755 },
+    "大阪": { lat: 34.686, lon: 135.520 },
+    "兵庫": { lat: 34.691, lon: 135.183 },
+    "奈良": { lat: 34.685, lon: 135.832 },
+    "和歌山": { lat: 34.226, lon: 135.167 },
+    "鳥取": { lat: 35.503, lon: 134.238 },
+    "島根": { lat: 35.472, lon: 133.050 },
+    "岡山": { lat: 34.661, lon: 133.934 },
+    "広島": { lat: 34.396, lon: 132.459 },
+    "山口": { lat: 34.186, lon: 131.470 },
+    "徳島": { lat: 34.065, lon: 134.559 },
+    "香川": { lat: 34.340, lon: 134.043 },
+    "愛媛": { lat: 33.841, lon: 132.765 },
+    "高知": { lat: 33.559, lon: 133.531 },
+    "福岡": { lat: 33.606, lon: 130.418 },
+    "佐賀": { lat: 33.249, lon: 130.298 },
+    "長崎": { lat: 32.744, lon: 129.873 },
+    "熊本": { lat: 32.789, lon: 130.741 },
+    "大分": { lat: 33.238, lon: 131.612 },
+    "宮崎": { lat: 31.911, lon: 131.423 },
+    "鹿児島": { lat: 31.560, lon: 130.558 },
+    "沖縄": { lat: 26.212, lon: 127.680 }
+};
+
+function normalizePrefectureName(pref) {
+    if (!pref || pref === "all") return "all";
+    return pref.replace(/(県|府|都)$/, "");
+}
+
+// 主要都道府県のリアルな名所プリセットデータ
+const PRESET_REAL_SPOTS = {
+    "東京": [
+        {
+            id: 2001,
+            name: "東京タワー",
+            prefecture: "東京",
+            season: "通年",
+            category: "city",
+            description: "東京のシンボルとして親しまれる高さ333mの総合電波塔。メインデッキからは東京の街並みが一望でき、夜間の温かみのあるオレンジ色のライトアップも格別です。",
+            img: "https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?w=800&auto=format&fit=crop",
+            tags: ["都市", "観光", "リラックス"],
+            lat: 35.6586,
+            lon: 139.7454,
+            companion: ["カップル", "友人グループ", "子連れ"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "観光"
+        },
+        {
+            id: 2002,
+            name: "東京スカイツリー",
+            prefecture: "東京",
+            season: "通年",
+            category: "city",
+            description: "地上634mを誇る世界一高い自立式電波塔。天望デッキ・天望回廊からの大パノラマはもちろん、足元に広がる巨大複合施設「東京ソラマチ」での買い物やグルメも楽しめます。",
+            img: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?w=800&auto=format&fit=crop",
+            tags: ["都市", "観光", "グルメ"],
+            lat: 35.7100,
+            lon: 139.8107,
+            companion: ["カップル", "友人グループ", "家族"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "観光"
+        },
+        {
+            id: 2003,
+            name: "明治神宮",
+            prefecture: "東京",
+            season: "通年",
+            category: "history",
+            description: "都心の喧騒を忘れさせる約70万平方メートルの広大な鎮守の森。初詣日本一の参拝者数を誇り、大鳥居や豊かな緑に包まれた参道は心安らぐパワースポットです。",
+            img: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800&auto=format&fit=crop",
+            tags: ["歴史", "リラックス", "自然"],
+            lat: 35.6764,
+            lon: 139.6993,
+            companion: ["一人旅", "カップル", "家族"],
+            budget: "低予算",
+            transport: "公共交通機関",
+            purpose: "歴史探訪"
+        },
+        {
+            id: 2004,
+            name: "上野恩賜公園",
+            prefecture: "東京",
+            season: "春",
+            category: "nature",
+            description: "日本最初の都市公園の一つで、春には桜の名所として賑わいます。園内には上野動物園や東京国立博物館、美術館が点在し、一日中文化と自然を満喫できます。",
+            img: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&auto=format&fit=crop",
+            tags: ["自然", "観光", "歴史"],
+            lat: 35.7140,
+            lon: 139.7741,
+            companion: ["家族", "子連れ", "カップル"],
+            budget: "低予算",
+            transport: "公共交通機関",
+            purpose: "リフレッシュ"
+        },
+        {
+            id: 2005,
+            name: "新宿御苑",
+            prefecture: "東京",
+            season: "秋",
+            category: "nature",
+            description: "皇室の庭園として造られた都会のオアシス。日本庭園、イギリス風景式庭園、フランス式整形庭園が巧みに組み合わされ、四季折々の草花と広大な芝生が広がります。",
+            img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop",
+            tags: ["自然", "リラックス", "観光"],
+            lat: 35.6852,
+            lon: 139.7100,
+            companion: ["一人旅", "カップル", "友人グループ"],
+            budget: "低予算",
+            transport: "公共交通機関",
+            purpose: "リフレッシュ"
+        },
+        {
+            id: 2006,
+            name: "お台場海浜公園",
+            prefecture: "東京",
+            season: "夏",
+            category: "city",
+            description: "レインボーブリッジと東京湾の摩天楼を一望できる開放的なシーサイドスポット。自由の女神像や砂浜プロムナードがあり、夕暮れから夜にかけての夜景は息をのむ美しさです。",
+            img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop",
+            tags: ["都市", "観光", "リラックス"],
+            lat: 35.6300,
+            lon: 139.7760,
+            companion: ["カップル", "友人グループ"],
+            budget: "低予算",
+            transport: "公共交通機関",
+            purpose: "観光"
+        },
+        {
+            id: 2007,
+            name: "築地場外市場",
+            prefecture: "東京",
+            season: "通年",
+            category: "food",
+            description: "威勢の良い声が飛び交う食のワンダーランド。新鮮な海鮮丼、玉子焼き、寿司などの名物グルメを味わえる飲食店や食材店がひしめき、活気あふれる食べ歩きが楽しめます。",
+            img: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop",
+            tags: ["グルメ", "観光", "都市"],
+            lat: 35.6655,
+            lon: 139.7708,
+            companion: ["友人グループ", "カップル", "一人旅"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "グルメ巡り"
+        },
+        {
+            id: 2008,
+            name: "六本木ヒルズ展望台 東京シティビュー",
+            prefecture: "東京",
+            season: "冬",
+            category: "city",
+            description: "海抜250mの屋内展望台から東京タワーをはじめとする煌びやかなメガシティの夜景を一望。森美術館も隣接し、ハイセンスなアートと絶景を同時に堪能できます。",
+            img: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=800&auto=format&fit=crop",
+            tags: ["都市", "観光", "リラックス"],
+            lat: 35.6599,
+            lon: 139.7290,
+            companion: ["カップル", "友人グループ"],
+            budget: "ラグジュアリー",
+            transport: "公共交通機関",
+            purpose: "観光"
+        },
+        {
+            id: 2009,
+            name: "皇居外苑・二重橋",
+            prefecture: "東京",
+            season: "秋",
+            category: "history",
+            description: "江戸城の面影を伝える石垣や美しい松並木が広がる国民公園。二重橋や伏見櫓を望むクラシカルな景観は、東京の中心地ならではの格式と静寂を感じさせます。",
+            img: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800&auto=format&fit=crop",
+            tags: ["歴史", "観光", "散策"],
+            lat: 35.6795,
+            lon: 139.7570,
+            companion: ["一人旅", "カップル", "家族"],
+            budget: "低予算",
+            transport: "公共交通機関",
+            purpose: "歴史探訪"
+        }
+    ],
+    "北海道": [
+        {
+            id: 2011,
+            name: "函館山展望台",
+            prefecture: "北海道",
+            season: "秋",
+            category: "nature",
+            description: "世界三大夜景の一つにも数えられる極上のパノラマビュー。扇状に広がる函館市街の灯りと津軽海峡の闇が織りなすドラマチックな景観をロープウェイで登って楽しめます。",
+            img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop",
+            tags: ["自然", "観光", "リラックス"],
+            lat: 41.7588,
+            lon: 140.7044,
+            companion: ["カップル", "友人グループ"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "観光"
+        },
+        {
+            id: 2012,
+            name: "富良野 ファーム富田",
+            prefecture: "北海道",
+            season: "夏",
+            category: "nature",
+            description: "丘一面を鮮やかな紫に染める日本屈指のラベンダー畑。十勝岳連峰を背景に広がる虹色の花畑や、名物のラベンダーソフトクリームが夏の北海道の代名詞です。",
+            img: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=800&auto=format&fit=crop",
+            tags: ["自然", "観光", "グルメ"],
+            lat: 43.4183,
+            lon: 142.4278,
+            companion: ["カップル", "家族", "友人グループ"],
+            budget: "低予算",
+            transport: "自家用車",
+            purpose: "リフレッシュ"
+        },
+        {
+            id: 2013,
+            name: "旭川市旭山動物園",
+            prefecture: "北海道",
+            season: "通年",
+            category: "activity",
+            description: "動物本来の生態を引き出す「行動展示」で全国的に有名な動物園。水中トンネルを飛ぶように泳ぐペンギンや円柱水槽を通るアザラシなど、驚きと感動の連続です。",
+            img: "https://images.unsplash.com/photo-1533050487297-09b450131914?w=800&auto=format&fit=crop",
+            tags: ["アクティブ", "観光", "自然"],
+            lat: 43.7686,
+            lon: 142.4797,
+            companion: ["子連れ", "家族", "カップル"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "アクティビティ"
+        },
+        {
+            id: 2014,
+            name: "美瑛 白金青い池",
+            prefecture: "北海道",
+            season: "夏",
+            category: "nature",
+            description: "アルミニウムを含む地下水が混ざり合うことで生まれた神秘的なコバルトブルーの水面。水面に立ち枯れたカラマツが幻想的な美しさを醸し出す絶景スポットです。",
+            img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop",
+            tags: ["自然", "リラックス", "観光"],
+            lat: 43.4936,
+            lon: 142.6141,
+            companion: ["カップル", "一人旅", "友人グループ"],
+            budget: "低予算",
+            transport: "自家用車",
+            purpose: "リフレッシュ"
+        },
+        {
+            id: 2015,
+            name: "登別温泉 地獄谷",
+            prefecture: "北海道",
+            season: "冬",
+            category: "healing",
+            description: "毎分3000リットルもの温泉が湧き出す登別温泉の源泉地。立ち上る白煙と荒々しい岩肌はまるで地獄そのもので、周辺の旅館で多彩な泉質の名湯を堪能できます。",
+            img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&auto=format&fit=crop",
+            tags: ["温泉・癒やし", "自然", "リラックス"],
+            lat: 42.4975,
+            lon: 141.1444,
+            companion: ["カップル", "一人旅", "家族"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "リフレッシュ"
+        },
+        {
+            id: 2016,
+            name: "札幌大通公園・テレビ塔",
+            prefecture: "北海道",
+            season: "冬",
+            category: "city",
+            description: "札幌市の中心部を東西に貫く緑豊かなオアシス。冬にはさっぽろ雪まつり、夏にはビアガーデンが開催され、テレビ塔の展望台からは札幌市街を一望できます。",
+            img: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?w=800&auto=format&fit=crop",
+            tags: ["都市", "イベント", "観光"],
+            lat: 43.0598,
+            lon: 141.3554,
+            companion: ["友人グループ", "子連れ", "カップル"],
+            budget: "低予算",
+            transport: "公共交通機関",
+            purpose: "観光"
+        },
+        {
+            id: 2017,
+            name: "五稜郭タワー＆公園",
+            prefecture: "北海道",
+            season: "春",
+            category: "history",
+            description: "日本初のフランス築城方式による美しい星形要塞。地上107mのタワー展望台からは巨大な星形の全景を見下ろすことができ、春には1600本もの桜が咲き誇ります。",
+            img: "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=800&auto=format&fit=crop",
+            tags: ["歴史", "観光", "自然"],
+            lat: 41.7969,
+            lon: 140.7569,
+            companion: ["一人旅", "カップル", "家族"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "歴史探訪"
+        },
+        {
+            id: 2018,
+            name: "知床五湖",
+            prefecture: "北海道",
+            season: "夏",
+            category: "nature",
+            description: "世界自然遺産・知床の大自然に抱かれた原生林の中の湖沼群。高架木道からは雄大な知床連山と湖面に映る大自然を安全に散策でき、野生動物との出会いも魅力です。",
+            img: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=800&auto=format&fit=crop",
+            tags: ["自然", "アクティブ", "リラックス"],
+            lat: 44.1258,
+            lon: 145.0831,
+            companion: ["一人旅", "友人グループ", "カップル"],
+            budget: "スタンダード",
+            transport: "自家用車",
+            purpose: "リフレッシュ"
+        }
+    ],
+    "大阪": [
+        {
+            id: 2021,
+            name: "ユニバーサル・スタジオ・ジャパン",
+            prefecture: "大阪",
+            season: "通年",
+            category: "activity",
+            description: "世界中からファンが集まる日本屈指のテーマパーク。マリオの世界やハリー・ポッターなど圧巻のクオリティを誇るアトラクションやショーが一日中楽しめます。",
+            img: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=800&auto=format&fit=crop",
+            tags: ["アクティブ", "観光", "都市"],
+            lat: 34.6654,
+            lon: 135.4323,
+            companion: ["友人グループ", "子連れ", "カップル"],
+            budget: "ラグジュアリー",
+            transport: "公共交通機関",
+            purpose: "アクティビティ"
+        },
+        {
+            id: 2022,
+            name: "通天閣・新世界",
+            prefecture: "大阪",
+            season: "通年",
+            category: "city",
+            description: "大阪の下町情緒が色濃く残るレトロタウン。展望台のビリケンさんに願掛けした後は、名物の串かつ屋台や将棋クラブが並ぶジャンジャン横丁の活気を満喫。",
+            img: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop",
+            tags: ["都市", "グルメ", "歴史"],
+            lat: 34.6525,
+            lon: 135.5063,
+            companion: ["友人グループ", "一人旅", "カップル"],
+            budget: "低予算",
+            transport: "公共交通機関",
+            purpose: "グルメ巡り"
+        },
+        {
+            id: 2023,
+            name: "梅田スカイビル 空中庭園展望台",
+            prefecture: "大阪",
+            season: "通年",
+            category: "city",
+            description: "2棟のビルが連結した独特のフォルムが世界的に評価されるランドマーク。地上173mの屋上回廊「スカイ・ウォーク」から吹き抜ける風とともに360度大パノラマを望めます。",
+            img: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?w=800&auto=format&fit=crop",
+            tags: ["都市", "観光", "リラックス"],
+            lat: 34.7059,
+            lon: 135.4897,
+            companion: ["カップル", "友人グループ"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "観光"
+        },
+        {
+            id: 2024,
+            name: "海遊館",
+            prefecture: "大阪",
+            season: "通年",
+            category: "activity",
+            description: "太平洋を取り囲む自然環境を再現した世界最大級の水族館。巨大な中央水槽を優雅に泳ぐ巨大なジンベエザメや愛らしいワモンアザラシを間近で観察できます。",
+            img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop",
+            tags: ["アクティブ", "観光", "リラックス"],
+            lat: 34.6545,
+            lon: 135.4289,
+            companion: ["子連れ", "カップル", "家族"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "観光"
+        },
+        {
+            id: 2025,
+            name: "万博記念公園・太陽の塔",
+            prefecture: "大阪",
+            season: "秋",
+            category: "nature",
+            description: "1970年大阪万博の跡地に広がる広大な緑地公園。岡本太郎デザインの「太陽の塔」がそびえ立ち、四季の草花や日本庭園、バーベキュー広場など見どころが尽きません。",
+            img: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=800&auto=format&fit=crop",
+            tags: ["自然", "観光", "歴史"],
+            lat: 34.8115,
+            lon: 135.5318,
+            companion: ["家族", "子連れ", "友人グループ"],
+            budget: "低予算",
+            transport: "公共交通機関",
+            purpose: "リフレッシュ"
+        },
+        {
+            id: 2026,
+            name: "なんばグランド花月",
+            prefecture: "大阪",
+            season: "通年",
+            category: "city",
+            description: "「笑いの殿堂」として吉本新喜劇や人気芸人の漫才・落語が365日毎日上演される劇場。大阪ならではの爆笑ライブとお笑いグッズの買い物が楽しめます。",
+            img: "https://images.unsplash.com/photo-1533050487297-09b450131914?w=800&auto=format&fit=crop",
+            tags: ["都市", "エンタメ", "観光"],
+            lat: 34.6657,
+            lon: 135.5031,
+            companion: ["友人グループ", "家族", "カップル"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "観光"
+        },
+        {
+            id: 2027,
+            name: "和宗総本山 四天王寺",
+            prefecture: "大阪",
+            season: "春",
+            category: "history",
+            description: "推古天皇元年（593年）に聖徳太子が創建した日本仏法最初の官寺。五重塔や金堂が一直線に並ぶ伽藍配置は日本最古の様式を今に伝えています。",
+            img: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800&auto=format&fit=crop",
+            tags: ["歴史", "観光", "リラックス"],
+            lat: 34.6533,
+            lon: 135.5165,
+            companion: ["一人旅", "家族", "カップル"],
+            budget: "低予算",
+            transport: "公共交通機関",
+            purpose: "歴史探訪"
+        }
+    ],
+    "京都": [
+        {
+            id: 2031,
+            name: "祇園 花見小路通",
+            prefecture: "京都",
+            season: "春",
+            category: "history",
+            description: "石畳の通りに紅殻格子とすだれの美しい町家が並ぶ京都随一の花街。夕暮れ時には舞妓さんの姿を見かけることもあり、風情ある京料理や甘味処を巡る贅沢な時間を過ごせます。",
+            img: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&auto=format&fit=crop",
+            tags: ["歴史", "グルメ", "観光"],
+            lat: 35.0037,
+            lon: 135.7750,
+            companion: ["カップル", "一人旅", "友人グループ"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "歴史探訪"
+        },
+        {
+            id: 2032,
+            name: "貴船神社",
+            prefecture: "京都",
+            season: "夏",
+            category: "nature",
+            description: "万物の命の源である水の神を祀る古社。朱塗りの春日灯篭が並ぶ石段参道は息をのむ美しさで、夏には貴船川にせり出した風流な川床料理と涼風を楽しめます。",
+            img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop",
+            tags: ["自然", "歴史", "リラックス"],
+            lat: 35.1217,
+            lon: 135.7629,
+            companion: ["カップル", "一人旅"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "リフレッシュ"
+        },
+        {
+            id: 2033,
+            name: "元離宮二条城",
+            prefecture: "京都",
+            season: "秋",
+            category: "history",
+            description: "徳川家康が築城し、大政奉還の舞台となった世界遺産。国宝・二の丸御殿の豪華絢爛な障壁画や歩くと音が鳴る「鴬張りの廊下」、広大な回遊式庭園が見どころです。",
+            img: "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=800&auto=format&fit=crop",
+            tags: ["歴史", "観光", "自然"],
+            lat: 35.0142,
+            lon: 135.7482,
+            companion: ["一人旅", "カップル", "家族"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "歴史探訪"
+        },
+        {
+            id: 2034,
+            name: "南禅寺 水路閣",
+            prefecture: "京都",
+            season: "秋",
+            category: "history",
+            description: "臨済宗南禅寺派の大本山。境内に突如現れる明治期の赤煉瓦アーチ橋「水路閣」は静寂の禅寺と近代土木が調和したフォトジェニックな名所で、三門からの眺望も見事です。",
+            img: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800&auto=format&fit=crop",
+            tags: ["歴史", "観光", "自然"],
+            lat: 35.0116,
+            lon: 135.7942,
+            companion: ["カップル", "一人旅", "友人グループ"],
+            budget: "低予算",
+            transport: "公共交通機関",
+            purpose: "歴史探訪"
+        },
+        {
+            id: 2035,
+            name: "平等院鳳凰堂",
+            prefecture: "京都",
+            season: "春",
+            category: "history",
+            description: "十円硬貨の意匠でおなじみの極楽浄土を具現化した国宝建築。阿字池の中島に優美に翼を広げる鳳凰堂の水面リフレクションや、宇治茶の香る宇治の街散策が魅力です。",
+            img: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800&auto=format&fit=crop",
+            tags: ["歴史", "観光", "リラックス"],
+            lat: 34.8893,
+            lon: 135.8078,
+            companion: ["一人旅", "カップル", "家族"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "歴史探訪"
+        },
+        {
+            id: 2036,
+            name: "錦市場",
+            prefecture: "京都",
+            season: "通年",
+            category: "food",
+            description: "「京都の台所」として約400年の歴史を持つ全長390mの商店街。京野菜、湯葉、漬物、串刺しのハモや天ぷらなど、老舗が手がける多彩な味覚の食べ歩きが楽しめます。",
+            img: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop",
+            tags: ["グルメ", "観光", "都市"],
+            lat: 35.0050,
+            lon: 135.7649,
+            companion: ["友人グループ", "カップル", "一人旅"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "グルメ巡り"
+        },
+        {
+            id: 2037,
+            name: "銀閣寺（慈照寺）",
+            prefecture: "京都",
+            season: "秋",
+            category: "history",
+            description: "室町幕府8代将軍・足利義政が築いた東山文化を象徴する国宝寺院。質素で洗練された観音殿や、白砂を盛り上げた「向月台」「銀沙灘」、苔庭の美しさに心が洗われます。",
+            img: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&auto=format&fit=crop",
+            tags: ["歴史", "リラックス", "自然"],
+            lat: 35.0272,
+            lon: 135.7982,
+            companion: ["一人旅", "カップル"],
+            budget: "低予算",
+            transport: "公共交通機関",
+            purpose: "歴史探訪"
+        }
+    ],
+    "沖縄": [
+        {
+            id: 2041,
+            name: "恩納村 万座毛",
+            prefecture: "沖縄",
+            season: "夏",
+            category: "nature",
+            description: "隆起サンゴ礁の断崖に広がる天然芝生と、象の鼻に似た奇岩がシンボルの名勝。眼下に広がるエメラルドグリーンの東シナ海と心地よい潮風を満喫できます。",
+            img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop",
+            tags: ["自然", "観光", "リラックス"],
+            lat: 26.5049,
+            lon: 127.8502,
+            companion: ["カップル", "友人グループ", "家族"],
+            budget: "低予算",
+            transport: "レンタカー",
+            purpose: "リフレッシュ"
+        },
+        {
+            id: 2042,
+            name: "古宇利大橋＆古宇利島",
+            prefecture: "沖縄",
+            season: "夏",
+            category: "nature",
+            description: "全長1,960mを誇る離島架橋。まるでエメラルドブルーの海上を走っているかのような爽快なドライブが楽しめ、島内のハートロックやカフェ巡りも大人気です。",
+            img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop",
+            tags: ["自然", "ドライブ", "観光"],
+            lat: 26.6961,
+            lon: 128.0244,
+            companion: ["カップル", "友人グループ"],
+            budget: "低予算",
+            transport: "レンタカー",
+            purpose: "観光"
+        },
+        {
+            id: 2043,
+            name: "首里城公園",
+            prefecture: "沖縄",
+            season: "通年",
+            category: "history",
+            description: "琉球王国の政治・外交・文化の中心であった世界遺産。朱塗りの守礼門や歓会門、復興へ歩みを進める正殿エリアなど、独自の琉球文化と高台からの那覇市街の眺めが魅力です。",
+            img: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800&auto=format&fit=crop",
+            tags: ["歴史", "観光", "文化"],
+            lat: 26.2170,
+            lon: 127.7195,
+            companion: ["家族", "一人旅", "カップル"],
+            budget: "低予算",
+            transport: "公共交通機関",
+            purpose: "歴史探訪"
+        },
+        {
+            id: 2044,
+            name: "那覇 国際通り",
+            prefecture: "沖縄",
+            season: "通年",
+            category: "city",
+            description: "約1.6kmにわたってお土産屋、沖縄料理店、カフェが立ち並ぶメインストリート。「奇跡の1マイル」と呼ばれ、夜遅くまで三線の音色と活気あふれる賑わいが続きます。",
+            img: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop",
+            tags: ["都市", "グルメ", "買い物"],
+            lat: 26.2152,
+            lon: 127.6853,
+            companion: ["友人グループ", "カップル", "一人旅"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "グルメ巡り"
+        },
+        {
+            id: 2045,
+            name: "石垣島 川平湾",
+            prefecture: "沖縄",
+            season: "夏",
+            category: "nature",
+            description: "ミシュラン・グリーンガイド・ジャポンで三ツ星を獲得した日本屈指の景勝地。光の加減で刻々と色を変える七色の海をグラスボートで巡り、色鮮やかな熱帯魚とサンゴ礁を鑑賞できます。",
+            img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop",
+            tags: ["自然", "リラックス", "アクティブ"],
+            lat: 24.4533,
+            lon: 124.1438,
+            companion: ["カップル", "家族", "一人旅"],
+            budget: "スタンダード",
+            transport: "レンタカー",
+            purpose: "リフレッシュ"
+        },
+        {
+            id: 2046,
+            name: "宮古島 与那覇前浜ビーチ",
+            prefecture: "沖縄",
+            season: "夏",
+            category: "nature",
+            description: "「東洋一の美しさ」と称される約7kmに及ぶパウダーサンドの白い砂浜。宮古ブルーと呼ばれる奇跡のような透明度の海と、対岸の来間島を結ぶ来間大橋の景色は圧巻です。",
+            img: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=800&auto=format&fit=crop",
+            tags: ["自然", "リラックス", "アクティブ"],
+            lat: 24.7336,
+            lon: 125.2636,
+            companion: ["カップル", "友人グループ", "一人旅"],
+            budget: "低予算",
+            transport: "レンタカー",
+            purpose: "リフレッシュ"
+        },
+        {
+            id: 2047,
+            name: "美浜アメリカンビレッジ",
+            prefecture: "沖縄",
+            season: "通年",
+            category: "city",
+            description: "西海岸沿いに広がるアメリカの西海岸リゾートを思わせる巨大エンタメタウン。フォトジェニックな街並み、多彩なセレクトショップ、美しい夕日を望むテラス席が魅力です。",
+            img: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?w=800&auto=format&fit=crop",
+            tags: ["都市", "買い物", "グルメ"],
+            lat: 26.3160,
+            lon: 127.7570,
+            companion: ["友人グループ", "カップル", "家族"],
+            budget: "スタンダード",
+            transport: "レンタカー",
+            purpose: "観光"
+        }
+    ],
+    "福岡": [
+        {
+            id: 2051,
+            name: "糸島・桜井二見ヶ浦",
+            prefecture: "福岡",
+            season: "夏",
+            category: "nature",
+            description: "青い玄界灘に浮かぶ夫婦岩と真っ白な鳥居が印象的な景勝地。「日本の夕日百選」にも選ばれており、海岸線沿いにおしゃれなカフェやクラフトショップが並びます。",
+            img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop",
+            tags: ["自然", "ドライブ", "リラックス"],
+            lat: 33.6425,
+            lon: 130.1983,
+            companion: ["カップル", "友人グループ"],
+            budget: "低予算",
+            transport: "自家用車",
+            purpose: "リフレッシュ"
+        },
+        {
+            id: 2052,
+            name: "門司港レトロ",
+            prefecture: "福岡",
+            season: "秋",
+            category: "history",
+            description: "明治・大正期のレトロな洋館や赤煉瓦建築が立ち並ぶ港町。重要文化財の門司港駅舎や関門海峡のパノラマビュー、名物「焼きカレー」を堪能できます。",
+            img: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&auto=format&fit=crop",
+            tags: ["歴史", "グルメ", "観光"],
+            lat: 33.9458,
+            lon: 130.9614,
+            companion: ["カップル", "家族", "一人旅"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "歴史探訪"
+        },
+        {
+            id: 2053,
+            name: "中洲屋台街",
+            prefecture: "福岡",
+            season: "通年",
+            category: "food",
+            description: "那珂川沿いに暖簾が並ぶ博多の夜の代名詞。本場の博多とんこつラーメン、一口餃子、焼き鳥など、店主やお隣の旅人との会話を楽しみながら活気ある夜を満喫できます。",
+            img: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop",
+            tags: ["グルメ", "都市", "ナイトライフ"],
+            lat: 33.5910,
+            lon: 130.4072,
+            companion: ["友人グループ", "一人旅", "カップル"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "グルメ巡り"
+        },
+        {
+            id: 2054,
+            name: "福岡タワー",
+            prefecture: "福岡",
+            season: "冬",
+            category: "city",
+            description: "高さ234m、海浜タワーとしては日本一の高さを誇るシーサイドタワー。8000枚ものハーフミラーで覆われた三角柱の美しい外観と、博多湾を見渡す360度展望が自慢です。",
+            img: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?w=800&auto=format&fit=crop",
+            tags: ["都市", "観光", "リラックス"],
+            lat: 33.5933,
+            lon: 130.3515,
+            companion: ["カップル", "友人グループ", "子連れ"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "観光"
+        },
+        {
+            id: 2055,
+            name: "櫛田神社",
+            prefecture: "福岡",
+            season: "夏",
+            category: "history",
+            description: "「お櫛田さん」の愛称で親しまれる博多の総鎮守。博多祇園山笠のクライマックス「追い山」のスタート地点であり、境内には迫力ある飾り山笠が一年中展示されています。",
+            img: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800&auto=format&fit=crop",
+            tags: ["歴史", "観光", "パワースポット"],
+            lat: 33.5930,
+            lon: 130.4106,
+            companion: ["一人旅", "カップル", "家族"],
+            budget: "低予算",
+            transport: "公共交通機関",
+            purpose: "歴史探訪"
+        },
+        {
+            id: 2056,
+            name: "柳川 川下り",
+            prefecture: "福岡",
+            season: "春",
+            category: "nature",
+            description: "掘割（水路）が網の目のように巡る水郷・柳川をどんこ舟でゆったり下る風情満点の舟旅。船頭さんの巧みな竿さばきと歌声を聞きながら、名物うなぎのせいろ蒸しも味わえます。",
+            img: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=800&auto=format&fit=crop",
+            tags: ["自然", "グルメ", "歴史"],
+            lat: 33.1614,
+            lon: 130.4078,
+            companion: ["家族", "カップル", "シニア"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "リフレッシュ"
+        }
+    ],
+    "神奈川": [
+        {
+            id: 2061,
+            name: "鎌倉大仏 高徳院",
+            prefecture: "神奈川",
+            season: "通年",
+            category: "history",
+            description: "古都・鎌倉のシンボルである国宝の阿弥陀如来坐像。屋外に露坐する高さ約11.3mの大仏様は圧巻の存在感で、胎内に入って内側から見学することもできます。",
+            img: "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=800&auto=format&fit=crop",
+            tags: ["歴史", "観光", "パワースポット"],
+            lat: 35.3168,
+            lon: 139.5357,
+            companion: ["一人旅", "カップル", "家族"],
+            budget: "低予算",
+            transport: "公共交通機関",
+            purpose: "歴史探訪"
+        },
+        {
+            id: 2062,
+            name: "江の島・シーキャンドル",
+            prefecture: "神奈川",
+            season: "夏",
+            category: "nature",
+            description: "相模湾に浮かぶ歴史と自然に満ちた人気リゾートアイランド。展望灯台シーキャンドルからの富士山と夕日の絶景、岩屋洞窟、新鮮な生しらす丼が楽しめます。",
+            img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop",
+            tags: ["自然", "観光", "グルメ"],
+            lat: 35.2997,
+            lon: 139.4794,
+            companion: ["カップル", "友人グループ", "一人旅"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "観光"
+        },
+        {
+            id: 2063,
+            name: "箱根神社・平和の鳥居",
+            prefecture: "神奈川",
+            season: "秋",
+            category: "history",
+            description: "芦ノ湖畔の深緑に囲まれた関東屈指の名社。湖上に朱色に映える「平和の鳥居」は国内外から参拝者が訪れるパワースポットで、富士山を望む遊覧船クルーズも人気です。",
+            img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop",
+            tags: ["歴史", "自然", "リラックス"],
+            lat: 35.2048,
+            lon: 139.0253,
+            companion: ["カップル", "家族", "一人旅"],
+            budget: "低予算",
+            transport: "公共交通機関",
+            purpose: "リフレッシュ"
+        },
+        {
+            id: 2064,
+            name: "大涌谷",
+            prefecture: "神奈川",
+            season: "冬",
+            category: "nature",
+            description: "約3000年前の水蒸気爆発でできた箱根火山の火口原。白煙と硫黄の香りが立ち込めるダイナミックな景観と、1個食べると7年寿命が延びると伝わる名物「黒たまご」が有名です。",
+            img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&auto=format&fit=crop",
+            tags: ["自然", "観光", "グルメ"],
+            lat: 35.2428,
+            lon: 139.0194,
+            companion: ["家族", "友人グループ", "カップル"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "観光"
+        },
+        {
+            id: 2065,
+            name: "横浜中華街",
+            prefecture: "神奈川",
+            season: "通年",
+            category: "food",
+            description: "500軒以上の中国料理店や雑貨店がひしめく東アジア最大級の中華街。小籠包、焼き小籠包、タピオカなどの食べ歩きや、本格広東料理・四川料理のフルコースを堪能できます。",
+            img: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop",
+            tags: ["グルメ", "都市", "買い物"],
+            lat: 35.4428,
+            lon: 139.6455,
+            companion: ["友人グループ", "家族", "カップル"],
+            budget: "スタンダード",
+            transport: "公共交通機関",
+            purpose: "グルメ巡り"
+        },
+        {
+            id: 2066,
+            name: "鶴岡八幡宮",
+            prefecture: "神奈川",
+            season: "春",
+            category: "history",
+            description: "源頼朝が創建した鎌倉武家文化の中心。段葛の桜並木を抜けた先にある大石段と朱塗りの本宮は壮麗で、小町通りでのショッピングやカフェ巡りと合わせて散策できます。",
+            img: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800&auto=format&fit=crop",
+            tags: ["歴史", "観光", "散策"],
+            lat: 35.3260,
+            lon: 139.5564,
+            companion: ["一人旅", "カップル", "家族"],
+            budget: "低予算",
+            transport: "公共交通機関",
+            purpose: "歴史探訪"
+        }
+    ]
+};
+
+// 多彩な観光スポット生成用テンプレート (47都道府県すべてに対応)
+const SPOT_TEMPLATES = [
+    {
+        nameSuffix: "スカイパノラマ展望台",
+        category: "nature",
+        season: "秋",
+        tags: ["自然", "観光", "リラックス"],
+        companion: ["カップル", "友人グループ", "一人旅"],
+        budget: "低予算",
+        transport: "公共交通機関",
+        purpose: "リフレッシュ",
+        img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop",
+        desc: "標高の高い丘陵地から地域一帯の街並みと雄大な山並みを一望できる絶景スポット。夕景から夜景へと移り変わるトワイライトタイムは息を呑む美しさです。"
+    },
+    {
+        nameSuffix: "歴史街道 蔵の街並み",
+        category: "history",
+        season: "春",
+        tags: ["歴史", "観光", "グルメ"],
+        companion: ["カップル", "一人旅", "友人グループ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "歴史探訪",
+        img: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&auto=format&fit=crop",
+        desc: "江戸・明治期の面影を色濃く残す白壁の蔵屋敷や町家が立ち並ぶ風情ある散策エリア。伝統的な和菓子処や古民家カフェでゆったりとした時間を過ごせます。"
+    },
+    {
+        nameSuffix: "清流ネイチャー渓谷",
+        category: "nature",
+        season: "夏",
+        tags: ["自然", "リラックス", "アクティブ"],
+        companion: ["友人グループ", "カップル", "子連れ"],
+        budget: "スタンダード",
+        transport: "自家用車",
+        purpose: "リフレッシュ",
+        img: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=800&auto=format&fit=crop",
+        desc: "エメラルドグリーンに澄み渡る清流と四季の木々に包まれた癒やしの渓谷。マイナスイオンあふれる滝や遊歩道が整備され、夏には涼やかな川遊びも楽しめます。"
+    },
+    {
+        nameSuffix: "名湯 湯けむり温泉郷",
+        category: "healing",
+        season: "冬",
+        tags: ["温泉・癒やし", "リラックス", "グルメ"],
+        companion: ["カップル", "一人旅", "家族"],
+        budget: "ラグジュアリー",
+        transport: "公共交通機関",
+        purpose: "リフレッシュ",
+        img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&auto=format&fit=crop",
+        desc: "古くから旅人の疲れを癒やしてきた名湯。立ち並ぶ湯宿の露天風呂からは情緒豊かな景色を堪能でき、地元の旬の味覚をふんだんに使った会席料理も自慢です。"
+    },
+    {
+        nameSuffix: "ご当地グルメ横丁＆朝市",
+        category: "food",
+        season: "通年",
+        tags: ["グルメ", "観光", "都市"],
+        companion: ["友人グループ", "カップル", "一人旅"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "グルメ巡り",
+        img: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop",
+        desc: "地元の新鮮な海の幸・山の幸や郷土料理の屋台が軒を連ねる活気あふれるグルメエリア。名物料理の食べ歩きやお土産探しに最適なスポットです。"
+    },
+    {
+        nameSuffix: "フラワーヒルズ高原植物園",
+        category: "nature",
+        season: "春",
+        tags: ["自然", "観光", "リラックス"],
+        companion: ["カップル", "子連れ", "家族"],
+        budget: "低予算",
+        transport: "自家用車",
+        purpose: "観光",
+        img: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=800&auto=format&fit=crop",
+        desc: "広大な丘一面に季節の花々が咲き誇る人気ガーデン。春の花壇や秋の紅葉、フォトジェニックなカフェテラスなど、心地よい高原の風を感じながら散策できます。"
+    },
+    {
+        nameSuffix: "鎮守の杜 古社総本宮",
+        category: "history",
+        season: "通年",
+        tags: ["歴史", "観光", "リラックス"],
+        companion: ["一人旅", "カップル", "家族"],
+        budget: "低予算",
+        transport: "公共交通機関",
+        purpose: "歴史探訪",
+        img: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800&auto=format&fit=crop",
+        desc: "千年以上の歴史を誇る格式高い古社。巨木が生い茂る厳かな参道を歩くだけで心が洗われるパワースポットとして全国から多くの参拝客が訪れます。"
+    },
+    {
+        nameSuffix: "ウォーターフロント シーサイドパーク",
+        category: "city",
+        season: "夏",
+        tags: ["都市", "観光", "アクティブ"],
+        companion: ["カップル", "友人グループ", "子連れ"],
+        budget: "低予算",
+        transport: "公共交通機関",
+        purpose: "観光",
+        img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop",
+        desc: "海風が吹き抜ける開放的なベイエリア。芝生広場やプロムナード、夜にはライトアップされた水辺の景色がロマンチックなデートスポットとしても人気です。"
+    },
+    {
+        nameSuffix: "フォレスト・アドベンチャーの森",
+        category: "activity",
+        season: "夏",
+        tags: ["アクティブ", "自然", "観光"],
+        companion: ["友人グループ", "子連れ", "家族"],
+        budget: "スタンダード",
+        transport: "自家用車",
+        purpose: "アクティビティ",
+        img: "https://images.unsplash.com/photo-1533050487297-09b450131914?w=800&auto=format&fit=crop",
+        desc: "自然の森をそのまま生かした樹上アスレチックやジップラインが楽しめる体験型アウトドアパーク。子どもから大人まで爽快なスリルを体感できます。"
+    },
+    {
+        nameSuffix: "現代アート＆カルチャーミュージアム",
+        category: "city",
+        season: "通年",
+        tags: ["都市", "観光", "リラックス"],
+        companion: ["一人旅", "カップル", "友人グループ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "観光",
+        img: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?w=800&auto=format&fit=crop",
+        desc: "独創的な現代アート展示と洗練された建築デザインが融合した文化施設。静かな空間で芸術作品に触れ、併設されたブックカフェでくつろぎのひとときを楽しめます。"
+    },
+    {
+        nameSuffix: "伝統工芸と手仕事の里",
+        category: "history",
+        season: "秋",
+        tags: ["歴史", "グルメ", "観光"],
+        companion: ["カップル", "家族", "一人旅"],
+        budget: "スタンダード",
+        transport: "自家用車",
+        purpose: "歴史探訪",
+        img: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800&auto=format&fit=crop",
+        desc: "代々受け継がれてきた伝統工芸の工房が集まる落ち着いた集落。職人の技を間近で見学できるほか、自作の器や染め物づくりなどの体験教室が充実しています。"
+    },
+    {
+        nameSuffix: "サンセット岬 オーシャンビュー展望台",
+        category: "nature",
+        season: "夏",
+        tags: ["自然", "観光", "リラックス"],
+        companion: ["カップル", "一人旅", "友人グループ"],
+        budget: "低予算",
+        transport: "自家用車",
+        purpose: "リフレッシュ",
+        img: "https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=800&auto=format&fit=crop",
+        desc: "水平線に沈む夕陽が絶景の岬。広がる海と打ち寄せる波の音に包まれながら、遮るもののない大パノラマを楽しめるドライブコースのハイライトです。"
+    },
+    {
+        nameSuffix: "星空ネイチャーキャンプ＆グランピング",
+        category: "activity",
+        season: "秋",
+        tags: ["自然", "アクティブ", "リラックス"],
+        companion: ["友人グループ", "カップル", "家族"],
+        budget: "ラグジュアリー",
+        transport: "自家用車",
+        purpose: "アクティビティ",
+        img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop",
+        desc: "満天の星空の下で贅沢なグランピング体験。焚き火を囲みながら地元食材のBBQを堪能し、日常の喧騒から離れた特別な夜を過ごせます。"
+    },
+    {
+        nameSuffix: "クラフトビール＆ワイナリーテラス",
+        category: "food",
+        season: "秋",
+        tags: ["グルメ", "観光", "リラックス"],
+        companion: ["カップル", "友人グループ", "大人旅"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "グルメ巡り",
+        img: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop",
+        desc: "葡萄畑やホップ畑を望む開放的なテラスで、醸造仕立てのクラフトドリンクとペアリング料理を堪能できる人気ワイナリー＆ブルワリーです。"
+    },
+    {
+        nameSuffix: "城址公園 四季の天守閣",
+        category: "history",
+        season: "春",
+        tags: ["歴史", "自然", "観光"],
+        companion: ["一人旅", "カップル", "家族"],
+        budget: "低予算",
+        transport: "公共交通機関",
+        purpose: "歴史探訪",
+        img: "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=800&auto=format&fit=crop",
+        desc: "戦国・江戸の歴史を刻む壮大な石垣と復元天守がそびえる名城跡。春には千本桜が咲き誇り、お堀の水面に映える桜並木は圧巻の美観を誇ります。"
+    }
+];
+
+// 動的スポット生成関数
+function generateDynamicSpots(prefecture, neededCount, startId = 10000) {
+    const coords = PREFECTURE_COORDINATES[prefecture] || { lat: 35.689, lon: 139.692 };
+    const generated = [];
+
+    for (let i = 0; i < neededCount; i++) {
+        const tmpl = SPOT_TEMPLATES[i % SPOT_TEMPLATES.length];
+        const spotId = startId + i;
+        const latOffset = Number((((i * 17) % 13 - 6) * 0.008).toFixed(4));
+        const lonOffset = Number((((i * 23) % 15 - 7) * 0.009).toFixed(4));
+
+        generated.push({
+            id: spotId,
+            name: `${prefecture} ${tmpl.nameSuffix}`,
+            prefecture: prefecture,
+            season: tmpl.season,
+            category: tmpl.category,
+            description: `${prefecture}を訪れたら外せない注目のスポット。${tmpl.desc}`,
+            img: tmpl.img,
+            tags: [...tmpl.tags],
+            lat: Number((coords.lat + latOffset).toFixed(4)),
+            lon: Number((coords.lon + lonOffset).toFixed(4)),
+            companion: [...tmpl.companion],
+            budget: tmpl.budget,
+            transport: tmpl.transport,
+            purpose: tmpl.purpose
+        });
+    }
+    return generated;
+}
+
+// 都道府県ごとに15〜20件の観光スポットを確実に確保する関数
+function ensurePrefectureSpots(prefInput, targetCount = 16) {
+    if (!prefInput || prefInput === "all") {
+        return;
+    }
+    const normPref = normalizePrefectureName(prefInput);
+    const existing = kinkiPlaces.filter(p => normalizePrefectureName(p.prefecture) === normPref);
+
+    if (existing.length >= targetCount) {
+        return;
+    }
+
+    const needed = targetCount - existing.length;
+    const existingNames = new Set(kinkiPlaces.map(p => p.name));
+    const newSpots = [];
+
+    // 1. 主要県リアルプリセットにあれば優先追加
+    if (PRESET_REAL_SPOTS[normPref]) {
+        for (const spot of PRESET_REAL_SPOTS[normPref]) {
+            if (!existingNames.has(spot.name) && newSpots.length < needed) {
+                newSpots.push(spot);
+                existingNames.add(spot.name);
+            }
+        }
+    }
+
+    // 2. まだ不足があれば動的ジェネレータで補完
+    if (newSpots.length < needed) {
+        const stillNeeded = needed - newSpots.length;
+        const maxId = kinkiPlaces.reduce((max, p) => Math.max(max, p.id || 0), 3000);
+        const dynamicSpots = generateDynamicSpots(normPref, stillNeeded, maxId + 1);
+        for (const dSpot of dynamicSpots) {
+            if (!existingNames.has(dSpot.name)) {
+                newSpots.push(dSpot);
+                existingNames.add(dSpot.name);
+            }
+        }
+    }
+
+    if (newSpots.length > 0) {
+        kinkiPlaces.push(...newSpots);
+    }
+}
+
 // 2. モックホテルデータ (楽天トラベル連携用)
 // ==========================================
 const mockHotels = {
@@ -723,12 +2540,7 @@ if (headerTitle === "Kinki Wander" || !headerTitle) {
 let currentTheme = localStorage.getItem("kw_theme") || "mc-blue";
 let currentFontSize = localStorage.getItem("kw_fontsize") || "100";
 let currentLanguage = localStorage.getItem("kw_lang") || "ja";
-let rakutenAppId = (localStorage.getItem("kw_rakuten_appid") || "").trim();
-const DEFAULT_GEMINI_API_KEY = "AQ.Ab8RN6KFH8axdvRQQ0D9RSYAHu-f_EFbJrpWVXXb4ncEEDx5EA";
-const DEFAULT_AI_API_KEY = ""; // 使用するOpenAI APIキー（sk-...）
-// AQ.形式はGoogle AI Studioの新しいAPIキーフォーマットのため、削除せずそのまま保持します
-const _storedGeminiKey = (localStorage.getItem("kw_gemini_apikey") || "").trim();
-let geminiApiKey = _storedGeminiKey;
+
 
 // カード関連の一時状態
 let activeFilters = { season: "all", category: "all" };
@@ -917,11 +2729,7 @@ function initApp() {
     document.getElementById("settingsHeaderTitle").value = headerTitle;
     document.getElementById("settingsLang").value = currentLanguage;
 
-    const rakutenInput = document.getElementById("settingsRakutenAppId");
-    if (rakutenInput) rakutenInput.value = rakutenAppId;
 
-    const geminiInput = document.getElementById("settingsGeminiApiKey");
-    if (geminiInput) geminiInput.value = geminiApiKey;
 
     // テーマボタンのアクティブ表示同期
     document.querySelectorAll(".theme-btn").forEach(b => b.classList.remove("active"));
@@ -968,8 +2776,7 @@ function saveToStorage() {
     localStorage.setItem("kw_theme", currentTheme);
     localStorage.setItem("kw_fontsize", currentFontSize);
     localStorage.setItem("kw_lang", currentLanguage);
-    localStorage.setItem("kw_rakuten_appid", rakutenAppId);
-    localStorage.setItem("kw_gemini_apikey", geminiApiKey);
+
 }
 // ==========================================
 // 5. 共通UI：ナビゲーション・サイドバー
@@ -1047,9 +2854,19 @@ window.switchView = function (viewId, element) {
 // Toast通知表示
 function showToast(message) {
     const container = document.getElementById("toastContainer");
+    if (!container) return;
     const toast = document.createElement("div");
     toast.className = "toast";
-    toast.innerHTML = `<span class="material-icons" style="font-size: 1.2rem; color: var(--primary-color);">info</span><span>${message}</span>`;
+    const icon = document.createElement("span");
+    icon.className = "material-icons";
+    icon.style.cssText = "font-size: 1.2rem; color: var(--primary-color);";
+    icon.textContent = "info";
+
+    const textSpan = document.createElement("span");
+    textSpan.textContent = String(message != null ? message : "");
+
+    toast.appendChild(icon);
+    toast.appendChild(textSpan);
     container.appendChild(toast);
 
     // 1.2秒後にフェードアウトして削除
@@ -1064,6 +2881,10 @@ function showToast(message) {
 // ==========================================
 // 6. 検索機能 (スワイプ & プリフェッチ)
 // ==========================================
+// 6. 検索機能 (スワイプ & プリフェッチ & 連続動作)
+// ==========================================
+let isSwipeAnimating = false; // スワイプアニメーション中の二重操作ガード
+
 window.applyFilters = function () {
     const seasonSelect = document.getElementById("filterSeason");
     const catSelect = document.getElementById("filterCategory");
@@ -1071,6 +2892,14 @@ window.applyFilters = function () {
     const tagSelect = document.getElementById("filterTag");
     const selectedPref = prefSelect ? prefSelect.value : "all";
     const selectedTag = tagSelect ? tagSelect.value : "all";
+
+    // 🌟 1. 観光スポット候補の増量: 選択された都道府県のスポットを動的に16件確保
+    if (selectedPref !== "all") {
+        ensurePrefectureSpots(selectedPref, 16);
+    } else {
+        // 「すべて」の場合も主要都道府県を中心に充実させる
+        ["東京", "北海道", "京都", "大阪", "沖縄", "福岡", "神奈川"].forEach(p => ensurePrefectureSpots(p, 10));
+    }
 
     const tagToCategoryMap = {
         "歴史・文化": "history",
@@ -1086,10 +2915,17 @@ window.applyFilters = function () {
         activeFilters.category = catSelect.value;
     }
 
+    const normSelectedPref = normalizePrefectureName(selectedPref);
+
     currentCardPool = kinkiPlaces.filter(place => {
-        const matchSeason = (activeFilters.season === "all" || place.season === activeFilters.season);
+        const matchSeason = (activeFilters.season === "all" || place.season === activeFilters.season || (place.season && place.season.includes("通年")));
         const matchCat = (activeFilters.category === "all" || place.category === activeFilters.category);
-        const matchPref = (selectedPref === "all" || place.prefecture === selectedPref);
+        const normPlacePref = normalizePrefectureName(place.prefecture);
+        const matchPref = (normSelectedPref === "all" ||
+            normPlacePref === normSelectedPref ||
+            place.prefecture === selectedPref ||
+            place.prefecture.startsWith(normSelectedPref) ||
+            normSelectedPref.startsWith(normPlacePref));
         const matchTag = (selectedCategory === "all" || place.category === selectedCategory);
         const isAlreadySelected = likes.some(l => l.id === place.id) || anmaris.some(a => a.id === place.id);
 
@@ -1112,7 +2948,8 @@ window.applyFilters = function () {
 
     nextPoolIndex = 0;
     renderStack();
-    if (currentCardPool.length === 0) {
+
+    if (currentCardPool.length === 0 && selectedPref === "all") {
         const existingNames = kinkiPlaces.map(p => p.name);
         fetchGeminiPlaces(existingNames).then(newPlaces => {
             if (newPlaces && newPlaces.length > 0) {
@@ -1168,18 +3005,19 @@ function matchesGenre(place, genreIndex) {
 function renderStack() {
     const stack = document.getElementById("card-stack");
     const container = document.getElementById("swipeActionsContainer");
+    if (!stack) return;
     stack.innerHTML = "";
 
     if (currentCardPool.length === 0) {
         if (container) container.classList.add("hidden");
         stack.innerHTML = `
             <div class="empty-stack-view">
-                <span class="material-icons empty-icon">sentiment_dissatisfied</span>
-                <h3>該当する観光スポットがありません</h3>
-                <p>フィルター条件を緩めるか、AIを使って新しく観光地を生成してみましょう！</p>
+                <span class="material-icons empty-icon" style="color: var(--primary-color);">task_alt</span>
+                <h3>すべての候補をチェックしました！</h3>
+                <p>気になるスポットは見つかりましたか？保存したスポットからAIによる旅行日程を作成できます。</p>
                 <div class="empty-stack-view-actions">
-                    <button class="btn-primary" onclick="generatePlacesWithAI()">✨ AIで観光スポットを増やす</button>
-                    <button class="btn-primary" style="background-color: var(--text-muted); opacity: 0.8;" onclick="resetSwipeHistory()">履歴をリセットしてやり直す</button>
+                    <button class="btn-primary" onclick="resetSwipeHistory()">🔄 スワイプ履歴をリセット</button>
+                    <button class="btn-primary" style="background-color: var(--secondary-color);" onclick="switchView('plan')">📋 予定を作成する</button>
                 </div>
             </div>
         `;
@@ -1188,7 +3026,7 @@ function renderStack() {
 
     if (container) container.classList.remove("hidden");
 
-    // 最初のカードと、バックグラウンドでのプリフェッチカード(最大3枚)をDOMに追加
+    // 最初のカードと、バックグラウンドでの待機カード(最大3枚)をDOMに追加
     // 重なり順のため、後ろのカードを先に挿入する
     const cardsToLoad = Math.min(3, currentCardPool.length);
     for (let i = cardsToLoad - 1; i >= 0; i--) {
@@ -1200,13 +3038,14 @@ function renderStack() {
 
 // カードの事前読み込み (プリフェッチ画像)
 function prefetchNextImages() {
-    // 現在表示中のカードの後ろに控えているカードの画像をブラウザにキャッシュさせる
     if (currentCardPool.length > 1) {
-        const prefetchCount = Math.min(3, currentCardPool.length);
+        const prefetchCount = Math.min(4, currentCardPool.length);
         for (let i = 1; i < prefetchCount; i++) {
             const imgUrl = currentCardPool[i].img;
-            const img = new Image();
-            img.src = imgUrl;
+            if (imgUrl) {
+                const img = new Image();
+                img.src = imgUrl;
+            }
         }
     }
 }
@@ -1289,7 +3128,7 @@ function getSugSeasonBadgeHtml(season) {
 function createCardElement(data, isTopCard) {
     const card = document.createElement("div");
     card.className = "swipe-card spot-card";
-    // 表示優先順位の設定（待機カードも同サイズ・同位置でフラットに重ねる）
+    // 表示優先順位の設定
     card.style.zIndex = isTopCard ? 5 : 1;
     if (!isTopCard) {
         card.style.pointerEvents = "none";
@@ -1299,10 +3138,19 @@ function createCardElement(data, isTopCard) {
     const isRecommended = recommendationMode;
     const matchScore = calculateCompatibilityScore(data);
 
+    const safeName = escapeHTML(data.name);
+    const safePref = escapeHTML(data.prefecture);
+    const safeDesc = escapeHTML(data.description);
+    const safeCompanion = escapeHTML(Array.isArray(data.companion) ? data.companion.join('・') : (data.companion || ''));
+    const safeBudget = escapeHTML(data.budget || 'スタンダード');
+    const safeTransport = escapeHTML(data.transport || '公共交通機関');
+    const safePurpose = escapeHTML(data.purpose || '観光');
+    const safeImg = escapeHTML(data.img || NO_IMAGE_URL);
+
     card.innerHTML = `
         <div class="card-img-container">
-            <img src="${data.img || NO_IMAGE_URL}" class="card-img" alt="${data.name}" onerror="this.onerror=null;this.src='${NO_IMAGE_URL}'">
-            <span class="card-prefecture-badge">📍 ${data.prefecture}</span>
+            <img src="${safeImg}" class="card-img" alt="${safeName}" onerror="this.onerror=null;this.src='${NO_IMAGE_URL}'">
+            <span class="card-prefecture-badge">📍 ${safePref}</span>
             ${getSeasonBadgeHtml(data.season)}
             ${isRecommended ? `<span class="card-match-badge"><span class="material-icons" style="font-size: 0.95rem; vertical-align: middle;">bolt</span>AIマッチ度 ${matchScore}%</span>` : ''}
             <div class="swipe-stamp stamp-like">いいね</div>
@@ -1310,14 +3158,14 @@ function createCardElement(data, isTopCard) {
         </div>
         <button class="card-star-btn ${isStarred ? 'starred' : ''}" onclick="toggleFavorite(this, event, ${data.id})"><span class="material-icons-outlined star-icon">${isStarred ? 'star' : 'star_border'}</span></button>
         <div class="card-info">
-            <h3><span class="place-name" data-original-name="${data.name}">${getDisplayName(data.name)}</span></h3>
+            <h3><span class="place-name" data-original-name="${safeName}">${getDisplayName(data.name)}</span></h3>
             <div class="card-tags-container">
-                <span class="tag-pill"><span class="material-icons">people</span>${data.companion ? data.companion.join('・') : ''}</span>
-                <span class="tag-pill"><span class="material-icons">payments</span>${data.budget || 'スタンダード'}</span>
-                <span class="tag-pill"><span class="material-icons">commute</span>${data.transport || '公共交通機関'}</span>
-                <span class="tag-pill"><span class="material-icons">explore</span>${data.purpose || '観光'}</span>
+                <span class="tag-pill"><span class="material-icons">people</span>${safeCompanion}</span>
+                <span class="tag-pill"><span class="material-icons">payments</span>${safeBudget}</span>
+                <span class="tag-pill"><span class="material-icons">commute</span>${safeTransport}</span>
+                <span class="tag-pill"><span class="material-icons">explore</span>${safePurpose}</span>
             </div>
-            <p class="spot-description">${data.description}</p>
+            <p class="spot-description">${safeDesc}</p>
         </div>
     `;
 
@@ -1344,19 +3192,86 @@ window.toggleFavorite = function (starBtn, event, id) {
         if (starIcon) starIcon.textContent = "star_border";
         showToast("お気に入りから削除しました。");
     } else {
-        favorites.push(item);
+        if (item) favorites.push(item);
         starBtn.classList.add("starred");
         if (starIcon) starIcon.textContent = "star";
         showToast("お気に入りに追加しました！⭐");
 
-        // Ensure favorited item is also in Saved Spots (likes)
-        if (!likes.some(l => l.id === id)) {
+        if (item && !likes.some(l => l.id === id)) {
             likes.push(item);
         }
     }
     saveToStorage();
     updateGridCounts();
 };
+
+// 🌟 2. スワイプ完了と連続表示の制御ロジック
+function completeCardSwipe(cardEl, direction, placeData) {
+    if (isSwipeAnimating) return;
+    isSwipeAnimating = true;
+
+    // スワイプ判定スタンプの表示強調
+    const stampLike = cardEl.querySelector(".stamp-like");
+    const stampAnmari = cardEl.querySelector(".stamp-anmari");
+    if (direction === "like") {
+        if (stampLike) stampLike.style.opacity = "1";
+        if (stampAnmari) stampAnmari.style.opacity = "0";
+    } else {
+        if (stampAnmari) stampAnmari.style.opacity = "1";
+        if (stampLike) stampLike.style.opacity = "0";
+    }
+
+    // 画面外へのスムーズなスワイプアウト演出
+    const moveX = direction === "like" ? 900 : -900;
+    const rotateAngle = direction === "like" ? 35 : -35;
+    cardEl.style.transition = "transform 0.32s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.32s ease";
+    cardEl.style.transform = `translateX(${moveX}px) rotate(${rotateAngle}deg)`;
+    cardEl.style.opacity = "0";
+
+    // データ処理（いいね/興味なし、スタンドパラメータ計算）
+    handleSwipeAction(direction, placeData);
+
+    // アニメーション完了後に次のカードへ切り替え（DOMの全再構築を避けてチラつきを防止）
+    setTimeout(() => {
+        const stack = document.getElementById("card-stack");
+        if (cardEl.parentNode === stack) {
+            cardEl.remove();
+        }
+        currentCardPool.shift(); // 先頭カードを消費
+
+        if (currentCardPool.length === 0) {
+            isSwipeAnimating = false;
+            isDragging = false;
+            renderStack();
+            return;
+        }
+
+        // 残っているDOMカードの中から、新しい最前面カード（最後のDOM子要素）を有効化
+        if (stack) {
+            const remainingCards = stack.querySelectorAll(".swipe-card");
+            if (remainingCards.length > 0) {
+                const nextTopCard = remainingCards[remainingCards.length - 1];
+                nextTopCard.style.zIndex = 5;
+                nextTopCard.style.pointerEvents = "auto";
+                initCardDrag(nextTopCard, currentCardPool[0]);
+                prefetchNextImages();
+            }
+
+            // スタックの背面に控えるカードを1枚補充（常に最大3枚の重なりを維持）
+            const currentDomCount = stack.querySelectorAll(".swipe-card").length;
+            if (currentDomCount < 3 && currentCardPool.length > currentDomCount) {
+                const backIndex = currentDomCount;
+                if (currentCardPool[backIndex]) {
+                    const newBackCard = createCardElement(currentCardPool[backIndex], false);
+                    stack.insertBefore(newBackCard, stack.firstChild);
+                }
+            }
+        }
+
+        isSwipeAnimating = false;
+        isDragging = false;
+    }, 280);
+}
 
 function initCardDrag(card, data) {
     let startX = 0, startY = 0;
@@ -1365,6 +3280,7 @@ function initCardDrag(card, data) {
     const stampAnmari = card.querySelector(".stamp-anmari");
 
     card.addEventListener("pointerdown", e => {
+        if (isSwipeAnimating) return;
         // お気に入りボタンをクリックした時はカードのドラッグを開始しない
         if (e.target.closest('.card-star-btn')) {
             return;
@@ -1377,7 +3293,7 @@ function initCardDrag(card, data) {
     });
 
     card.addEventListener("pointermove", e => {
-        if (!isDragging) return;
+        if (!isDragging || isSwipeAnimating) return;
         currentX = e.clientX - startX;
         currentY = e.clientY - startY;
 
@@ -1402,30 +3318,28 @@ function initCardDrag(card, data) {
 
     card.addEventListener("pointerup", e => {
         if (!isDragging) return;
-        isDragging = false;
 
-        // スワイプ判定 (130px以上移動)
-        if (Math.abs(currentX) > 130) {
+        // スワイプ判定 (120px以上移動)
+        if (Math.abs(currentX) > 120 && !isSwipeAnimating) {
             const dir = currentX > 0 ? "like" : "anmari";
-            card.style.transition = "transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease";
-            card.style.transform = `translateX(${currentX > 0 ? 1000 : -1000}px) rotate(${currentX > 0 ? 45 : -45}deg)`;
-            card.style.opacity = "0";
-
-            handleSwipeAction(dir, data);
-
-            // 次のカードへ移行
-            setTimeout(() => {
-                card.remove();
-                currentCardPool.shift();
-                renderStack();
-            }, 300);
+            completeCardSwipe(card, dir, data);
         } else {
-            // 元の位置に戻す (バネのようなスプリングイージング)
+            // 元の位置に戻す
             card.style.transition = "transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.2)";
             card.style.transform = "translateX(0) rotate(0deg)";
             if (stampLike) stampLike.style.opacity = 0;
             if (stampAnmari) stampAnmari.style.opacity = 0;
+            isDragging = false;
         }
+    });
+
+    card.addEventListener("pointercancel", () => {
+        if (!isDragging) return;
+        card.style.transition = "transform 0.3s ease";
+        card.style.transform = "translateX(0) rotate(0deg)";
+        if (stampLike) stampLike.style.opacity = 0;
+        if (stampAnmari) stampAnmari.style.opacity = 0;
+        isDragging = false;
     });
 }
 
@@ -1459,36 +3373,18 @@ window.resetSwipeHistory = function () {
 };
 
 window.swipeTopCard = function (direction) {
-    if (currentCardPool.length === 0 || isDragging) return;
+    if (currentCardPool.length === 0 || isDragging || isSwipeAnimating) return;
     const stack = document.getElementById("card-stack");
-    const topCard = stack.querySelector(".swipe-card");
+    if (!stack) return;
+    const remainingCards = stack.querySelectorAll(".swipe-card");
+    if (remainingCards.length === 0) return;
+
+    // 最前面カード（最後の子要素）
+    const topCard = remainingCards[remainingCards.length - 1];
     if (!topCard) return;
 
-    const stampLike = topCard.querySelector(".stamp-like");
-    const stampAnmari = topCard.querySelector(".stamp-anmari");
-
-    // バッジを表示
-    if (direction === "like") {
-        if (stampLike) stampLike.style.opacity = "1";
-    } else {
-        if (stampAnmari) stampAnmari.style.opacity = "1";
-    }
-
-    isDragging = true; // 連打やドラッグ重複のブロック
-
-    topCard.style.transition = "transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.45s ease";
-    topCard.style.transform = `translateX(${direction === "like" ? 1000 : -1000}px) rotate(${direction === "like" ? 45 : -45}deg)`;
-    topCard.style.opacity = "0";
-
     const data = currentCardPool[0];
-    handleSwipeAction(direction === "like" ? "like" : "anmari", data);
-
-    setTimeout(() => {
-        topCard.remove();
-        currentCardPool.shift();
-        isDragging = false;
-        renderStack();
-    }, 350);
+    completeCardSwipe(topCard, direction, data);
 };
 
 // ==========================================
@@ -1509,11 +3405,15 @@ function renderLikedList() {
         const div = document.createElement("div");
         div.className = `liked-item ${isSelected ? 'selected' : ''}`;
         div.setAttribute("data-id", item.id);
+        const safeName = escapeHTML(item.name);
+        const safePref = escapeHTML(item.prefecture);
+        const safeSeason = escapeHTML(item.season ? (item.season.includes('通年') ? item.season : item.season + '時期') : '通年');
+        const safeImg = escapeHTML(item.img || NO_IMAGE_URL);
         div.innerHTML = `
-            <img src="${item.img}" class="liked-item-thumb">
+            <img src="${safeImg}" class="liked-item-thumb" alt="${safeName}" onerror="this.onerror=null;this.src='${NO_IMAGE_URL}'">
             <div class="liked-item-info" style="flex:1; min-width:0;">
-                <h4><span class="place-name" data-original-name="${item.name}">${getDisplayName(item.name)}</span></h4>
-                <p>📍 ${item.prefecture} / 🏷️ ${item.season.includes('通年') ? item.season : item.season + '時期'}</p>
+                <h4><span class="place-name" data-original-name="${safeName}">${getDisplayName(item.name)}</span></h4>
+                <p>📍 ${safePref} / 🏷️ ${safeSeason}</p>
             </div>
             <button class="sim3d-launch-mini-btn" title="3Dルートシミュレーション">
                 <span class="material-icons" style="font-size:1.1rem;">route</span>
@@ -1645,7 +3545,19 @@ function getApiUrl(path) {
 
 // Safely fetch and parse JSON, checking response.ok first to avoid JSON parsing errors on HTML/text errors.
 async function safeFetchJson(url, options = {}) {
-    const response = await fetch(url, options);
+    const opts = { ...options };
+    opts.headers = { ...(opts.headers || {}) };
+    if (auth && auth.currentUser) {
+        try {
+            const token = await auth.currentUser.getIdToken();
+            if (token) {
+                opts.headers['Authorization'] = `Bearer ${token}`;
+            }
+        } catch (authErr) {
+            console.warn("Failed to get Firebase token for safeFetchJson:", authErr);
+        }
+    }
+    const response = await fetch(url, opts);
     if (!response.ok) {
         let errMsg = `HTTP ${response.status}`;
         try {
@@ -1957,17 +3869,22 @@ window.generateTravelPlan = async function (event) {
             cachedPlan.hotels.forEach(h => {
                 const card = document.createElement("div");
                 card.className = "hotel-card";
+                const safeName = escapeHTML(h.name);
+                const safeRating = escapeHTML(h.rating);
+                const safeAddress = h.address ? escapeHTML(h.address) : "";
+                const safePrice = (h.price && h.price !== '料金情報なし') ? escapeHTML(h.price) : "";
+                const safeUrl = sanitizeUrl(h.url);
                 card.innerHTML = `
-                    <img src="${h.img || activePlanTarget.img || NO_IMAGE_URL}" class="hotel-img" alt="${h.name}" onerror="this.onerror=null;this.src='${NO_IMAGE_URL}'">
+                    <img src="${escapeHTML(h.img || activePlanTarget.img || NO_IMAGE_URL)}" class="hotel-img" alt="${safeName}" onerror="this.onerror=null;this.src='${NO_IMAGE_URL}'">
                     <div class="hotel-info">
                         <div>
-                            <h4>${h.name}</h4>
-                            <div class="hotel-rating">⭐ ${h.rating}</div>
-                            ${h.address ? `<p style="font-size:0.8rem;color:#64748b;">${h.address}</p>` : ''}
+                            <h4>${safeName}</h4>
+                            <div class="hotel-rating">⭐ ${safeRating}</div>
+                            ${safeAddress ? `<p style="font-size:0.8rem;color:#64748b;">${safeAddress}</p>` : ''}
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            ${h.price && h.price !== '料金情報なし' ? `<p>${h.price}</p>` : ''}
-                            <a href="${h.url}" target="_blank" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; text-decoration: none;">地図で確認・予約</a>
+                            ${safePrice ? `<p>${safePrice}</p>` : ''}
+                            <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; text-decoration: none;">地図で確認・予約</a>
                         </div>
                     </div>
                 `;
@@ -2090,11 +4007,11 @@ window.generateTravelPlan = async function (event) {
             const placesRes = await safeFetchJson(getApiUrl('/api/travel/places'), {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.rating,places.priceLevel,places.photos'
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     textQuery: `${activePlanTarget.name} 周辺 ホテル`,
+                    purpose: 'hotel',
                     locationBias: {
                         circle: {
                             center: { latitude: activePlanTarget.lat, longitude: activePlanTarget.lon },
@@ -2148,17 +4065,22 @@ window.generateTravelPlan = async function (event) {
             hotels.forEach(h => {
                 const card = document.createElement("div");
                 card.className = "hotel-card";
+                const safeName = escapeHTML(h.name);
+                const safeRating = escapeHTML(h.rating);
+                const safeAddress = h.address ? escapeHTML(h.address) : "";
+                const safePrice = (h.price && h.price !== '料金情報なし') ? escapeHTML(h.price) : "";
+                const safeUrl = sanitizeUrl(h.url || 'https://www.google.com/maps/search/ホテル');
                 card.innerHTML = `
-                    <img src="${h.img || activePlanTarget.img || NO_IMAGE_URL}" class="hotel-img" alt="${h.name}" onerror="this.onerror=null;this.src='${NO_IMAGE_URL}'">
+                    <img src="${escapeHTML(h.img || activePlanTarget.img || NO_IMAGE_URL)}" class="hotel-img" alt="${safeName}" onerror="this.onerror=null;this.src='${NO_IMAGE_URL}'">
                     <div class="hotel-info">
                         <div>
-                            <h4>${h.name}</h4>
-                            <div class="hotel-rating">⭐ ${h.rating}</div>
-                            ${h.address ? `<p style="font-size:0.8rem;color:#64748b;">${h.address}</p>` : ''}
+                            <h4>${safeName}</h4>
+                            <div class="hotel-rating">⭐ ${safeRating}</div>
+                            ${safeAddress ? `<p style="font-size:0.8rem;color:#64748b;">${safeAddress}</p>` : ''}
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            ${h.price && h.price !== '料金情報なし' ? `<p>${h.price}</p>` : ''}
-                            <a href="${h.url || 'https://www.google.com/maps/search/ホテル'}" target="_blank" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; text-decoration: none;">地図で確認・予約</a>
+                            ${safePrice ? `<p>${safePrice}</p>` : ''}
+                            <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; text-decoration: none;">地図で確認・予約</a>
                         </div>
                     </div>
                 `;
@@ -2823,9 +4745,7 @@ window.updateSettingsFromUI = function () {
 
     userName = usernameInput ? usernameInput.value.trim() || "トラベラー" : "トラベラー";
     headerTitle = headerTitleInput ? headerTitleInput.value.trim() || "Japan Wander" : "Japan Wander";
-    // APIキーはサーバー側で管理されるため、フロントからの入力取得は廃止します
-    rakutenAppId = "server";
-    geminiApiKey = "server";
+
 
     applyAccountSettings();
     saveToStorage();
@@ -2958,6 +4878,11 @@ function renderModalList(type, list, container) {
     const fifteenDaysMs = 15 * 24 * 60 * 60 * 1000;
 
     container.innerHTML = list.map(item => {
+        const safeName = escapeHTML(item.name);
+        const safePref = escapeHTML(item.prefecture);
+        const safeSeason = escapeHTML(item.season ? (item.season.includes('通年') ? item.season : item.season + '時期') : '通年');
+        const safeDesc = escapeHTML(item.description ? item.description.substring(0, 30) : '');
+
         if (type === "anmari") {
             const savedTime = item.savedAt || now;
             const daysPassed = (now - savedTime) / (1000 * 60 * 60 * 24);
@@ -2967,7 +4892,7 @@ function renderModalList(type, list, container) {
                 <div class="modal-item" id="modal-item-${item.id}">
                     <div class="modal-item-info">
                         <div class="modal-item-name">${getDisplayName(item.name)}</div>
-                        <div class="modal-item-sub">📍 ${item.prefecture} / ${item.season.includes('通年') ? item.season : item.season + '時期'}</div>
+                        <div class="modal-item-sub">📍 ${safePref} / ${safeSeason}</div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <span class="modal-item-days">自動消滅まであと${daysLeft}日</span>
@@ -2978,11 +4903,15 @@ function renderModalList(type, list, container) {
                 </div>
             `;
         } else if (type === "plans") {
+            const safeDest = escapeHTML(item.destination);
+            const safeDate = escapeHTML(item.date);
+            const safePeople = escapeHTML(item.people);
+            const nights = parseInt(item.nights, 10) || 0;
             return `
                 <div class="modal-item" id="modal-item-${item.id}">
                     <div class="modal-item-info" style="flex: 1; cursor: pointer;" onclick="viewItineraryDetails(${item.id})">
-                        <div class="modal-item-name">📅 ${item.destination} の旅 (${item.nights}泊${item.nights + 1}日)</div>
-                        <div class="modal-item-sub">出発日: ${item.date} | 人数: ${item.people}名</div>
+                        <div class="modal-item-name">📅 ${safeDest} の旅 (${nights}泊${nights + 1}日)</div>
+                        <div class="modal-item-sub">出発日: ${safeDate} | 人数: ${safePeople}名</div>
                     </div>
                     <button class="btn-item-delete" onclick="deleteModalItem('plans', ${item.id})">
                         <span class="material-icons" style="font-size: 1.2rem;">delete</span>
@@ -2994,7 +4923,7 @@ function renderModalList(type, list, container) {
                 <div class="modal-item" id="modal-item-${item.id}">
                     <div class="modal-item-info">
                         <div class="modal-item-name">${getDisplayName(item.name)}</div>
-                        <div class="modal-item-sub">📍 ${item.prefecture} | ${item.description.substring(0, 30)}...</div>
+                        <div class="modal-item-sub">📍 ${safePref} | ${safeDesc}...</div>
                     </div>
                     <button class="btn-item-delete" onclick="deleteModalItem('favorites', ${item.id})">
                         <span class="material-icons" style="font-size: 1.2rem;">star</span>
@@ -3006,7 +4935,7 @@ function renderModalList(type, list, container) {
                 <div class="modal-item" id="modal-item-${item.id}">
                     <div class="modal-item-info">
                         <div class="modal-item-name">${getDisplayName(item.name)}</div>
-                        <div class="modal-item-sub">📍 ${item.prefecture} | ${item.description.substring(0, 30)}...</div>
+                        <div class="modal-item-sub">📍 ${safePref} | ${safeDesc}...</div>
                     </div>
                     <button class="btn-item-delete" onclick="deleteModalItem('recent-likes', ${item.id})">
                         <span class="material-icons" style="font-size: 1.2rem;">delete</span>
@@ -3049,17 +4978,22 @@ window.viewItineraryDetails = function (planId) {
     hotels.forEach(h => {
         const card = document.createElement("div");
         card.className = "hotel-card";
+        const safeName = escapeHTML(h.name);
+        const safeRating = escapeHTML(h.rating);
+        const safeAddress = h.address ? escapeHTML(h.address) : "";
+        const safePrice = (h.price && h.price !== '料金情報なし') ? escapeHTML(h.price) : "";
+        const safeUrl = sanitizeUrl(h.url || 'https://www.google.com/maps/search/ホテル');
         card.innerHTML = `
-            <img src="${referenceSpot.img}" class="hotel-img">
+            <img src="${escapeHTML(referenceSpot.img || NO_IMAGE_URL)}" class="hotel-img" alt="${safeName}" onerror="this.onerror=null;this.src='${NO_IMAGE_URL}'">
             <div class="hotel-info">
                 <div>
-                    <h4>${h.name}</h4>
-                    <div class="hotel-rating">⭐ ${h.rating}</div>
-                    ${h.address ? `<p style="font-size:0.8rem;color:#64748b;">${h.address}</p>` : ''}
+                    <h4>${safeName}</h4>
+                    <div class="hotel-rating">⭐ ${safeRating}</div>
+                    ${safeAddress ? `<p style="font-size:0.8rem;color:#64748b;">${safeAddress}</p>` : ''}
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    ${h.price && h.price !== '料金情報なし' ? `<p>${h.price}</p>` : ''}
-                    <a href="https://www.google.com/maps/search/ホテル" target="_blank" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; text-decoration: none;">地図で確認・予約</a>
+                    ${safePrice ? `<p>${safePrice}</p>` : ''}
+                    <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; text-decoration: none;">地図で確認・予約</a>
                 </div>
             </div>
         `;
@@ -3140,27 +5074,37 @@ window.renderShareView = function () {
         sharedListContainer.innerHTML = `<div class="modal-empty">投稿されたプランはありません。</div>`;
     } else {
         sharedPlans.forEach(sp => {
-            const nightsText = `${sp.nights}泊${sp.nights + 1}日`;
+            const nights = parseInt(sp.nights, 10) || 0;
+            const nightsText = `${nights}泊${nights + 1}日`;
             const reactions = sp.reactions || { like: 0, heart: 0, fire: 0, wow: 0 };
             const standStatsArr = sp.standStats ? JSON.stringify(sp.standStats) : "null";
+            const safeAuthor = escapeHTML(sp.author);
+            const safeDate = escapeHTML(sp.date);
+            const safePref = escapeHTML(sp.prefecture);
+            const safeDest = escapeHTML(sp.destination);
+            const safePeople = escapeHTML(sp.people);
+            const safeBudget = escapeHTML(sp.budget ? sp.budget.toLocaleString() : "0");
+            const safeItinerary = escapeHTML(sp.itineraryText || "").replace(/\n/g, "<br>");
+            const safeAvatar = encodeURIComponent(sp.avatar || "traveler");
+
             const div = document.createElement("div");
             div.className = "shared-plan-card";
             div.innerHTML = `
                 <div class="shared-card-header">
                     <div class="shared-author-info">
-                        <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${sp.avatar || 'traveler'}" class="shared-author-avatar" alt="Avatar">
+                        <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${safeAvatar}" class="shared-author-avatar" alt="Avatar">
                         <div>
-                            <span class="shared-author-name">${sp.author}</span>
-                            <span class="shared-date-badge">プラン作成日: ${sp.date}</span>
+                            <span class="shared-author-name">${safeAuthor}</span>
+                            <span class="shared-date-badge">プラン作成日: ${safeDate}</span>
                         </div>
                     </div>
-                    <span class="shared-pref-badge">📍 ${sp.prefecture}</span>
+                    <span class="shared-pref-badge">📍 ${safePref}</span>
                 </div>
                 <div class="shared-card-body">
-                    <h4>📅 ${sp.destination} の旅 (${nightsText})</h4>
-                    <p class="shared-details">👥 ${sp.people}名様 | 💰 予算目安: ${sp.budget.toLocaleString()}円程度</p>
+                    <h4>📅 ${safeDest} の旅 (${nightsText})</h4>
+                    <p class="shared-details">👥 ${safePeople}名様 | 💰 予算目安: ${safeBudget}円程度</p>
                     <div class="shared-itinerary-preview" onclick="toggleSharedItinerary(this)">
-                        <div class="preview-text">${sp.itineraryText}</div>
+                        <div class="preview-text">${safeItinerary}</div>
                         <div class="preview-fade"></div>
                         <div class="preview-toggle-btn">行程をすべて表示</div>
                     </div>
@@ -3751,10 +5695,13 @@ window.renderSavedSpotsHome = function () {
         const card = document.createElement("div");
         card.className = "saved-spot-thumbnail-card";
         card.setAttribute("data-id", item.id);
+        const safeName = escapeHTML(item.name);
+        const safePref = escapeHTML(item.prefecture);
+        const safeImg = escapeHTML(item.img || NO_IMAGE_URL);
         card.innerHTML = `
-                <img src="${item.img}" alt="${item.name}">
+                <img src="${safeImg}" alt="${safeName}" onerror="this.onerror=null;this.src='${NO_IMAGE_URL}'">
                 <div class="thumbnail-overlay"></div>
-                <span class="thumbnail-pref">📍 ${item.prefecture}</span>
+                <span class="thumbnail-pref">📍 ${safePref}</span>
                 <h4 class="thumbnail-name">${getDisplayName(item.name)}</h4>
                 <button class="thumbnail-star-btn ${isStarred ? 'starred' : ''}" onclick="toggleFavoriteFromHome(this, event, ${item.id})">
                     <span class="material-icons star-icon">${isStarred ? 'star' : 'star_border'}</span>
@@ -4065,23 +6012,27 @@ window.renderProactiveSuggestions = function () {
         // タイムライン
         let timelineHTML = "";
         if (sug.spots.length === 1) {
-            const s = sug.spots[0];
+            const sName = escapeHTML(sug.spots[0].name);
             timelineHTML = `
-                ・10:00 - 出発して「${s.name}」へ移動<br>
-                ・11:30 - 「${s.name}」到着＆観光<br>
+                ・10:00 - 出発して「${sName}」へ移動<br>
+                ・11:30 - 「${sName}」到着＆観光<br>
                 ・13:00 - 周辺の特産ランチ＆カフェ散策
             `;
         } else {
-            const s1 = sug.spots[0];
-            const s2 = sug.spots[1];
+            const s1Name = escapeHTML(sug.spots[0].name);
+            const s2Name = escapeHTML(sug.spots[1].name);
             timelineHTML = `
-                ・09:30 - 出発して「${s1.name}」を観光<br>
+                ・09:30 - 出発して「${s1Name}」を観光<br>
                 ・12:00 - 地元の名物ランチを堪能<br>
-                ・13:30 - 「${s2.name}」へ移動＆散策
+                ・13:30 - 「${s2Name}」へ移動＆散策
             `;
         }
 
         const isDefault = likes.length === 0;
+        const safeTitle = escapeHTML(sug.title);
+        const safeCompanion = escapeHTML(sug.companion);
+        const safeTransport = escapeHTML(sug.transport);
+        const safeBudget = escapeHTML(sug.budget);
 
         const card = document.createElement("div");
         card.className = "proactive-suggestion-card";
@@ -4092,22 +6043,22 @@ window.renderProactiveSuggestions = function () {
                 ${getSugSeasonBadgeHtml(sug.season)}
             </div>
             
-            <h4 class="sug-title" style="font-size: 1.05rem; font-weight: 800; margin-bottom: 12px; color: var(--text-color);">${sug.title}</h4>
+            <h4 class="sug-title" style="font-size: 1.05rem; font-weight: 800; margin-bottom: 12px; color: var(--text-color);">${safeTitle}</h4>
             
             <div class="sug-spots" style="display: flex; align-items: center; gap: 8px; background: var(--item-bg); padding: 10px; border-radius: 12px; margin-bottom: 10px;">
                 ${sug.spots.map((spot, idx) => `
                     ${idx > 0 ? '<span class="sug-arrow" style="color: var(--text-muted); font-weight: bold;">➔</span>' : ''}
                     <div class="sug-spot-item" style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; color: var(--text-color);">
-                        <img src="${spot.img}" class="sug-thumb" style="width: 32px; height: 32px; border-radius: 6px; object-fit: cover;">
-                        <span>${spot.name}</span>
+                        <img src="${escapeHTML(spot.img || NO_IMAGE_URL)}" class="sug-thumb" style="width: 32px; height: 32px; border-radius: 6px; object-fit: cover;" alt="${escapeHTML(spot.name)}" onerror="this.onerror=null;this.src='${NO_IMAGE_URL}'">
+                        <span>${escapeHTML(spot.name)}</span>
                     </div>
                 `).join("")}
             </div>
 
             <div class="sug-meta" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
-                <span style="font-size: 0.7rem; background: rgba(0,0,0,0.04); color: var(--text-muted); padding: 2px 8px; border-radius: 6px; font-weight: 600;">👥 ${sug.companion}</span>
-                <span style="font-size: 0.7rem; background: rgba(0,0,0,0.04); color: var(--text-muted); padding: 2px 8px; border-radius: 6px; font-weight: 600;">🚗 ${sug.transport}</span>
-                <span style="font-size: 0.7rem; background: rgba(0,0,0,0.04); color: var(--text-muted); padding: 2px 8px; border-radius: 6px; font-weight: 600;">💰 ${sug.budget}</span>
+                <span style="font-size: 0.7rem; background: rgba(0,0,0,0.04); color: var(--text-muted); padding: 2px 8px; border-radius: 6px; font-weight: 600;">👥 ${safeCompanion}</span>
+                <span style="font-size: 0.7rem; background: rgba(0,0,0,0.04); color: var(--text-muted); padding: 2px 8px; border-radius: 6px; font-weight: 600;">🚗 ${safeTransport}</span>
+                <span style="font-size: 0.7rem; background: rgba(0,0,0,0.04); color: var(--text-muted); padding: 2px 8px; border-radius: 6px; font-weight: 600;">💰 ${safeBudget}</span>
             </div>
 
             <div class="sug-itinerary-preview" style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; border-left: 3px solid var(--border-color); padding-left: 8px; margin-bottom: 14px;">

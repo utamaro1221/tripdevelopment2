@@ -107,41 +107,54 @@ function getApiUrl(path) {
     return `${base}${path}`;
 }
 
-export function loadGoogleMaps(apiKey) {
+async function getSimAuthHeaders() {
+    const headers = { "Content-Type": "application/json" };
+    if (window._auth && window._auth.currentUser) {
+        try {
+            const token = await window._auth.currentUser.getIdToken();
+            if (token) headers["Authorization"] = `Bearer ${token}`;
+        } catch (e) {
+            console.warn("Auth token acquisition failed in simulation:", e);
+        }
+    }
+    return headers;
+}
+
+export async function loadGoogleMaps() {
+    if (simGoogleMapsLoaded && window.google && window.google.maps) {
+        return;
+    }
+    if (window.google && window.google.maps && window.google.maps.importLibrary) {
+        await Promise.all([
+            google.maps.importLibrary("maps"),
+            google.maps.importLibrary("geometry")
+        ]);
+        simGoogleMapsLoaded = true;
+        return;
+    }
     return new Promise((resolve, reject) => {
-        if (simGoogleMapsLoaded && window.google && window.google.maps) {
-            resolve();
-            return;
-        }
-        if (document.querySelector('script[src*="maps.googleapis.com"]')) {
-            const check = setInterval(() => {
-                if (window.google && window.google.maps) {
-                    clearInterval(check);
-                    simGoogleMapsLoaded = true;
-                    resolve();
-                }
-            }, 100);
-            return;
-        }
-        const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry,marker`;
-        script.async = true;
-        script.defer = true;
-        script.onload = () => {
-            simGoogleMapsLoaded = true;
-            resolve();
-        };
-        script.onerror = () => reject(new Error("Google Maps API loading failed"));
-        document.head.appendChild(script);
+        let attempts = 0;
+        const check = setInterval(() => {
+            attempts++;
+            if (window.google && window.google.maps) {
+                clearInterval(check);
+                simGoogleMapsLoaded = true;
+                resolve();
+            } else if (attempts > 50) {
+                clearInterval(check);
+                reject(new Error("Google Maps API loading timed out"));
+            }
+        }, 100);
     });
 }
 
 export async function fetchRoutesData(originLat, originLng, destLat, destLng, intermediates = []) {
     try {
         const url = getApiUrl("/api/travel/routes");
+        const headers = await getSimAuthHeaders();
         const response = await fetch(url, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: headers,
             body: JSON.stringify({
                 origin: { lat: originLat, lng: originLng },
                 destination: { lat: destLat, lng: destLng },
@@ -164,10 +177,11 @@ export async function fetchRoutesData(originLat, originLng, destLat, destLng, in
 export async function fetchPlaceDetails(query) {
     try {
         const url = getApiUrl("/api/travel/places");
+        const headers = await getSimAuthHeaders();
         const response = await fetch(url, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ textQuery: query })
+            headers: headers,
+            body: JSON.stringify({ textQuery: query, purpose: "spot" })
         });
         if (!response.ok) {
             throw new Error(`Places API Error: ${response.status}`);
@@ -386,7 +400,21 @@ function animateStep(timestamp) {
             }
             const banner = document.createElement("div");
             banner.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(15,23,42,0.95);color:#fff;padding:20px 32px;border-radius:16px;font-size:1.2rem;font-weight:800;z-index:99999;text-align:center;border:2px solid #4f8cff;box-shadow:0 8px 32px rgba(79,140,255,0.4);max-width:320px;";
-            banner.innerHTML = "📍 " + stop.label + " に到着！<br><span style='font-size:0.9rem;font-weight:400;opacity:0.9;margin-top:6px;display:block;'>" + stop.description + "</span><span style='font-size:0.8rem;font-weight:400;opacity:0.6;margin-top:8px;display:block;'>3秒後に再出発します</span>";
+
+            const titleEl = document.createElement("div");
+            titleEl.textContent = `📍 ${stop.label || ''} に到着！`;
+
+            const descEl = document.createElement("div");
+            descEl.style.cssText = "font-size:0.9rem;font-weight:400;opacity:0.9;margin-top:6px;";
+            descEl.textContent = stop.description || '';
+
+            const subEl = document.createElement("div");
+            subEl.style.cssText = "font-size:0.8rem;font-weight:400;opacity:0.6;margin-top:8px;";
+            subEl.textContent = "3秒後に再出発します";
+
+            banner.appendChild(titleEl);
+            banner.appendChild(descEl);
+            banner.appendChild(subEl);
             document.body.appendChild(banner);
             simStopTimer = setTimeout(function() {
                 banner.remove();
@@ -468,7 +496,7 @@ export async function open3DRouteSimulation(plan) {
         endLng = parseFloat(wp[wp.length - 1].lng);
         intermediates = wp.slice(1, wp.length - 1).map(p => ({ lat: parseFloat(p.lat), lng: parseFloat(p.lng) }));
     }
-    await loadGoogleMaps("AIzaSyB3NKrrdzg7yCnn_ATcmWs-r5j4Z5PDcBg");
+    await loadGoogleMaps();
     if (plan.departure) {
         await new Promise(function(resolve) {
             const geocoder = new google.maps.Geocoder();
