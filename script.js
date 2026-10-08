@@ -180,9 +180,25 @@ window.toggleNameDisplayMode = function () {
 };
 
 // ==========================================
-// 1. 観光スポットデータ定義 (近畿地方限定)
+// 1. 観光スポットデータ定義 (全国・モックデータ)
 // ==========================================
 const kinkiPlaces = [
+    {
+        id: 101,
+        name: "小樽運河",
+        prefecture: "北海道",
+        season: "冬",
+        category: "history",
+        description: "歴史ある石造り倉庫群が運河沿いに立ち並ぶ小樽を代表する観光地。夕暮れ時にはガス灯が灯り、レトロでロマンチックな雰囲気が漂います。四季折々の景観が美しく、散策路を歩きながら運河クルーズや周辺のガラス工房・スイーツ巡りを楽しむことができます。",
+        img: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?w=500&auto=format&fit=crop",
+        tags: ["歴史", "観光", "リラックス"],
+        lat: 43.1996,
+        lon: 140.9996,
+        companion: ["カップル", "一人旅", "友人グループ"],
+        budget: "スタンダード",
+        transport: "公共交通機関",
+        purpose: "歴史探訪"
+    },
     {
         id: 0,
         name: "清水寺",
@@ -628,6 +644,10 @@ const mockHotels = {
     "和歌山": [
         { name: "白浜温泉 むさし", rating: "4.3", price: "￥15,000〜", desc: "白良浜まで徒歩1分の好立地。和歌山の新鮮な海の幸バイキングと多彩な源泉掛け流し。" },
         { name: "インフィニート ホテル＆スパ 南紀白浜", rating: "4.7", price: "￥26,000〜", desc: "高台から太平洋を一望する絶景インフィニティ温泉。欧米スタイルの上質なスパリゾート。" }
+    ],
+    "北海道": [
+        { name: "運河の宿 おたる ふる川", rating: "4.7", price: "￥22,000〜", desc: "小樽運河の目の前に位置するノスタルジックな温泉宿。運河を望む展望風呂が自慢。" },
+        { name: "ホテルノルド小樽", rating: "4.4", price: "￥12,000〜", desc: "小樽運河を望むヨーロッパ調のクラシックホテル。最上階のラウンジからの眺望が格別。" }
     ]
 };
 
@@ -913,8 +933,8 @@ function initApp() {
     // 「興味なし」リストの自動削除 (15日経過したものをパージ)
     purgeOldAnmaris();
 
-    // 検索カードプールの準備
-    applyFilters();
+    // 検索カードプールの準備 (初期おすすめスポット反映)
+    loadInitialSpot();
 
     // ホームカウントとリストの表示
     updateGridCounts();
@@ -1268,7 +1288,7 @@ function getSugSeasonBadgeHtml(season) {
 
 function createCardElement(data, isTopCard) {
     const card = document.createElement("div");
-    card.className = "swipe-card";
+    card.className = "swipe-card spot-card";
     // 表示優先順位の設定（待機カードも同サイズ・同位置でフラットに重ねる）
     card.style.zIndex = isTopCard ? 5 : 1;
     if (!isTopCard) {
@@ -1297,7 +1317,7 @@ function createCardElement(data, isTopCard) {
                 <span class="tag-pill"><span class="material-icons">commute</span>${data.transport || '公共交通機関'}</span>
                 <span class="tag-pill"><span class="material-icons">explore</span>${data.purpose || '観光'}</span>
             </div>
-            <p>${data.description}</p>
+            <p class="spot-description">${data.description}</p>
         </div>
     `;
 
@@ -4237,4 +4257,37 @@ if (filterPref && chatPref) {
         filterPref.value = chatPref.value;
         applyFilters();
     });
+}
+
+// ==========================================
+// 15. アプリ起動時の初期スポット読み込み
+// ==========================================
+window.loadInitialSpot = function () {
+    const prefSelect = document.getElementById("filterPrefecture");
+    if (prefSelect) {
+        prefSelect.value = "北海道";
+    }
+    const chatPrefSelect = document.getElementById("chatPrefecture");
+    if (chatPrefSelect) {
+        chatPrefSelect.value = "北海道";
+    }
+    activeFilters.prefecture = "北海道";
+
+    // アプリ起動時に探す（スワイプ）画面を表示
+    if (typeof switchView === "function") {
+        const swipeNav = document.querySelector(".sidebar-item:nth-child(2)");
+        switchView("swipe", swipeNav);
+    }
+
+    // フィルタを適用してモックデータの「小樽運河」をスポットカードに表示
+    applyFilters();
+};
+
+// DOMContentLoaded イベントで初期スポット読み込みを実行
+if (document.readyState === "loading") {
+    window.addEventListener("DOMContentLoaded", () => {
+        loadInitialSpot();
+    });
+} else {
+    loadInitialSpot();
 }
