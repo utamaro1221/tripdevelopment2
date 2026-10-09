@@ -5521,15 +5521,6 @@ function removeTypingIndicator(id) {
     if (el) el.remove();
 }
 
-function escapeHTML(str) {
-    return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
 // ==========================================
 // handleSendChatMessage - チャットメッセージ送信
 // ==========================================
@@ -5683,8 +5674,10 @@ window.renderSavedSpotsHome = function () {
 
     if (likes.length === 0) {
         scrollContainer.innerHTML = `
-            <div class="saved-spots-empty" style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.85rem; width: 100%;">
+            <div class="saved-spots-empty">
+                <span class="material-icons saved-spots-empty-icon">bookmark_border</span>
                 保存したスポットはまだありません。<br>「探す」タブでスワイプして保存しましょう！
+                <button class="btn-primary" onclick="switchView('swipe')">スポットを探す</button>
             </div>
         `;
         return;
