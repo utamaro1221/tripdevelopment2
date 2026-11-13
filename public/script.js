@@ -1,4 +1,5 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+﻿import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
 import {
     getAuth,
     signInWithEmailAndPassword,
@@ -39,19 +40,34 @@ window.getPathPointAndHeading = getPathPointAndHeading;
 
 // Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyDeC3R7NLajt8zesqmQalgoeYSdtmicOPk",
-    authDomain: "tripdevelopment-d109d.firebaseapp.com",
-    projectId: "tripdevelopment-d109d",
-    storageBucket: "tripdevelopment-d109d.firebasestorage.app",
-    messagingSenderId: "15713811869",
-    appId: "1:15713811869:web:0928db27dfa1d906e3c374",
-    measurementId: "G-ZLZET7PJMS"
+    apiKey: "AIzaSyC9Sk685SKTMaPEdzGlG4k9ud5JN6A4STE",
+    authDomain: "tora-1c525.firebaseapp.com",
+    projectId: "tora-1c525",
+    storageBucket: "tora-1c525.firebasestorage.app",
+    messagingSenderId: "653968349377",
+    appId: "1:653968349377:web:ffc825383ea33e5c86dc40",
+    measurementId: "G-HQXJFMSH4T"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 window._auth = auth;
+
+let analytics = null;
+try {
+    analytics = getAnalytics(app);
+} catch (e) {
+    console.warn("Analytics initialization failed:", e);
+}
+window._analytics = analytics;
+
+// 認証確定を待つ Promise (A6: 初回 onAuthStateChanged コールバックで解決)
+let resolveAuthReady;
+export const authReadyPromise = new Promise((resolve) => {
+    resolveAuthReady = resolve;
+});
+window.authReadyPromise = authReadyPromise;
 
 // ==========================================
 // 🛡️ XSS防止・サニタイズユーティリティ (A7)
@@ -81,6 +97,7 @@ window.sanitizeUrl = sanitizeUrl;
 // 🛡️ 認証ヘッダー取得ユーティリティ (A6)
 // ==========================================
 async function getAuthHeaders() {
+    await authReadyPromise;
     const headers = { 'Content-Type': 'application/json' };
     if (auth && auth.currentUser) {
         try {
@@ -94,6 +111,44 @@ async function getAuthHeaders() {
 }
 window.getAuthHeaders = getAuthHeaders;
 
+
+// ==========================================
+// 🌟 写真取得用のキャッシュ・キュー・重複排除
+// ==========================================
+const pendingPhotoRequests = new Map();
+
+class AsyncQueue {
+    constructor(concurrency = 3) {
+        this.concurrency = concurrency;
+        this.running = 0;
+        this.queue = [];
+    }
+
+    enqueue(task) {
+        return new Promise((resolve, reject) => {
+            this.queue.push({ task, resolve, reject });
+            this.dequeue();
+        });
+    }
+
+    dequeue() {
+        if (this.running >= this.concurrency || this.queue.length === 0) {
+            return;
+        }
+        const { task, resolve, reject } = this.queue.shift();
+        this.running++;
+        task()
+            .then(resolve)
+            .catch(reject)
+            .finally(() => {
+                this.running--;
+                this.dequeue();
+            });
+    }
+}
+
+const photoQueue = new AsyncQueue(3);
+
 // ==========================================
 // 🌟 429エラー対策: 画像の遅延読み込み (Lazy Loading) オブザーバー
 // ==========================================
@@ -104,7 +159,7 @@ const imageObserver = new IntersectionObserver((entries, observer) => {
             const placeName = card.dataset.placeName;
             const imgEl = card.querySelector('img');
 
-            if (placeName && imgEl && (imgEl.src.includes('unsplash.com') || imgEl.src.includes('loremflickr.com'))) {
+            if (placeName && imgEl && (imgEl.src.includes('unsplash.com') || imgEl.src.includes('loremflickr.com') || imgEl.src === NO_IMAGE_URL || !imgEl.src)) {
                 fetchPlacePhoto(placeName).then(url => {
                     const resolvedUrl = (url && !url.includes('placehold.co')) ? url : NO_IMAGE_URL;
                     imgEl.src = resolvedUrl;
@@ -119,6 +174,7 @@ const imageObserver = new IntersectionObserver((entries, observer) => {
     rootMargin: '100px 0px',
     threshold: 0.1
 });
+
 // ==========================================
 // 🌟 本物の Google Places API を呼び出す関数
 // ==========================================
@@ -131,30 +187,100 @@ window.fetchPlacePhoto = async function (placeName) {
         return placeName;
     }
 
+    // 1. sessionStorage キャッシュ確認（同一 placeName は再リクエストしない）
+    const cacheKey = `place_photo_${placeName}`;
     try {
-        const url = new URL("https://tripdevelopment2.onrender.com/api/travel/places");
-        const headers = await getAuthHeaders();
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify({ textQuery: placeName, purpose: "photo", languageCode: "ja" })
-        });
-
-        if (!response.ok) throw new Error(`Places API Error: ${response.status}`);
-        const data = await response.json();
-
-        if (data.places && data.places.length > 0 && data.places[0].photos && data.places[0].photos.length > 0) {
-            const photoName = data.places[0].photos[0].name;
-            return `https://tripdevelopment2.onrender.com/api/travel/photo?name=${encodeURIComponent(photoName)}&maxWidthPx=800`;
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+            return cached;
         }
+    } catch (e) { }
 
-    } catch (error) {
-        console.error(`[API通信エラー] ${placeName} の写真取得に失敗:`, error);
+    // 2. 同一 placeName の進行中 Promise があれば共有（重複リクエスト排除）
+    if (pendingPhotoRequests.has(placeName)) {
+        return pendingPhotoRequests.get(placeName);
     }
 
-    return NO_IMAGE_URL;
+    const requestPromise = (async () => {
+        try {
+            // 認証確定を待つ
+            await authReadyPromise;
+
+            // 未ログイン状態（currentUser が null）のときは API を呼ばずスキップ
+            if (!auth || !auth.currentUser) {
+                return NO_IMAGE_URL;
+            }
+
+            // 同時実行キュー（同時3件に制限）経由で実行
+            return await photoQueue.enqueue(async () => {
+                // キュー待機中にキャッシュされたか再チェック
+                try {
+                    const cached = sessionStorage.getItem(cacheKey);
+                    if (cached) return cached;
+                } catch (e) { }
+
+                const url = new URL("https://tripdevelopment2.onrender.com/api/travel/places");
+
+                const doFetch = async (forceRefresh = false) => {
+                    let token = null;
+                    if (auth && auth.currentUser) {
+                        try {
+                            token = await auth.currentUser.getIdToken(forceRefresh);
+                        } catch (e) {
+                            console.warn("Failed to get Firebase token:", e);
+                        }
+                    }
+                    if (!token) return null;
+
+                    const headers = {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    };
+
+                    return await fetch(url, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify({ textQuery: placeName, purpose: "photo", languageCode: "ja" })
+                    });
+                };
+
+                let response = await doFetch(false);
+
+                // 401 が返ったときは getIdToken(true) で強制更新して 1 回だけ再試行
+                if (response && response.status === 401 && auth && auth.currentUser) {
+                    console.warn(`[Places API 401] トークンを強制更新して再試行します: ${placeName}`);
+                    response = await doFetch(true);
+                }
+
+                if (!response || !response.ok) {
+                    console.warn(`[Places API] 写真取得失敗 (Status: ${response ? response.status : 'No response'}): ${placeName}`);
+                    return NO_IMAGE_URL;
+                }
+
+                const data = await response.json();
+                if (data.places && data.places.length > 0 && data.places[0].photos && data.places[0].photos.length > 0) {
+                    const photoName = data.places[0].photos[0].name;
+                    const photoUrl = `https://tripdevelopment2.onrender.com/api/travel/photo?name=${encodeURIComponent(photoName)}&maxWidthPx=800`;
+                    try {
+                        sessionStorage.setItem(cacheKey, photoUrl);
+                    } catch (e) { }
+                    return photoUrl;
+                }
+
+                return NO_IMAGE_URL;
+            });
+        } catch (error) {
+            console.warn(`[Places API] 写真取得エラー: ${placeName}`, error);
+            return NO_IMAGE_URL;
+        } finally {
+            pendingPhotoRequests.delete(placeName);
+        }
+    })();
+
+    pendingPhotoRequests.set(placeName, requestPromise);
+    return requestPromise;
 };
+
 
 const nameDisplayModeMap = {
     "清水寺": { kanji: "清水寺", ruby: "<ruby>清水寺<rt>きよみずでら</rt></ruby>", hiragana: "きよみずでら" },
@@ -2587,13 +2713,38 @@ window.tryEnteringApp = function () {
 };
 
 // ログイン状態の監視とUI更新
+let isAuthReadyResolved = false;
 onAuthStateChanged(auth, (user) => {
+    if (!isAuthReadyResolved) {
+        isAuthReadyResolved = true;
+        resolveAuthReady(user);
+    }
     isAuthStateResolved = true;
     updateAuthUI(user);
+    if (user) {
+        // ログイン確定後、プレースホルダー状態の表示中カードがあれば写真を再取得
+        refreshVisiblePlacePhotos();
+    }
     if (isSplashAnimationFinished) {
         tryEnteringApp();
     }
 });
+
+function refreshVisiblePlacePhotos() {
+    if (!auth || !auth.currentUser) return;
+    document.querySelectorAll('.spot-card[data-place-name]').forEach(card => {
+        const placeName = card.dataset.placeName;
+        const imgEl = card.querySelector('img');
+        if (placeName && imgEl && (imgEl.src === NO_IMAGE_URL || imgEl.src.includes('placehold.co'))) {
+            fetchPlacePhoto(placeName).then(url => {
+                const resolvedUrl = (url && !url.includes('placehold.co')) ? url : NO_IMAGE_URL;
+                imgEl.src = resolvedUrl;
+                const place = kinkiPlaces.find(p => p.name === placeName);
+                if (place) place.img = resolvedUrl;
+            });
+        }
+    });
+}
 
 function updateAuthUI(user) {
     const settingsUserStatus = document.getElementById("settingsUserStatus");
@@ -3545,6 +3696,7 @@ function getApiUrl(path) {
 
 // Safely fetch and parse JSON, checking response.ok first to avoid JSON parsing errors on HTML/text errors.
 async function safeFetchJson(url, options = {}) {
+    await authReadyPromise;
     const opts = { ...options };
     opts.headers = { ...(opts.headers || {}) };
     if (auth && auth.currentUser) {

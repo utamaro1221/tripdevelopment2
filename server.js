@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
@@ -143,7 +143,7 @@ function checkAndIncrementDailyLimit(apiType) {
 // A6. Firebase ID トークン検証 (JWKSによる軽量検証)
 // /generate, /places, /routes を認証必須化
 // =================================================================
-const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'tripdevelopment-d109d';
+const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'tora-1c525';
 const JWKS = createRemoteJWKSet(
     new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
 );
