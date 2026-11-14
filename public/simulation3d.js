@@ -280,10 +280,12 @@ export function simUpdateHUD(data) {
         const km = (data.distance / 1000).toFixed(1);
         distEl.textContent = `${km} km`;
     }
-    if (timeEl && data.elapsed !== undefined) {
-        const mins = Math.floor(data.elapsed / 60);
-        const secs = Math.floor(data.elapsed % 60);
-        timeEl.textContent = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    if (timeEl && (data.estimatedTime !== undefined || data.elapsed !== undefined)) {
+        const totalSeconds = data.estimatedTime !== undefined ? data.estimatedTime : data.elapsed;
+        const totalMins = Math.floor(totalSeconds / 60);
+        const hours = Math.floor(totalMins / 60);
+        const mins = totalMins % 60;
+        timeEl.textContent = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
     }
     if (progEl && data.progress !== undefined) {
         progEl.style.width = `${Math.round(data.progress * 100)}%`;
@@ -448,11 +450,36 @@ function animateStep(timestamp) {
             simVehicleMarker.position = { lat: point.lat, lng: point.lng };
         }
     }
-    const simulatedSpeed = baseSpeed * simSpeed + Math.sin(simProgress * Math.PI * 4) * 5;
+    // 🌟 HUD表示速度の計算 (現実に即した移動速度の算出)
+    // ・総距離 < 5km: 40 km/h 前後（徒歩・車市街地）
+    // ・5km〜50km: 40〜60 km/h（車・在来線）
+    // ・50km以上: 新幹線を想定して 200〜285 km/h
+    const totalDistKm = simTotalDistance / 1000;
+    let baseRealisticSpeed;
+    if (totalDistKm < 5) {
+        baseRealisticSpeed = 40;
+    } else if (totalDistKm < 50) {
+        baseRealisticSpeed = 40 + ((totalDistKm - 5) / 45) * 20;
+    } else {
+        const ratio = Math.min(1, (totalDistKm - 50) / 250);
+        baseRealisticSpeed = 200 + ratio * 85;
+    }
+
+    // ±5% の微細な揺らぎを加える
+    const wobble = 1 + (Math.sin(simProgress * Math.PI * 8 + timestamp * 0.002) * 0.05);
+    // simSpeed スライダーに比例し、上限 300 km/h でクランプ
+    let displaySpeed = baseRealisticSpeed * wobble * simSpeed;
+    displaySpeed = Math.min(300, Math.max(0, displaySpeed));
+
     const traveledDistance = simTotalDistance * simProgress;
+    const traveledKm = traveledDistance / 1000;
+    // 表示速度と走行距離から計算した想定所要時間（秒）
+    const estimatedSeconds = baseRealisticSpeed > 0 ? (traveledKm / baseRealisticSpeed) * 3600 : 0;
+
     simUpdateHUD({
-        speed: simulatedSpeed,
+        speed: displaySpeed,
         distance: traveledDistance,
+        estimatedTime: estimatedSeconds,
         elapsed: elapsed,
         progress: simProgress
     });
