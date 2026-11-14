@@ -2487,6 +2487,94 @@ const SPOT_TEMPLATES = [
 ];
 
 // 動的スポット生成関数
+// ==========================================
+// 📍 全国・地方グループ定義と保存ヘルパー (修正2)
+// ==========================================
+const REGION_PREFECTURES = {
+    "region:hokkaido_tohoku": ["北海道", "青森", "岩手", "宮城", "秋田", "山形", "福島"],
+    "region:kanto": ["茨城", "栃木", "群馬", "埼玉", "千葉", "東京", "神奈川"],
+    "region:chubu": ["新潟", "富山", "石川", "福井", "山梨", "長野", "岐阜", "静岡", "愛知"],
+    "region:kinki": ["三重", "滋賀", "京都", "大阪", "兵庫", "奈良", "和歌山"],
+    "region:chugoku": ["鳥取", "島根", "岡山", "広島", "山口"],
+    "region:shikoku": ["徳島", "香川", "愛媛", "高知"],
+    "region:kyushu_okinawa": ["福岡", "佐賀", "長崎", "熊本", "大分", "宮崎", "鹿児島", "沖縄"]
+};
+
+const VALID_PREF_VALUES = new Set([
+    "all",
+    "region:hokkaido_tohoku", "region:kanto", "region:chubu", "region:kinki", "region:chugoku", "region:shikoku", "region:kyushu_okinawa",
+    "北海道", "青森", "岩手", "宮城", "秋田", "山形", "福島",
+    "茨城", "栃木", "群馬", "埼玉", "千葉", "東京", "神奈川",
+    "新潟", "富山", "石川", "福井", "山梨", "長野", "岐阜", "静岡", "愛知",
+    "三重", "滋賀", "京都", "大阪", "兵庫", "奈良", "和歌山",
+    "鳥取", "島根", "岡山", "広島", "山口",
+    "徳島", "香川", "愛媛", "高知",
+    "福岡", "佐賀", "長崎", "熊本", "大分", "宮崎", "鹿児島", "沖縄"
+]);
+
+function getSavedPrefecture() {
+    try {
+        const saved = localStorage.getItem("selectedPrefecture");
+        if (saved && VALID_PREF_VALUES.has(saved)) {
+            return saved;
+        }
+    } catch (e) {}
+    return "all";
+}
+
+function saveSelectedPrefecture(val) {
+    if (VALID_PREF_VALUES.has(val)) {
+        try {
+            localStorage.setItem("selectedPrefecture", val);
+        } catch (e) {}
+    }
+}
+
+// 🌟 全国のとき各県から均等に混ぜて表示する（同じ県が連続しないようシャッフル・インターリーブ）
+function interleaveByPrefecture(places) {
+    if (places.length <= 1) return places;
+    const prefMap = new Map();
+    places.forEach(p => {
+        const pref = p.prefecture || "その他";
+        if (!prefMap.has(pref)) prefMap.set(pref, []);
+        prefMap.get(pref).push(p);
+    });
+
+    const keys = Array.from(prefMap.keys());
+    for (let i = keys.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [keys[i], keys[j]] = [keys[j], keys[i]];
+    }
+    for (const k of keys) {
+        const arr = prefMap.get(k);
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+    }
+
+    const result = [];
+    let lastPref = null;
+    let hasMore = true;
+
+    while (hasMore) {
+        hasMore = false;
+        const availableKeys = keys.filter(k => prefMap.get(k).length > 0);
+        if (availableKeys.length === 0) break;
+
+        let chosenKey = availableKeys.find(k => k !== lastPref);
+        if (!chosenKey) {
+            chosenKey = availableKeys[0];
+        }
+
+        const item = prefMap.get(chosenKey).shift();
+        result.push(item);
+        lastPref = chosenKey;
+        hasMore = true;
+    }
+    return result;
+}
+
 function generateDynamicSpots(prefecture, neededCount, startId = 10000) {
     const coords = PREFECTURE_COORDINATES[prefecture] || { lat: 35.689, lon: 139.692 };
     const generated = [];
@@ -2511,15 +2599,16 @@ function generateDynamicSpots(prefecture, neededCount, startId = 10000) {
             companion: [...tmpl.companion],
             budget: tmpl.budget,
             transport: tmpl.transport,
-            purpose: tmpl.purpose
+            purpose: tmpl.purpose,
+            isSample: true // 🌟 テンプレ生成品（サンプル）明示フラグ
         });
     }
     return generated;
 }
 
-// 都道府県ごとに15〜20件の観光スポットを確実に確保する関数
-function ensurePrefectureSpots(prefInput, targetCount = 16) {
-    if (!prefInput || prefInput === "all") {
+// 都道府県ごとに観光スポットを確保する関数（実在スポット最優先、テンプレ生成は最後の手段）
+function ensurePrefectureSpots(prefInput, targetCount = 10) {
+    if (!prefInput || prefInput === "all" || prefInput.startsWith("region:")) {
         return;
     }
     const normPref = normalizePrefectureName(prefInput);
@@ -2533,7 +2622,7 @@ function ensurePrefectureSpots(prefInput, targetCount = 16) {
     const existingNames = new Set(kinkiPlaces.map(p => p.name));
     const newSpots = [];
 
-    // 1. 主要県リアルプリセットにあれば優先追加
+    // 1. 主要県リアルプリセットにあれば最優先で追加
     if (PRESET_REAL_SPOTS[normPref]) {
         for (const spot of PRESET_REAL_SPOTS[normPref]) {
             if (!existingNames.has(spot.name) && newSpots.length < needed) {
@@ -2543,9 +2632,10 @@ function ensurePrefectureSpots(prefInput, targetCount = 16) {
         }
     }
 
-    // 2. まだ不足があれば動的ジェネレータで補完
-    if (newSpots.length < needed) {
-        const stillNeeded = needed - newSpots.length;
+    // 2. 実在スポットを追加してもなお極端に少ない（2件未満など）場合のみ、最後の手段として最小限補完
+    const currentTotal = existing.length + newSpots.length;
+    if (currentTotal < 3) {
+        const stillNeeded = Math.min(3 - currentTotal, needed - newSpots.length);
         const maxId = kinkiPlaces.reduce((max, p) => Math.max(max, p.id || 0), 3000);
         const dynamicSpots = generateDynamicSpots(normPref, stillNeeded, maxId + 1);
         for (const dSpot of dynamicSpots) {
@@ -3037,6 +3127,10 @@ function showToast(message) {
 let isSwipeAnimating = false; // スワイプアニメーション中の二重操作ガード
 
 window.applyFilters = function () {
+    // 🌟 アニメーションとドラッグ状態をリセット (要件6: スタック破損防止)
+    isSwipeAnimating = false;
+    isDragging = false;
+
     const seasonSelect = document.getElementById("filterSeason");
     const catSelect = document.getElementById("filterCategory");
     const prefSelect = document.getElementById("filterPrefecture");
@@ -3044,12 +3138,19 @@ window.applyFilters = function () {
     const selectedPref = prefSelect ? prefSelect.value : "all";
     const selectedTag = tagSelect ? tagSelect.value : "all";
 
-    // 🌟 1. 観光スポット候補の増量: 選択された都道府県のスポットを動的に16件確保
+    // 🌟 選択された都道府県を localStorage に保存 (要件3)
+    saveSelectedPrefecture(selectedPref);
+
+    // 観光スポットの確保
     if (selectedPref !== "all") {
-        ensurePrefectureSpots(selectedPref, 16);
+        if (selectedPref.startsWith("region:")) {
+            const regionPrefs = REGION_PREFECTURES[selectedPref] || [];
+            regionPrefs.forEach(p => ensurePrefectureSpots(p, 6));
+        } else {
+            ensurePrefectureSpots(selectedPref, 12);
+        }
     } else {
-        // 「すべて」の場合も主要都道府県を中心に充実させる
-        ["東京", "北海道", "京都", "大阪", "沖縄", "福岡", "神奈川"].forEach(p => ensurePrefectureSpots(p, 10));
+        ["東京", "北海道", "京都", "大阪", "沖縄", "福岡", "神奈川"].forEach(p => ensurePrefectureSpots(p, 6));
     }
 
     const tagToCategoryMap = {
@@ -3072,11 +3173,25 @@ window.applyFilters = function () {
         const matchSeason = (activeFilters.season === "all" || place.season === activeFilters.season || (place.season && place.season.includes("通年")));
         const matchCat = (activeFilters.category === "all" || place.category === activeFilters.category);
         const normPlacePref = normalizePrefectureName(place.prefecture);
-        const matchPref = (normSelectedPref === "all" ||
-            normPlacePref === normSelectedPref ||
-            place.prefecture === selectedPref ||
-            place.prefecture.startsWith(normSelectedPref) ||
-            normSelectedPref.startsWith(normPlacePref));
+
+        // 🌟 地方グループ・都道府県・全国の柔軟な絞り込み (要件2)
+        let matchPref = false;
+        if (selectedPref === "all") {
+            matchPref = true;
+        } else if (selectedPref.startsWith("region:")) {
+            const regionPrefs = REGION_PREFECTURES[selectedPref] || [];
+            matchPref = regionPrefs.some(p => {
+                const normP = normalizePrefectureName(p);
+                return normPlacePref === normP || place.prefecture === p || place.prefecture.startsWith(normP) || normP.startsWith(normPlacePref);
+            });
+        } else {
+            matchPref = (normSelectedPref === "all" ||
+                normPlacePref === normSelectedPref ||
+                place.prefecture === selectedPref ||
+                place.prefecture.startsWith(normSelectedPref) ||
+                normSelectedPref.startsWith(normPlacePref));
+        }
+
         const matchTag = (selectedCategory === "all" || place.category === selectedCategory);
         const isAlreadySelected = likes.some(l => l.id === place.id) || anmaris.some(a => a.id === place.id);
 
@@ -3095,12 +3210,16 @@ window.applyFilters = function () {
             place.tempCompatibilityScore = calculateCompatibilityScore(place);
         });
         currentCardPool.sort((a, b) => b.tempCompatibilityScore - a.tempCompatibilityScore);
+    } else if (selectedPref === "all" || selectedPref.startsWith("region:")) {
+        // 🌟 全国のとき（または地方のとき）、各県から均等に混ぜて表示 (要件4: シャッフル&インターリーブ)
+        currentCardPool = interleaveByPrefecture(currentCardPool);
     }
 
     nextPoolIndex = 0;
     renderStack();
 
-    if (currentCardPool.length === 0 && selectedPref === "all") {
+    // 🌟 候補が尽きた場合の Gemini 自動補充導線 (要件5)
+    if (currentCardPool.length === 0) {
         const existingNames = kinkiPlaces.map(p => p.name);
         fetchGeminiPlaces(existingNames).then(newPlaces => {
             if (newPlaces && newPlaces.length > 0) {
@@ -3303,6 +3422,7 @@ function createCardElement(data, isTopCard) {
             <img src="${safeImg}" class="card-img" alt="${safeName}" onerror="this.onerror=null;this.src='${NO_IMAGE_URL}'">
             <span class="card-prefecture-badge">📍 ${safePref}</span>
             ${getSeasonBadgeHtml(data.season)}
+            ${data.isSample ? '<span class="card-sample-badge">サンプル</span>' : ''}
             ${isRecommended ? `<span class="card-match-badge"><span class="material-icons" style="font-size: 0.95rem; vertical-align: middle;">bolt</span>AIマッチ度 ${matchScore}%</span>` : ''}
             <div class="swipe-stamp stamp-like">いいね</div>
             <div class="swipe-stamp stamp-anmari">興味なし</div>
@@ -3735,8 +3855,25 @@ async function fetchGeminiPlaces(excludeNames = []) {
     const url = getApiUrl("/api/travel/generate");
     const excludeStr = excludeNames.length > 0 ? `ただし、以下の観光地はすでに登録済みまたはスワイプ済みであるため、絶対に含めないでください: ${excludeNames.join(", ")}` : "";
 
-    const selectedPrefecture = document.getElementById('filterPrefecture').value;
-    const prefInstruction = selectedPrefecture === 'all' ? '日本全国の観光スポットの中から提案してください。' : `日本全国の観光スポットの中から、選択された都道府県（${selectedPrefecture}）に絞って提案してください。`;
+    const selectedPrefecture = document.getElementById('filterPrefecture') ? document.getElementById('filterPrefecture').value : 'all';
+    let prefInstruction;
+    if (selectedPrefecture === 'all') {
+        prefInstruction = '日本全国の観光スポットの中から提案してください。';
+    } else if (selectedPrefecture.startsWith('region:')) {
+        const regionNames = {
+            'region:hokkaido_tohoku': '北海道・東北地方',
+            'region:kanto': '関東地方',
+            'region:chubu': '中部地方',
+            'region:kinki': '近畿地方',
+            'region:chugoku': '中国地方',
+            'region:shikoku': '四国地方',
+            'region:kyushu_okinawa': '九州・沖縄地方'
+        };
+        const rName = regionNames[selectedPrefecture] || '該当地域';
+        prefInstruction = `日本全国の観光スポットの中から、${rName}に絞って提案してください。`;
+    } else {
+        prefInstruction = `日本全国の観光スポットの中から、選択された都道府県（${selectedPrefecture}）に絞って提案してください。`;
+    }
 
     const promptText = `
 ${prefInstruction}スワイプ型旅行アプリで表示する魅力的な観光スポット（名所、歴史的建造物、温泉、グルメ街、自然など）を新たに「5件」考案し、日本語のJSON形式で出力してください。
@@ -5689,7 +5826,19 @@ window.handleSendChatMessage = async function (event) {
     const prefSelect = document.getElementById("chatPrefecture");
     let apiMessageText = messageText;
     if (prefSelect && prefSelect.value !== "all") {
-        const prefVal = prefSelect.value;
+        let prefVal = prefSelect.value;
+        if (prefVal.startsWith("region:")) {
+            const regionNames = {
+                'region:hokkaido_tohoku': '北海道・東北',
+                'region:kanto': '関東',
+                'region:chubu': '中部',
+                'region:kinki': '近畿',
+                'region:chugoku': '中国地方',
+                'region:shikoku': '四国',
+                'region:kyushu_okinawa': '九州・沖縄'
+            };
+            prefVal = regionNames[prefVal] || prefVal;
+        }
         if (!messageText.includes(prefVal)) {
             apiMessageText = `${prefVal} ${messageText}`;
         }
@@ -6359,15 +6508,17 @@ if (filterPref && chatPref) {
 // 15. アプリ起動時の初期スポット読み込み
 // ==========================================
 window.loadInitialSpot = function () {
+    // 🌟 北海道固定を廃止: 前回選んだ都道府県を復元、初期値は全国 (要件3)
+    const initialPref = getSavedPrefecture();
     const prefSelect = document.getElementById("filterPrefecture");
     if (prefSelect) {
-        prefSelect.value = "北海道";
+        prefSelect.value = initialPref;
     }
     const chatPrefSelect = document.getElementById("chatPrefecture");
     if (chatPrefSelect) {
-        chatPrefSelect.value = "北海道";
+        chatPrefSelect.value = initialPref;
     }
-    activeFilters.prefecture = "北海道";
+    activeFilters.prefecture = initialPref;
 
     // アプリ起動時に探す（スワイプ）画面を表示
     if (typeof switchView === "function") {
@@ -6375,7 +6526,6 @@ window.loadInitialSpot = function () {
         switchView("swipe", swipeNav);
     }
 
-    // フィルタを適用してモックデータの「小樽運河」をスポットカードに表示
     applyFilters();
 };
 
