@@ -3552,8 +3552,7 @@ function initCardDrag(card, data) {
 
     card.addEventListener("pointerdown", e => {
         if (isSwipeAnimating) return;
-        // お気に入りボタンをクリックした時はカードのドラッグを開始しない
-        if (e.target.closest('.card-star-btn')) {
+        if (e.target.closest('.card-star-btn') || e.target.closest('.spot-description')) {
             return;
         }
         isDragging = true;
