@@ -127,7 +127,6 @@ export async function loadGoogleMaps() {
                 await Promise.all([
                     google.maps.importLibrary("maps"),
                     google.maps.importLibrary("geometry"),
-                    google.maps.importLibrary("routes"),
                     google.maps.importLibrary("geocoding"),
                     google.maps.importLibrary("places"),
                     google.maps.importLibrary("marker")
@@ -140,7 +139,6 @@ export async function loadGoogleMaps() {
         await Promise.all([
             google.maps.importLibrary("maps"),
             google.maps.importLibrary("geometry"),
-            google.maps.importLibrary("routes"),
             google.maps.importLibrary("geocoding"),
             google.maps.importLibrary("places"),
             google.maps.importLibrary("marker")
@@ -159,7 +157,6 @@ export async function loadGoogleMaps() {
                         await Promise.all([
                             google.maps.importLibrary("maps"),
                             google.maps.importLibrary("geometry"),
-                            google.maps.importLibrary("routes"),
                             google.maps.importLibrary("geocoding"),
                             google.maps.importLibrary("places"),
                             google.maps.importLibrary("marker")
@@ -472,6 +469,12 @@ function animateStep(timestamp) {
         simIsPlaying = false;
     }
     const point = getPathPointAndHeading(simPathCoords, simProgress);
+    if (simCurrentHeading === null || isNaN(simCurrentHeading)) {
+        simCurrentHeading = point.heading;
+    } else {
+        const diff = ((point.heading - simCurrentHeading + 540) % 360) - 180;
+        simCurrentHeading = (simCurrentHeading + diff * 0.2 + 360) % 360;
+    }
     const passedPath = [];
     const targetDist = simProgress * (simPathCoords._totalDist || 0);
     passedPath.push(simPathCoords[0]);
@@ -484,21 +487,32 @@ function animateStep(timestamp) {
     }
     passedPath.push({ lat: point.lat, lng: point.lng });
     if (simProgressPolyline) {
-        simProgressPolyline.setPath(passedPath);
+        if (typeof simProgressPolyline.setPath === "function") {
+            simProgressPolyline.setPath(passedPath);
+        } else {
+            simProgressPolyline.coordinates = passedPath.map(function (p) {
+                return { lat: p.lat, lng: p.lng, altitude: 0 };
+            });
+        }
     }
     if (simMap) {
         if (typeof simMap.moveCamera === "function") {
             simMap.moveCamera({
                 center: { lat: point.lat, lng: point.lng },
-                heading: point.heading,
-                tilt: 60,
-                zoom: 16
+                heading: simCurrentHeading,
+                tilt: 65,
+                zoom: 18
             });
-        } else {
+        } else if (typeof simMap.setCenter === "function") {
             simMap.setCenter({ lat: point.lat, lng: point.lng });
-            if (typeof simMap.setHeading === "function") simMap.setHeading(point.heading);
-            if (typeof simMap.setTilt === "function") simMap.setTilt(60);
-            if (typeof simMap.setZoom === "function") simMap.setZoom(16);
+            if (typeof simMap.setHeading === "function") simMap.setHeading(simCurrentHeading);
+            if (typeof simMap.setTilt === "function") simMap.setTilt(65);
+            if (typeof simMap.setZoom === "function") simMap.setZoom(18);
+        } else {
+            simMap.center = { lat: point.lat, lng: point.lng, altitude: 0 };
+            simMap.heading = simCurrentHeading;
+            simMap.tilt = 65;
+            simMap.range = 900;
         }
         if (simVehicleMarker) {
             simVehicleMarker.position = { lat: point.lat, lng: point.lng };
@@ -602,38 +616,47 @@ export async function open3DRouteSimulation(plan) {
     }
     renderSimOverlay();
     simOverlayEl.classList.remove("hidden");
+    document.body.classList.add("sim3d-open");
     document.body.style.overflow = "hidden";
     simProgress = 0;
     simIsPlaying = false;
     simStartTime = null;
     simCurrentHeading = null;
-    simCurrentZoom = 16;
-    simCurrentTilt = 60;
+    simCurrentZoom = 18;
+    simCurrentTilt = 65;
     simSpeed = 1.0;
     const sliderEl = document.getElementById("simSpeedSlider");
     if (sliderEl) sliderEl.value = "1";
 
     if (simRoutePolyline) {
-        simRoutePolyline.setMap(null);
+        if (typeof simRoutePolyline.setMap === "function") simRoutePolyline.setMap(null);
+        else if (typeof simRoutePolyline.remove === "function") simRoutePolyline.remove();
         simRoutePolyline = null;
     }
     if (simProgressPolyline) {
-        simProgressPolyline.setMap(null);
+        if (typeof simProgressPolyline.setMap === "function") simProgressPolyline.setMap(null);
+        else if (typeof simProgressPolyline.remove === "function") simProgressPolyline.remove();
         simProgressPolyline = null;
     }
     if (simStartMarker) {
-        simStartMarker.setMap(null);
+        if (typeof simStartMarker.setMap === "function") simStartMarker.setMap(null);
+        else if (typeof simStartMarker.remove === "function") simStartMarker.remove();
         simStartMarker = null;
     }
     if (simEndMarker) {
-        simEndMarker.setMap(null);
+        if (typeof simEndMarker.setMap === "function") simEndMarker.setMap(null);
+        else if (typeof simEndMarker.remove === "function") simEndMarker.remove();
         simEndMarker = null;
     }
     if (simVehicleMarker) {
-        simVehicleMarker.map = null;
+        if ("map" in simVehicleMarker) simVehicleMarker.map = null;
+        if (typeof simVehicleMarker.remove === "function") simVehicleMarker.remove();
         simVehicleMarker = null;
     }
-    simWaypointMarkers.forEach(function (m) { m.setMap(null); });
+    simWaypointMarkers.forEach(function (m) {
+        if (m && typeof m.setMap === "function") m.setMap(null);
+        else if (m && typeof m.remove === "function") m.remove();
+    });
     simWaypointMarkers = [];
     if (simStopTimer) {
         clearTimeout(simStopTimer);
@@ -677,7 +700,7 @@ export async function open3DRouteSimulation(plan) {
             depPoint = await resolveLocationCoords(departureQuery);
         }
         if (!depPoint) {
-            depPoint = { lat: 35.681236, lng: 139.767125, name: departureQuery };
+            depPoint = { lat: 34.7267, lng: 135.2768, name: departureQuery };
         }
 
         let destPoint = null;
@@ -707,37 +730,25 @@ export async function open3DRouteSimulation(plan) {
         ];
     }
 
-    const { DirectionsService } = await google.maps.importLibrary("routes");
-    const directionsService = new DirectionsService();
-    const travelMode = window.google?.maps?.TravelMode?.DRIVING || "DRIVING";
-
     let detailedPath = [];
     for (let i = 0; i < waypoints.length - 1; i++) {
         const fromPt = waypoints[i];
         const toPt = waypoints[i + 1];
+        const startLat = fromPt.lat;
+        const startLng = fromPt.lng;
+        const endLat = toPt.lat;
+        const endLng = toPt.lng;
 
         let segmentCoords = [];
         try {
-            const res = await new Promise((resolve, reject) => {
-                directionsService.route({
-                    origin: { lat: fromPt.lat, lng: fromPt.lng },
-                    destination: { lat: toPt.lat, lng: toPt.lng },
-                    travelMode: travelMode
-                }, (result, status) => {
-                    if (status === "OK" && result && result.routes && result.routes[0]) {
-                        resolve(result.routes[0]);
-                    } else {
-                        reject(status);
-                    }
-                });
-            });
-
-            if (res && res.overview_path && res.overview_path.length > 0) {
-                for (let k = 0; k < res.overview_path.length; k++) {
-                    const pt = res.overview_path[k];
-                    segmentCoords.push({
-                        lat: typeof pt.lat === "function" ? pt.lat() : Number(pt.lat),
-                        lng: typeof pt.lng === "function" ? pt.lng() : Number(pt.lng)
+            const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson`;
+            const response = await fetch(osrmUrl);
+            if (response.ok) {
+                const data = await response.json();
+                const coords = data && data.routes && data.routes[0] && data.routes[0].geometry && data.routes[0].geometry.coordinates;
+                if (Array.isArray(coords) && coords.length > 0) {
+                    segmentCoords = coords.map(function (c) {
+                        return { lat: Number(c[1]), lng: Number(c[0]) };
                     });
                 }
             }
@@ -746,13 +757,12 @@ export async function open3DRouteSimulation(plan) {
         }
 
         if (segmentCoords.length === 0) {
-            segmentCoords = [];
-            const steps = 30;
+            const steps = 60;
             for (let k = 0; k <= steps; k++) {
                 const t = k / steps;
                 segmentCoords.push({
-                    lat: fromPt.lat + (toPt.lat - fromPt.lat) * t,
-                    lng: fromPt.lng + (toPt.lng - fromPt.lng) * t
+                    lat: startLat + (endLat - startLat) * t,
+                    lng: startLng + (endLng - startLng) * t
                 });
             }
         }
@@ -765,7 +775,7 @@ export async function open3DRouteSimulation(plan) {
     }
 
     if (detailedPath.length === 0) {
-        const steps = 30;
+        const steps = 60;
         for (let k = 0; k <= steps; k++) {
             const t = k / steps;
             detailedPath.push({
@@ -797,8 +807,6 @@ export async function open3DRouteSimulation(plan) {
 async function initSimMap(waypoints, detailedPath) {
     const container = document.getElementById("sim3dMapContainer");
     if (!container) return;
-    const { AdvancedMarkerElement: ame } = await google.maps.importLibrary("marker");
-    AdvancedMarkerElement = ame;
 
     const startPt = waypoints[0];
     const endPt = waypoints[waypoints.length - 1];
@@ -809,54 +817,131 @@ async function initSimMap(waypoints, detailedPath) {
 
     let initialHeading = 0;
     if (detailedPath && detailedPath.length >= 2) {
+        let nextIdx = 1;
+        while (nextIdx < detailedPath.length - 1 && detailedPath[nextIdx].lat === detailedPath[0].lat && detailedPath[nextIdx].lng === detailedPath[0].lng) {
+            nextIdx++;
+        }
         if (window.google?.maps?.geometry?.spherical?.computeHeading) {
             const p1 = new google.maps.LatLng(detailedPath[0].lat, detailedPath[0].lng);
-            const p2 = new google.maps.LatLng(detailedPath[1].lat, detailedPath[1].lng);
+            const p2 = new google.maps.LatLng(detailedPath[nextIdx].lat, detailedPath[nextIdx].lng);
             initialHeading = google.maps.geometry.spherical.computeHeading(p1, p2);
         } else {
-            const y = Math.sin((detailedPath[1].lng - detailedPath[0].lng) * Math.PI / 180) * Math.cos(detailedPath[1].lat * Math.PI / 180);
-            const x = Math.cos(detailedPath[0].lat * Math.PI / 180) * Math.sin(detailedPath[1].lat * Math.PI / 180) -
-                      Math.sin(detailedPath[0].lat * Math.PI / 180) * Math.cos(detailedPath[1].lat * Math.PI / 180) * Math.cos((detailedPath[1].lng - detailedPath[0].lng) * Math.PI / 180);
+            const y = Math.sin((detailedPath[nextIdx].lng - detailedPath[0].lng) * Math.PI / 180) * Math.cos(detailedPath[nextIdx].lat * Math.PI / 180);
+            const x = Math.cos(detailedPath[0].lat * Math.PI / 180) * Math.sin(detailedPath[nextIdx].lat * Math.PI / 180) -
+                      Math.sin(detailedPath[0].lat * Math.PI / 180) * Math.cos(detailedPath[nextIdx].lat * Math.PI / 180) * Math.cos((detailedPath[nextIdx].lng - detailedPath[0].lng) * Math.PI / 180);
             initialHeading = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
         }
     }
+    simCurrentHeading = initialHeading;
 
-    if (!simMap) {
+    try {
+        const maps3dLib = await google.maps.importLibrary("maps3d");
+        const Map3DElement = maps3dLib && maps3dLib.Map3DElement;
+        const Polyline3DElement = maps3dLib && maps3dLib.Polyline3DElement;
+        const Marker3DElement = maps3dLib && maps3dLib.Marker3DElement;
+        const AltitudeMode = maps3dLib && maps3dLib.AltitudeMode;
+        if (Map3DElement && Polyline3DElement) {
+            if (!simMap || typeof simMap.setCenter === "function") {
+                container.innerHTML = "";
+                simMap = new Map3DElement({
+                    center: { lat: startLat, lng: startLng, altitude: 0 },
+                    tilt: 65,
+                    range: 900,
+                    heading: initialHeading,
+                    mode: "HYBRID"
+                });
+                simMap.style.width = "100%";
+                simMap.style.height = "100%";
+                container.appendChild(simMap);
+            } else {
+                simMap.center = { lat: startLat, lng: startLng, altitude: 0 };
+                simMap.tilt = 65;
+                simMap.range = 900;
+                simMap.heading = initialHeading;
+            }
+
+            const clampMode = AltitudeMode && AltitudeMode.CLAMP_TO_GROUND ? AltitudeMode.CLAMP_TO_GROUND : "CLAMP_TO_GROUND";
+            simRoutePolyline = new Polyline3DElement({
+                strokeColor: "rgba(30, 41, 59, 0.75)",
+                strokeWidth: 8,
+                altitudeMode: clampMode,
+                drawsOccludedSegments: true
+            });
+            simRoutePolyline.coordinates = detailedPath.map(function (p) {
+                return { lat: p.lat, lng: p.lng, altitude: 0 };
+            });
+            simMap.append(simRoutePolyline);
+
+            simProgressPolyline = new Polyline3DElement({
+                strokeColor: "#00f3ff",
+                strokeWidth: 8,
+                altitudeMode: clampMode,
+                drawsOccludedSegments: true
+            });
+            simProgressPolyline.coordinates = [
+                { lat: startLat, lng: startLng, altitude: 0 },
+                { lat: startLat, lng: startLng, altitude: 0 }
+            ];
+            simMap.append(simProgressPolyline);
+
+            if (Marker3DElement) {
+                simStartMarker = new Marker3DElement({
+                    position: { lat: startLat, lng: startLng },
+                    label: "出発地"
+                });
+                simMap.append(simStartMarker);
+
+                simEndMarker = new Marker3DElement({
+                    position: { lat: endLat, lng: endLng },
+                    label: "目的地"
+                });
+                simMap.append(simEndMarker);
+
+                simVehicleMarker = new Marker3DElement({
+                    position: { lat: startLat, lng: startLng },
+                    label: "🚄"
+                });
+                simMap.append(simVehicleMarker);
+            }
+            return;
+        }
+    } catch (e) {}
+
+    const { AdvancedMarkerElement: ame } = await google.maps.importLibrary("marker");
+    AdvancedMarkerElement = ame;
+
+    if (!simMap || typeof simMap.setCenter !== "function") {
+        container.innerHTML = "";
         simMap = new google.maps.Map(container, {
             center: { lat: startLat, lng: startLng },
-            zoom: 16,
-            tilt: 60,
+            zoom: 18,
+            tilt: 65,
             heading: initialHeading,
             mapId: "762efe723963e54aa2efe1dd",
-            mapTypeId: "hybrid",
+            renderingType: "VECTOR",
+            mapTypeId: "roadmap",
             colorScheme: google.maps.ColorScheme.DARK,
             disableDefaultUI: true,
             gestureHandling: "greedy"
         });
     } else {
-        simMap.setCenter({ lat: startLat, lng: startLng });
-        simMap.setZoom(16);
-        simMap.setTilt(60);
-        simMap.setHeading(initialHeading);
+        simMap.moveCamera({
+            center: { lat: startLat, lng: startLng },
+            zoom: 18,
+            tilt: 65,
+            heading: initialHeading
+        });
     }
 
-    if (simRoutePolyline) {
-        simRoutePolyline.setMap(null);
-        simRoutePolyline = null;
-    }
     simRoutePolyline = new google.maps.Polyline({
         path: detailedPath,
         geodesic: true,
         strokeColor: "#1e293b",
-        strokeOpacity: 0.6,
+        strokeOpacity: 0.7,
         strokeWeight: 6
     });
     simRoutePolyline.setMap(simMap);
 
-    if (simProgressPolyline) {
-        simProgressPolyline.setMap(null);
-        simProgressPolyline = null;
-    }
     simProgressPolyline = new google.maps.Polyline({
         path: [],
         geodesic: true,
@@ -866,24 +951,6 @@ async function initSimMap(waypoints, detailedPath) {
     });
     simProgressPolyline.setMap(simMap);
 
-    if (window.google?.maps?.maps3d?.Polyline3DElement) {
-        try {
-            const polyline3D = new google.maps.maps3d.Polyline3DElement({
-                coordinates: detailedPath,
-                path: detailedPath,
-                strokeColor: "#1e293b",
-                strokeWidth: 6
-            });
-            if (simMap.append) {
-                simMap.append(polyline3D);
-            }
-        } catch (e) {}
-    }
-
-    if (simStartMarker) {
-        simStartMarker.setMap(null);
-        simStartMarker = null;
-    }
     simStartMarker = new google.maps.Marker({
         position: { lat: startLat, lng: startLng },
         icon: createCustomMarkerIcon("start"),
@@ -891,10 +958,6 @@ async function initSimMap(waypoints, detailedPath) {
         map: simMap
     });
 
-    if (simEndMarker) {
-        simEndMarker.setMap(null);
-        simEndMarker = null;
-    }
     simEndMarker = new google.maps.Marker({
         position: { lat: endLat, lng: endLng },
         icon: createCustomMarkerIcon("goal"),
@@ -902,10 +965,6 @@ async function initSimMap(waypoints, detailedPath) {
         map: simMap
     });
 
-    if (simVehicleMarker) {
-        simVehicleMarker.map = null;
-        simVehicleMarker = null;
-    }
     const shinkansenEl = document.createElement("div");
     shinkansenEl.style.fontSize = "32px";
     shinkansenEl.style.display = "flex";
@@ -924,7 +983,9 @@ async function initSimMap(waypoints, detailedPath) {
         content: shinkansenEl
     });
 
-    simWaypointMarkers.forEach(m => m.setMap(null));
+    simWaypointMarkers.forEach(m => {
+        if (m && typeof m.setMap === "function") m.setMap(null);
+    });
     simWaypointMarkers = [];
     const intermediateStops = waypoints.slice(1, waypoints.length - 1);
     intermediateStops.forEach(function (wp, i) {
@@ -964,27 +1025,35 @@ export function close3DRouteSimulation() {
     simCurrentHeading = null;
     simPathCoords = [];
     if (simRoutePolyline) {
-        simRoutePolyline.setMap(null);
+        if (typeof simRoutePolyline.setMap === "function") simRoutePolyline.setMap(null);
+        else if (typeof simRoutePolyline.remove === "function") simRoutePolyline.remove();
         simRoutePolyline = null;
     }
     if (simProgressPolyline) {
-        simProgressPolyline.setMap(null);
+        if (typeof simProgressPolyline.setMap === "function") simProgressPolyline.setMap(null);
+        else if (typeof simProgressPolyline.remove === "function") simProgressPolyline.remove();
         simProgressPolyline = null;
     }
     if (simStartMarker) {
-        simStartMarker.setMap(null);
+        if (typeof simStartMarker.setMap === "function") simStartMarker.setMap(null);
+        else if (typeof simStartMarker.remove === "function") simStartMarker.remove();
         simStartMarker = null;
     }
     if (simEndMarker) {
-        simEndMarker.setMap(null);
+        if (typeof simEndMarker.setMap === "function") simEndMarker.setMap(null);
+        else if (typeof simEndMarker.remove === "function") simEndMarker.remove();
         simEndMarker = null;
     }
     if (simVehicleMarker) {
-        simVehicleMarker.map = null;
+        if ("map" in simVehicleMarker) simVehicleMarker.map = null;
+        if (typeof simVehicleMarker.remove === "function") simVehicleMarker.remove();
         simVehicleMarker = null;
     }
 
-    simWaypointMarkers.forEach(function (m) { m.setMap(null); });
+    simWaypointMarkers.forEach(function (m) {
+        if (m && typeof m.setMap === "function") m.setMap(null);
+        else if (m && typeof m.remove === "function") m.remove();
+    });
     simWaypointMarkers = [];
     simWaypointLabels = [];
     if (simStopTimer) { clearTimeout(simStopTimer); simStopTimer = null; }
@@ -993,6 +1062,7 @@ export function close3DRouteSimulation() {
     if (simOverlayEl) {
         simOverlayEl.classList.add("hidden");
     }
+    document.body.classList.remove("sim3d-open");
     document.body.style.overflow = "";
 }
 
@@ -1023,10 +1093,17 @@ export function reset3DAnimation() {
     simProgress = 0;
     simStartTime = null;
     simCurrentHeading = null;
-    simCurrentZoom = 16;
-    simCurrentTilt = 60;
+    simCurrentZoom = 18;
+    simCurrentTilt = 65;
     if (simProgressPolyline) {
-        simProgressPolyline.setPath([]);
+        if (typeof simProgressPolyline.setPath === "function") {
+            simProgressPolyline.setPath([]);
+        } else if (simPathCoords.length > 0) {
+            simProgressPolyline.coordinates = [
+                { lat: simPathCoords[0].lat, lng: simPathCoords[0].lng, altitude: 0 },
+                { lat: simPathCoords[0].lat, lng: simPathCoords[0].lng, altitude: 0 }
+            ];
+        }
     }
     simUpdateHUD({
         speed: 0,
@@ -1036,12 +1113,19 @@ export function reset3DAnimation() {
     });
     if (simMap && simPathCoords.length > 0) {
         const start = simPathCoords[0];
-        simMap.moveCamera({
-            center: { lat: start.lat, lng: start.lng },
-            heading: 0,
-            tilt: 60,
-            zoom: 16
-        });
+        if (typeof simMap.moveCamera === "function") {
+            simMap.moveCamera({
+                center: { lat: start.lat, lng: start.lng },
+                heading: 0,
+                tilt: 65,
+                zoom: 18
+            });
+        } else {
+            simMap.center = { lat: start.lat, lng: start.lng, altitude: 0 };
+            simMap.heading = 0;
+            simMap.tilt = 65;
+            simMap.range = 900;
+        }
         if (simVehicleMarker) {
             simVehicleMarker.position = { lat: start.lat, lng: start.lng };
         }

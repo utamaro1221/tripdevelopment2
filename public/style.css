@@ -131,8 +131,13 @@ body {
     align-items: center;
     justify-content: center;
     transition: transform var(--transition-speed) ease, width 0.3s ease, margin 0.3s ease;
-    z-index: 160000;
+    z-index: 100;
     box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.03);
+}
+
+body.sim3d-open .app-sidebar,
+body.sim3d-open .bottom-nav {
+    display: none !important;
 }
 
 body.chat-drawer-open .bottom-nav {
@@ -2098,13 +2103,13 @@ body.chat-drawer-open .app-content {
 
 
 
+#launch-screen,
 .launch-screen {
     position: fixed;
     inset: 0;
     width: 100vw;
-    height: 100dvh;
+    height: 100vh;
     background-color: #0c111d;
-    
     z-index: 99999;
     display: flex;
     flex-direction: column;
@@ -3797,28 +3802,38 @@ body.theme-mc-dark .compat-unique {
     font-size: 0.75rem;
 }
 
+#sim3dOverlay,
+#simulation3d-modal,
 .sim3d-overlay {
     position: fixed;
+    inset: 0;
     top: 0;
     left: 0;
     width: 100vw;
-    height: 100dvh;
-    z-index: 9999;
+    height: 100vh;
+    z-index: 99999;
     background: #0f172a;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
+    overflow: hidden;
     transition: opacity 0.3s ease;
 }
 
+#sim3dOverlay.hidden,
+#simulation3d-modal.hidden,
 .sim3d-overlay.hidden {
     display: none;
 }
 
 .sim3d-header {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 12px 20px;
+    min-height: 56px;
+    box-sizing: border-box;
     background: rgba(15, 23, 42, 0.95);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -3865,20 +3880,26 @@ body.theme-mc-dark .compat-unique {
 }
 
 .sim3d-map-container {
-    flex: 1;
+    flex: 1 1 0;
     width: 100%;
     min-height: 0;
     position: relative;
+    overflow: hidden;
 }
 
 .sim3d-hud {
+    flex-shrink: 0;
     display: flex;
     justify-content: center;
+    align-items: center;
     gap: 24px;
-    padding: 12px 20px;
-    background: rgba(15, 23, 42, 0.95);
+    padding: 10px 20px;
+    min-height: 64px;
+    box-sizing: border-box;
+    background: rgba(15, 23, 42, 0.96);
     backdrop-filter: blur(12px);
     border-top: 1px solid rgba(255, 255, 255, 0.06);
+    z-index: 20;
 }
 
 .sim3d-hud-item {
@@ -3910,10 +3931,12 @@ body.theme-mc-dark .compat-unique {
 }
 
 .sim3d-progress-track {
+    flex-shrink: 0;
     width: 100%;
     height: 4px;
     background: rgba(255, 255, 255, 0.06);
     position: relative;
+    z-index: 20;
 }
 
 .sim3d-progress-fill {
@@ -3925,13 +3948,18 @@ body.theme-mc-dark .compat-unique {
 }
 
 .sim3d-controls {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 12px 20px 20px;
+    min-height: 76px;
+    box-sizing: border-box;
     background: rgba(15, 23, 42, 0.98);
     border-top: 1px solid rgba(255, 255, 255, 0.06);
+    z-index: 20;
 }
 
 .sim3d-ctrl-btn {
@@ -3970,7 +3998,7 @@ body.theme-mc-dark .compat-unique {
 }
 
 .sim3d-speed-control {
-    display: flex;
+    display: flex !important;
     align-items: center;
     gap: 8px;
     margin-left: 8px;
@@ -3985,7 +4013,7 @@ body.theme-mc-dark .compat-unique {
 }
 
 .sim3d-speed-slider {
-    width: 80px;
+    width: 100px;
     height: 4px;
     -webkit-appearance: none;
     appearance: none;
@@ -4020,12 +4048,12 @@ body.theme-mc-dark .compat-unique {
     }
 
     .sim3d-controls {
-        padding: 10px 12px;
+        padding: 10px 12px 16px;
         gap: 8px;
     }
 
     .sim3d-speed-control {
-        display: none;
+        display: flex !important;
     }
 }
 
