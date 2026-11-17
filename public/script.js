@@ -3092,8 +3092,7 @@ window.switchView = function (viewId, element) {
     }
 };
 
-// Toast通知表示
-function showToast(message) {
+function showToast(message, duration = 1200) {
     const container = document.getElementById("toastContainer");
     if (!container) return;
     const toast = document.createElement("div");
@@ -3110,13 +3109,151 @@ function showToast(message) {
     toast.appendChild(textSpan);
     container.appendChild(toast);
 
-    // 1.2秒後にフェードアウトして削除
+    const displayTime = typeof duration === "number" && duration > 0 ? duration : 1200;
     setTimeout(() => {
         toast.style.transition = "opacity 0.3s ease, transform 0.3s ease";
         toast.style.opacity = "0";
         toast.style.transform = "translateY(-10px)";
         setTimeout(() => toast.remove(), 300);
-    }, 1200);
+    }, displayTime);
+}
+
+let isDemoLockActive = false;
+let lastDemoToastTime = 0;
+
+function isExternalUrl(targetUrl) {
+    if (!targetUrl || typeof targetUrl !== "string") {
+        return false;
+    }
+    const trimmed = targetUrl.trim();
+    if (!trimmed || trimmed === "#" || trimmed.startsWith("#") || trimmed.startsWith("javascript:")) {
+        return false;
+    }
+    if (trimmed.startsWith("mailto:") || trimmed.startsWith("tel:")) {
+        return true;
+    }
+    try {
+        const parsed = new URL(trimmed, window.location.href);
+        if (parsed.origin === window.location.origin) {
+            return false;
+        }
+        if (parsed.origin === "http://127.0.0.1:5500" || parsed.origin === "http://localhost:5500") {
+            return false;
+        }
+        return true;
+    } catch (e) {
+        if (/^https?:\/\//i.test(trimmed)) {
+            return !trimmed.startsWith(window.location.origin) && !trimmed.startsWith("http://127.0.0.1:5500") && !trimmed.startsWith("http://localhost:5500");
+        }
+        return false;
+    }
+}
+
+function showDemoBlockedToast() {
+    const now = Date.now();
+    if (now - lastDemoToastTime < 800) {
+        return;
+    }
+    lastDemoToastTime = now;
+    showToast("展示デモ中のため外部サイトへの移動は制限されています", 2500);
+}
+
+function updateDemoLockUI() {
+    const btn = document.getElementById("demoLockBtn");
+    const icon = document.getElementById("demoLockIcon");
+    const label = document.getElementById("demoLockLabel");
+    if (!btn) return;
+    if (isDemoLockActive) {
+        btn.classList.add("active");
+        if (icon) icon.textContent = "lock";
+        if (label) label.textContent = "展示ロック ON";
+    } else {
+        btn.classList.remove("active");
+        if (icon) icon.textContent = "lock_open";
+        if (label) label.textContent = "展示ロック OFF";
+    }
+}
+
+function toggleDemoLock() {
+    isDemoLockActive = !isDemoLockActive;
+    sessionStorage.setItem("demoLockState", isDemoLockActive ? "1" : "0");
+    updateDemoLockUI();
+    if (isDemoLockActive) {
+        showToast("展示デモモードを開始しました（外部リンクを制限）", 2500);
+    } else {
+        showToast("展示デモモードを解除しました", 2000);
+    }
+}
+
+window.toggleDemoLock = toggleDemoLock;
+
+function initDemoLock() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const demoParam = urlParams.get("demo");
+    const savedState = sessionStorage.getItem("demoLockState");
+    if (demoParam === "1" || demoParam === "true") {
+        isDemoLockActive = savedState === null ? true : (savedState === "1");
+    } else if (demoParam === "0" || demoParam === "false") {
+        isDemoLockActive = false;
+    } else {
+        isDemoLockActive = savedState === "1";
+    }
+    updateDemoLockUI();
+
+    const btn = document.getElementById("demoLockBtn");
+    if (btn) {
+        btn.onclick = () => toggleDemoLock();
+    }
+}
+
+function handleExternalLinkEvent(event) {
+    if (!isDemoLockActive) {
+        return;
+    }
+    const anchor = event.target && typeof event.target.closest === "function" ? event.target.closest("a") : null;
+    if (!anchor) {
+        return;
+    }
+    const href = anchor.getAttribute("href") || anchor.href;
+    if (isExternalUrl(href)) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof event.stopImmediatePropagation === "function") {
+            event.stopImmediatePropagation();
+        }
+        showDemoBlockedToast();
+    }
+}
+
+document.addEventListener("click", handleExternalLinkEvent, true);
+document.addEventListener("auxclick", handleExternalLinkEvent, true);
+
+document.addEventListener("submit", (event) => {
+    if (!isDemoLockActive) return;
+    const form = event.target;
+    if (form && form.action && isExternalUrl(form.action)) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof event.stopImmediatePropagation === "function") {
+            event.stopImmediatePropagation();
+        }
+        showDemoBlockedToast();
+    }
+}, true);
+
+const nativeWindowOpen = window.open;
+window.open = function (url, target, features) {
+    if (isDemoLockActive && isExternalUrl(url)) {
+        showDemoBlockedToast();
+        return null;
+    }
+    return nativeWindowOpen.call(window, url, target, features);
+};
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initDemoLock);
+} else {
+    initDemoLock();
 }
 
 // ==========================================
