@@ -391,7 +391,7 @@ function renderSimOverlay() {
             </button>
             <div class="sim3d-speed-control">
                 <label class="sim3d-speed-label">Speed</label>
-                <input type="range" id="simSpeedSlider" min="1" max="10" value="3" class="sim3d-speed-slider">
+                <input type="range" id="simSpeedSlider" min="0.5" max="10" step="0.5" value="1" class="sim3d-speed-slider">
             </div>
         </div>
     `;
@@ -411,7 +411,7 @@ function renderSimOverlay() {
         reset3DAnimation();
     });
     document.getElementById("simSpeedSlider").addEventListener("input", (e) => {
-        simSpeed = parseFloat(e.target.value) / 3;
+        simSpeed = parseFloat(e.target.value) || 1;
     });
 }
 
@@ -427,13 +427,11 @@ function animateStep(timestamp) {
     const elapsed = (timestamp - simStartTime) / 1000;
     const delta = (timestamp - (animateStep._lastTimestamp || timestamp)) / 1000;
     animateStep._lastTimestamp = timestamp;
-    let baseSpeed = 40;
-    if (simTotalDistance / 40 > 180) {
-        baseSpeed = simTotalDistance / 180;
-    }
-    const currentSpeed = baseSpeed * simSpeed;
+    const totalDistKm = simTotalDistance / 1000;
+    const baseSpeedMps = totalDistKm > 100 ? 32 + Math.min(1, (totalDistKm - 100) / 400) * 268 : 32;
+    const currentMps = baseSpeedMps * simSpeed;
     const totalDist = Math.max(1, simTotalDistance);
-    simProgress += (currentSpeed * delta) / totalDist;
+    simProgress += (currentMps * delta) / totalDist;
     simStopPoints.forEach(function(stop, idx) {
         if (simStoppedIndexes.indexOf(idx) !== -1) return;
         const stopProgress = idx / Math.max(simStopPoints.length - 1, 1);
@@ -489,16 +487,23 @@ function animateStep(timestamp) {
         simProgressPolyline.setPath(passedPath);
     }
     if (simMap) {
-        simMap.setCenter({ lat: point.lat, lng: point.lng });
+        if (typeof simMap.moveCamera === "function") {
+            simMap.moveCamera({
+                center: { lat: point.lat, lng: point.lng },
+                heading: point.heading,
+                tilt: 60,
+                zoom: 16
+            });
+        } else {
+            simMap.setCenter({ lat: point.lat, lng: point.lng });
+            if (typeof simMap.setHeading === "function") simMap.setHeading(point.heading);
+            if (typeof simMap.setTilt === "function") simMap.setTilt(60);
+            if (typeof simMap.setZoom === "function") simMap.setZoom(16);
+        }
         if (simVehicleMarker) {
             simVehicleMarker.position = { lat: point.lat, lng: point.lng };
         }
     }
-    // 🌟 HUD表示速度の計算 (現実に即した移動速度の算出)
-    // ・総距離 < 5km: 40 km/h 前後（徒歩・車市街地）
-    // ・5km〜50km: 40〜60 km/h（車・在来線）
-    // ・50km以上: 新幹線を想定して 200〜285 km/h
-    const totalDistKm = simTotalDistance / 1000;
     let baseRealisticSpeed;
     if (totalDistKm < 5) {
         baseRealisticSpeed = 40;
@@ -509,15 +514,12 @@ function animateStep(timestamp) {
         baseRealisticSpeed = 200 + ratio * 85;
     }
 
-    // ±5% の微細な揺らぎを加える
     const wobble = 1 + (Math.sin(simProgress * Math.PI * 8 + timestamp * 0.002) * 0.05);
-    // simSpeed スライダーに比例し、上限 300 km/h でクランプ
     let displaySpeed = baseRealisticSpeed * wobble * simSpeed;
     displaySpeed = Math.min(300, Math.max(0, displaySpeed));
 
     const traveledDistance = simTotalDistance * simProgress;
     const traveledKm = traveledDistance / 1000;
-    // 表示速度と走行距離から計算した想定所要時間（秒）
     const estimatedSeconds = baseRealisticSpeed > 0 ? (traveledKm / baseRealisticSpeed) * 3600 : 0;
 
     simUpdateHUD({
@@ -605,8 +607,8 @@ export async function open3DRouteSimulation(plan) {
     simIsPlaying = false;
     simStartTime = null;
     simCurrentHeading = null;
-    simCurrentZoom = 17;
-    simCurrentTilt = 65;
+    simCurrentZoom = 16;
+    simCurrentTilt = 60;
 
     if (simRoutePolyline) {
         simRoutePolyline.setMap(null);
@@ -819,8 +821,8 @@ async function initSimMap(waypoints, detailedPath) {
     if (!simMap) {
         simMap = new google.maps.Map(container, {
             center: { lat: startLat, lng: startLng },
-            zoom: 17,
-            tilt: 65,
+            zoom: 16,
+            tilt: 60,
             heading: initialHeading,
             mapId: "762efe723963e54aa2efe1dd",
             mapTypeId: "hybrid",
@@ -830,8 +832,8 @@ async function initSimMap(waypoints, detailedPath) {
         });
     } else {
         simMap.setCenter({ lat: startLat, lng: startLng });
-        simMap.setZoom(17);
-        simMap.setTilt(65);
+        simMap.setZoom(16);
+        simMap.setTilt(60);
         simMap.setHeading(initialHeading);
     }
 
@@ -1018,8 +1020,8 @@ export function reset3DAnimation() {
     simProgress = 0;
     simStartTime = null;
     simCurrentHeading = null;
-    simCurrentZoom = 17;
-    simCurrentTilt = 65;
+    simCurrentZoom = 16;
+    simCurrentTilt = 60;
     if (simProgressPolyline) {
         simProgressPolyline.setPath([]);
     }
@@ -1034,8 +1036,8 @@ export function reset3DAnimation() {
         simMap.moveCamera({
             center: { lat: start.lat, lng: start.lng },
             heading: 0,
-            tilt: 65,
-            zoom: 17
+            tilt: 60,
+            zoom: 16
         });
         if (simVehicleMarker) {
             simVehicleMarker.position = { lat: start.lat, lng: start.lng };

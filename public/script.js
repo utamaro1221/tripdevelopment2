@@ -4369,6 +4369,7 @@ window.generateTravelPlan = async function (event) {
         let startCoords = null;
         try {
             if (startStationVal && startStationVal.trim()) {
+                await loadGoogleMaps();
                 const { Geocoder } = await google.maps.importLibrary("geocoding");
                 const geocoder = new Geocoder();
                 startCoords = await new Promise((resolve) => {
@@ -5864,6 +5865,7 @@ window.openChatDrawer = function () {
         drawer.classList.remove("hidden");
         drawer.style.transform = "translateX(0)";
     }
+    document.body.classList.add("chat-drawer-open");
 };
 
 window.closeChatDrawer = function () {
@@ -5872,6 +5874,7 @@ window.closeChatDrawer = function () {
         drawer.classList.add("hidden");
         drawer.style.transform = "translateX(100%)";
     }
+    document.body.classList.remove("chat-drawer-open");
     chatHistory = [];
 };
 

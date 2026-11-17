@@ -130,9 +130,29 @@ body {
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    transition: transform var(--transition-speed) ease;
-    z-index: 100;
+    transition: transform var(--transition-speed) ease, width 0.3s ease, margin 0.3s ease;
+    z-index: 160000;
     box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.03);
+}
+
+body.chat-drawer-open .bottom-nav {
+    width: calc(100% - 420px) !important;
+    max-width: calc(100% - 420px) !important;
+}
+
+body.chat-drawer-open .app-content {
+    margin-right: 420px;
+    transition: margin-right 0.3s ease;
+}
+
+@media (max-width: 768px) {
+    body.chat-drawer-open .bottom-nav {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    body.chat-drawer-open .app-content {
+        margin-right: 0;
+    }
 }
 
 .sidebar-profile {
@@ -1229,8 +1249,8 @@ body {
 /* VIEW: HOME (ホーム & データ管理)       */
 /* ------------------------------------- */
 #view-home {
-    padding: 24px 20px;
-    overflow-y: auto;
+    padding: 24px 20px 120px !important;
+    overflow-y: auto !important;
     gap: 20px;
     align-items: center;
     width: 100%;
@@ -2636,7 +2656,7 @@ body {
 }
 
 .chat-drawer-footer {
-    padding: 12px 14px;
+    padding: 10px 12px;
     background-color: var(--card-bg);
     border-top: 1px solid var(--border-color);
     box-sizing: border-box;
@@ -2647,23 +2667,24 @@ body {
 }
 
 #chatBotForm {
-    display: flex;
+    box-sizing: border-box;
     width: 100%;
-    max-width: 100%;
+    padding: 0;
+    display: flex;
+    align-items: center;
     gap: 8px;
     margin: 0;
-    padding: 0;
-    align-items: center;
-    box-sizing: border-box;
     overflow: hidden;
 }
 
 #chatPrefecture,
 #chatBotForm .filter-select {
-    flex: 0 0 auto !important;
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
     min-width: 0 !important;
     max-width: 86px !important;
     width: 86px !important;
+    margin: 0 !important;
     padding: 6px 14px 6px 8px !important;
     font-size: 0.8rem !important;
     height: 38px !important;
@@ -2671,9 +2692,8 @@ body {
 }
 
 #chatInput {
-    flex: 1 1 0 !important;
+    flex: 1 !important;
     min-width: 0 !important;
-    width: 0 !important;
     box-sizing: border-box !important;
     padding: 8px 12px !important;
     height: 38px !important;
@@ -4343,14 +4363,14 @@ textarea {
             "hero  saved"
             "plans saved"
             "chat  chat";
-        grid-template-rows: minmax(320px, 1fr) auto auto; /* 左右の高さを揃えて画面いっぱいに。足りない時のみスクロール */
+        grid-template-rows: minmax(320px, 1fr) auto auto;
         align-content: stretch;
         align-items: stretch;
         column-gap: 24px;
         row-gap: 16px;
-        padding: 20px max(28px, calc((100% - var(--content-max)) / 2));
-        max-width: 100% !important; /* 末尾の共通 max-width:100% !important と同値(幅は padding で 1100px に制限) */
-        overflow-y: auto;
+        padding: 20px max(28px, calc((100% - var(--content-max)) / 2)) 120px !important;
+        max-width: 100% !important;
+        overflow-y: auto !important;
     }
 
     /* 左カラム: 空状態 / ヒーローを縦に伸ばし、中身を縦中央に配置 */
@@ -4382,21 +4402,20 @@ textarea {
 
     .home-empty-state h3,
     .hero-dest {
-        font-size: 1.5rem; /* タイトル 1.5rem */
+        font-size: 1.5rem;
     }
 
     .home-empty-state p,
     .hero-label,
     .weather-desc {
-        font-size: 1rem; /* 説明 1rem */
-    }
-
-    .home-empty-state .btn-large {
-        min-height: 52px; /* ボタン高さ 52px 以上 */
         font-size: 1rem;
     }
 
-    /* 予定リストは高さを制限し、多い時だけ内部スクロール */
+    .home-empty-state .btn-large {
+        min-height: 52px;
+        font-size: 1rem;
+    }
+
     #homePlansSection {
         grid-area: plans;
         max-height: clamp(140px, 30dvh, 300px);
@@ -4406,12 +4425,17 @@ textarea {
     #homePlansSection .home-plans-list {
         overflow-y: auto;
         min-height: 0;
+        max-height: 100%;
+        padding-bottom: 16px;
     }
 
-    /* 右カラム: 保存スポットを左と同じ高さのパネルにする */
     .home-section:not(#homePlansSection) {
         grid-area: saved;
         min-height: 0;
+        max-height: clamp(340px, 60dvh, 650px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
         padding: 20px;
         background: var(--card-bg);
         border: 1px solid var(--border-color);
@@ -4424,7 +4448,7 @@ textarea {
     }
 
     .section-title {
-        font-size: 1.25rem; /* 保存スポット見出し 1.25rem */
+        font-size: 1.25rem;
     }
 
     .saved-spots-scroll {
@@ -4435,6 +4459,7 @@ textarea {
         overflow-x: visible;
         overflow-y: auto;
         gap: 16px;
+        padding-bottom: 24px;
     }
 
     /* 保存スポット 0 件: 点線枠の空状態カードで右カラムを埋める */
