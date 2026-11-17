@@ -3829,7 +3829,8 @@ function renderLikedList() {
         div.querySelector(".liked-item-info").addEventListener("click", () => selectPlanTarget(item, div));
         div.querySelector(".sim3d-launch-mini-btn").addEventListener("click", (e) => {
             e.stopPropagation();
-            open3DRouteSimulation({ destination: item.name, lat: item.lat, lon: item.lon });
+            const startVal = document.getElementById("planStartStation")?.value || "東京駅";
+            open3DRouteSimulation({ destination: item.name, departure: startVal, lat: item.lat, lon: item.lon });
         });
         listContainer.appendChild(div);
     });
@@ -4368,25 +4369,35 @@ window.generateTravelPlan = async function (event) {
         let startCoords = null;
         try {
             if (startStationVal && startStationVal.trim()) {
-                startCoords = await new Promise((resolve, reject) => {
-                    if (!window.google || !window.google.maps || !window.google.maps.Geocoder) {
-                        reject(new Error("Geocoder not available"));
-                        return;
-                    }
+                await loadGoogleMaps();
+                if (window.google?.maps?.Geocoder) {
                     const geocoder = new google.maps.Geocoder();
-                    geocoder.geocode({ address: startStationVal }, (results, status) => {
-                        if (status === "OK" && results && results[0]) {
-                            const loc = results[0].geometry.location;
-                            resolve({ lat: loc.lat(), lng: loc.lng() });
-                        } else {
-                            reject(new Error("Geocoding status: " + status));
-                        }
+                    startCoords = await new Promise((resolve) => {
+                        geocoder.geocode({ address: startStationVal, region: "JP" }, (results, status) => {
+                            if (status === "OK" && results && results[0] && results[0].geometry && results[0].geometry.location) {
+                                const loc = results[0].geometry.location;
+                                resolve({ lat: loc.lat(), lng: loc.lng() });
+                            } else {
+                                resolve(null);
+                            }
+                        });
                     });
-                });
+                }
+                if (!startCoords && window.google?.maps?.places?.Place?.searchByText) {
+                    const placeRes = await google.maps.places.Place.searchByText({
+                        textQuery: startStationVal,
+                        fields: ["location"]
+                    });
+                    if (placeRes?.places?.[0]?.location) {
+                        const loc = placeRes.places[0].location;
+                        startCoords = {
+                            lat: typeof loc.lat === "function" ? loc.lat() : loc.lat,
+                            lng: typeof loc.lng === "function" ? loc.lng() : loc.lng
+                        };
+                    }
+                }
             }
-        } catch (geocodeErr) {
-            console.warn("Geocoding failed:", geocodeErr);
-        }
+        } catch (geocodeErr) {}
 
         if (startCoords) {
             if (waypoints.length > 0) {
@@ -4588,15 +4599,18 @@ function bind3DSimButton(planData) {
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
         newBtn.addEventListener("click", () => {
+            const departureVal = planData.departure || document.getElementById("planStartStation")?.value || "東京駅";
+            const destinationVal = planData.destination || document.getElementById("planTargetName")?.textContent || "目的地";
             const wps = planData.waypoints || [];
             const labels = wps.map(function (wp, i) {
                 if (i === 0) return "出発地";
-                if (i === wps.length - 1) return planData.destination || "目的地";
+                if (i === wps.length - 1) return destinationVal;
                 return "経由地" + i;
             });
             const enrichedPlan = Object.assign({}, planData, {
                 waypointLabels: labels,
-                departure: planData.departure || document.getElementById("planStartStation")?.value || ""
+                departure: departureVal,
+                destination: destinationVal
             });
             open3DRouteSimulation(enrichedPlan);
         });
@@ -6145,7 +6159,8 @@ window.renderSavedSpotsHome = function () {
         card.querySelector(".thumbnail-pref").addEventListener("click", () => selectPlanAndGo(item));
         card.querySelector(".thumbnail-sim3d-btn").addEventListener("click", (e) => {
             e.stopPropagation();
-            open3DRouteSimulation({ destination: item.name, lat: item.lat, lon: item.lon });
+            const startVal = document.getElementById("planStartStation")?.value || "東京駅";
+            open3DRouteSimulation({ destination: item.name, departure: startVal, lat: item.lat, lon: item.lon });
         });
         card.dataset.placeName = item.name;
         imageObserver.observe(card);
@@ -6243,6 +6258,9 @@ window.renderHomePlans = function () {
 
         card.querySelector(".sim3d-launch-mini-btn").addEventListener("click", (e) => {
             e.stopPropagation();
+            if (!plan.departure) {
+                plan.departure = document.getElementById("planStartStation")?.value || "東京駅";
+            }
             open3DRouteSimulation(plan);
         });
         card.querySelector(".home-plan-item-info").addEventListener("click", () => viewItineraryDetails(plan.id));
