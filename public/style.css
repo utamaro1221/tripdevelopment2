@@ -18,7 +18,7 @@
     --transition-speed: 0.3s;
 }
 
-/* Themes */
+
 body.theme-mc-blue {
     --bg-color: #f0f6fa;
     --sidebar-bg: #ffffff;
@@ -80,7 +80,7 @@ body.theme-mc-dark {
 }
 
 html {
-    /* rem ??????: ??????????(80?120%)?????? */
+    
     font-size: var(--app-font-size);
 }
 
@@ -107,7 +107,7 @@ body {
     display: none !important;
 }
 
-/* App Container and Layout */
+
 .app-container {
     display: flex;
     width: 100%;
@@ -115,7 +115,7 @@ body {
     position: relative;
 }
 
-/* Sidebar Styling (Modern Clean Bottom Navigation Bar) */
+
 .app-sidebar,
 .bottom-nav {
     position: fixed;
@@ -214,7 +214,7 @@ body.chat-drawer-open .app-content {
     background: linear-gradient(to bottom, rgba(var(--primary-color-rgb), 0.08), rgba(var(--primary-color-rgb), 0.01));
 }
 
-/* Glowing active indicator line at the top of the item inspired by mandc.tokyo/NIKKE mix */
+
 .sidebar-item.active::after {
     content: '';
     position: absolute;
@@ -227,7 +227,7 @@ body.chat-drawer-open .app-content {
     border-radius: 2px;
 }
 
-/* Pulsing outline glow on active icons */
+
 .sidebar-item.active .material-icons {
     transform: scale(1.1);
     filter: drop-shadow(0 0 4px rgba(var(--primary-color-rgb), 0.4));
@@ -255,7 +255,7 @@ body.chat-drawer-open .app-content {
     display: none !important;
 }
 
-/* Permanent Top Header */
+
 .mobile-header {
     display: flex;
     position: fixed;
@@ -301,22 +301,22 @@ body.chat-drawer-open .app-content {
     object-fit: cover;
 }
 
-/* App Content Area */
+
 .app-content {
     flex: 1;
     position: relative;
     width: 100%;
     margin-top: 60px;
-    /* offset top header */
+    
     margin-bottom: 90px;
-    /* offset bottom bar */
+    
     height: calc(100dvh - 150px);
     overflow: hidden;
     background-color: var(--bg-color);
     transition: background-color var(--transition-speed);
 }
 
-/* View General Setup */
+
 .view {
     position: absolute;
     inset: 0;
@@ -332,7 +332,7 @@ body.chat-drawer-open .app-content {
     opacity: 0;
 }
 
-/* Sidebar Overlay for Mobile */
+
 .sidebar-overlay {
     display: none;
     position: fixed;
@@ -342,7 +342,7 @@ body.chat-drawer-open .app-content {
     z-index: 95;
 }
 
-/* Custom Scrollbars */
+
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -361,9 +361,9 @@ body.chat-drawer-open .app-content {
     background: var(--text-extra-muted);
 }
 
-/* ------------------------------------- */
-/* VIEW: SWIPE (検索)                  */
-/* ------------------------------------- */
+
+
+
 #view-swipe {
     justify-content: flex-start;
     align-items: center;
@@ -373,7 +373,7 @@ body.chat-drawer-open .app-content {
     -webkit-overflow-scrolling: touch;
 }
 
-/* Filter Bar styles: スマホ幅でも横スクロールなしで上部に固定表示 */
+
 .filter-bar {
     position: sticky;
     top: 0;
@@ -416,7 +416,7 @@ body.chat-drawer-open .app-content {
     box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.12);
 }
 
-/* Card Stack */
+
 #card-stack {
     position: relative;
     width: 92%;
@@ -496,7 +496,7 @@ body.chat-drawer-open .app-content {
     z-index: 7;
 }
 
-/* Star Button */
+
 .card-star-btn {
     position: absolute;
     bottom: 20px;
@@ -611,7 +611,7 @@ body.chat-drawer-open .app-content {
     border-radius: 4px;
 }
 
-/* Swipe Stamps */
+
 .swipe-stamp {
     position: absolute;
     top: 50px;
@@ -642,7 +642,7 @@ body.chat-drawer-open .app-content {
     transform: rotate(-15deg);
 }
 
-/* Empty State / No Cards Screen */
+
 .empty-stack-view {
     display: flex;
     flex-direction: column;
@@ -665,7 +665,7 @@ body.chat-drawer-open .app-content {
     max-width: 280px;
 }
 
-/* Swipe Actions (いいね / 興味なしボタン) */
+
 .swipe-actions-container {
     display: flex;
     gap: 20px;
@@ -768,9 +768,9 @@ body.chat-drawer-open .app-content {
     }
 }
 
-/* ------------------------------------- */
-/* VIEW: PLAN (予定)                     */
-/* ------------------------------------- */
+
+
+
 .plan-view-container {
     padding: 30px;
     max-width: 900px;
@@ -882,7 +882,7 @@ body.chat-drawer-open .app-content {
     color: var(--text-muted);
 }
 
-/* Planning Form & Results Panel */
+
 .planning-panel {
     background-color: var(--sidebar-bg);
     border-radius: 20px;
@@ -940,7 +940,7 @@ body.chat-drawer-open .app-content {
     box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.12);
 }
 
-/* Priority Pills Selector */
+
 .priority-pills {
     display: flex;
     flex-wrap: wrap;
@@ -979,7 +979,7 @@ body.chat-drawer-open .app-content {
     gap: 12px;
 }
 
-/* Debug Simulator Switch */
+
 .debug-simulator {
     display: flex;
     align-items: center;
@@ -992,7 +992,7 @@ body.chat-drawer-open .app-content {
     cursor: pointer;
 }
 
-/* AI Results Loading View */
+
 .loading-view {
     display: flex;
     flex-direction: column;
@@ -1018,7 +1018,7 @@ body.chat-drawer-open .app-content {
     }
 }
 
-/* Boat Spinner and Progress Bar */
+
 .boat-spinner-container {
     position: relative;
     width: 80px;
@@ -1061,7 +1061,7 @@ body.chat-drawer-open .app-content {
     }
 }
 
-/* Shinkansen Progress Bar */
+
 .progress-container {
     width: 100%;
     max-width: 320px;
@@ -1118,7 +1118,7 @@ body.chat-drawer-open .app-content {
     letter-spacing: 0.05em;
 }
 
-/* AI Generated Itinerary and Hotel Results */
+
 .ai-results-view {
     display: flex;
     flex-direction: column;
@@ -1205,7 +1205,7 @@ body.chat-drawer-open .app-content {
     font-size: 1.15rem;
 }
 
-/* API Error state style */
+
 .api-error-card {
     background-color: rgba(239, 68, 68, 0.05);
     border: 1px solid rgba(239, 68, 68, 0.2);
@@ -1246,9 +1246,9 @@ body.chat-drawer-open .app-content {
     transform: translateY(1px);
 }
 
-/* ------------------------------------- */
-/* VIEW: HOME (ホーム & データ管理)       */
-/* ------------------------------------- */
+
+
+
 #view-home {
     padding: 24px 20px 120px !important;
     overflow-y: auto !important;
@@ -1408,9 +1408,9 @@ body.chat-drawer-open .app-content {
     margin-top: 2px;
 }
 
-/* ------------------------------------- */
-/* VIEW: DATA (スタンド能力値)          */
-/* ------------------------------------- */
+
+
+
 #view-data {
     padding: 30px;
     box-sizing: border-box;
@@ -1436,7 +1436,7 @@ body.chat-drawer-open .app-content {
     color: var(--text-muted);
 }
 
-/* Stand Name Display */
+
 .stand-badge-container {
     background: linear-gradient(135deg, rgba(var(--primary-color-rgb), 0.06), rgba(var(--primary-color-rgb), 0.01));
     border: 1px solid rgba(var(--primary-color-rgb), 0.2);
@@ -1481,9 +1481,9 @@ body.chat-drawer-open .app-content {
     margin: 0 auto;
 }
 
-/* ------------------------------------- */
-/* VIEW: SETTINGS (設定)                 */
-/* ------------------------------------- */
+
+
+
 #view-settings {
     padding: 30px;
     box-sizing: border-box;
@@ -1592,9 +1592,9 @@ body.chat-drawer-open .app-content {
     accent-color: var(--primary-color);
 }
 
-/* ------------------------------------- */
-/* MODAL & TOAST                         */
-/* ------------------------------------- */
+
+
+
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -1740,7 +1740,7 @@ body.chat-drawer-open .app-content {
     padding: 40px 0;
 }
 
-/* Toast Notifications */
+
 .toast-container {
     position: fixed;
     bottom: 24px;
@@ -1781,7 +1781,7 @@ body.chat-drawer-open .app-content {
     }
 }
 
-/* Recommendation Banner */
+
 .recommendation-banner {
     position: absolute;
     top: 20px;
@@ -1835,7 +1835,7 @@ body.chat-drawer-open .app-content {
     transform: scale(1.05);
 }
 
-/* Share View Layout */
+
 .shared-plans-panel,
 .my-shareable-panel {
     background-color: var(--sidebar-bg);
@@ -1874,7 +1874,7 @@ body.chat-drawer-open .app-content {
     max-height: 700px;
 }
 
-/* Shared Plan Card */
+
 .shared-plan-card {
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
@@ -1949,7 +1949,7 @@ body.chat-drawer-open .app-content {
     margin-bottom: 8px;
 }
 
-/* Itinerary Preview Collapse/Expand */
+
 .shared-itinerary-preview {
     position: relative;
     max-height: 110px;
@@ -2005,7 +2005,7 @@ body.chat-drawer-open .app-content {
     width: auto;
 }
 
-/* My Shareable Item */
+
 .my-shareable-item {
     display: flex;
     justify-content: space-between;
@@ -2035,14 +2035,14 @@ body.chat-drawer-open .app-content {
     color: var(--text-muted);
 }
 
-/* Responsive adjustment for share view */
+
 @media (max-width: 992px) {
     .share-view-container {
         grid-template-columns: 1fr !important;
     }
 }
 
-/* Firebase Auth UI Styles */
+
 .auth-status-card {
     display: flex;
     align-items: center;
@@ -2097,14 +2097,14 @@ body.chat-drawer-open .app-content {
 
 
 
-/* Launch Screen & Opening Animation Styles */
+
 .launch-screen {
     position: fixed;
     inset: 0;
     width: 100vw;
     height: 100dvh;
     background-color: #0c111d;
-    /* 深みのあるブラックアウト */
+    
     z-index: 99999;
     display: flex;
     flex-direction: column;
@@ -2272,7 +2272,7 @@ body.chat-drawer-open .app-content {
     }
 }
 
-/* 飛行機の螺旋軌道アニメーション */
+
 .moving-plane {
     offset-path: url(#spiral-path);
     offset-rotate: auto;
@@ -2303,7 +2303,7 @@ body.chat-drawer-open .app-content {
     }
 }
 
-/* 新幹線の楕円軌道アニメーション */
+
 .moving-train {
     offset-path: url(#circle-path);
     offset-rotate: auto;
@@ -2322,7 +2322,7 @@ body.chat-drawer-open .app-content {
     }
 }
 
-/* オンボーディングパネルのスライドインスタイル */
+
 .onboarding-panel {
     position: absolute;
     bottom: 0;
@@ -2367,7 +2367,7 @@ body.chat-drawer-open .app-content {
     gap: 12px;
 }
 
-/* Responsive Overrides */
+
 @media (max-width: 768px) {
     .sidebar-nav ul {
         gap: 6px;
@@ -2387,7 +2387,7 @@ body.chat-drawer-open .app-content {
         gap: 12px;
     }
 
-    /* Mobile Launch Screen Layout Overrides */
+    
     .launch-screen .animation-container {
         max-height: 360px;
         transform: translateY(-50px);
@@ -2460,7 +2460,7 @@ body.chat-drawer-open .app-content {
 
 @media (min-width: 769px) {
 
-    /* PC Launch Screen Layout (More Impact) */
+    
     .launch-screen .animation-container {
         max-width: 650px;
         max-height: 650px;
@@ -2510,7 +2510,7 @@ body.chat-drawer-open .app-content {
     }
 }
 
-/* AI Chatbot Drawer Style */
+
 .chat-drawer {
     position: fixed;
     top: 0;
@@ -2715,7 +2715,7 @@ body.chat-drawer-open .app-content {
     border-radius: 10px !important;
 }
 
-/* Skeleton loader for AI typing */
+
 .chat-typing-bubble {
     display: flex;
     gap: 4px;
@@ -2777,11 +2777,11 @@ body.chat-drawer-open .app-content {
     }
 }
 
-/* ================================================================= */
-/* NEW CUSTOM STYLES (Kinki Wander Travel Premium UX Refinement)     */
-/* ================================================================= */
 
-/* Accordion for advanced settings */
+
+
+
+
 .advanced-settings-accordion {
     margin-top: 16px;
     border: 1px solid var(--border-color);
@@ -2810,7 +2810,7 @@ body.chat-drawer-open .app-content {
     transform: rotate(180deg);
 }
 
-/* Category Filter Tag Pills in Swipe view */
+
 .category-filters {
     display: flex;
     gap: 8px;
@@ -2818,12 +2818,12 @@ body.chat-drawer-open .app-content {
     padding: 4px 0;
     width: 100%;
     scrollbar-width: none;
-    /* Hide scrollbar in Firefox */
+    
 }
 
 .category-filters::-webkit-scrollbar {
     display: none;
-    /* Hide scrollbar in Webkit browsers */
+    
 }
 
 .filter-pill, .filter-btn {
@@ -2855,9 +2855,9 @@ body.chat-drawer-open .app-content {
     box-shadow: 0 4px 10px rgba(var(--primary-color-rgb), 0.2);
 }
 
-/* Home Screen Redesigned Components */
 
-/* Empty State Card */
+
+
 .home-empty-state {
     width: 100%;
     max-width: 700px;
@@ -2902,7 +2902,7 @@ body.chat-drawer-open .app-content {
     width: 100%;
 }
 
-/* Image-backed Hero Card */
+
 .home-hero-card {
     width: 100%;
     max-width: 700px;
@@ -3008,7 +3008,7 @@ body.chat-drawer-open .app-content {
     font-weight: 500;
 }
 
-/* Horizontal Spot Thumbnail List */
+
 .home-section {
     width: 100%;
     max-width: 700px;
@@ -3167,7 +3167,7 @@ body.chat-drawer-open .app-content {
     font-size: 1.1rem;
 }
 
-/* Upcoming Plans List on Home */
+
 .home-plans-list {
     display: flex;
     flex-direction: column;
@@ -3216,7 +3216,7 @@ body.chat-drawer-open .app-content {
     flex-shrink: 0;
 }
 
-/* 旅行予定 削除ボタン */
+
 .home-plan-delete-btn {
     background: none;
     border: none;
@@ -3248,7 +3248,7 @@ body.chat-drawer-open .app-content {
     font-size: 1.1rem;
 }
 
-/* 旅行予定 もっと見るボタン */
+
 .home-plans-toggle-btn {
     width: 100%;
     background: var(--card-bg);
@@ -3283,7 +3283,7 @@ body.chat-drawer-open .app-content {
     transform: rotate(180deg);
 }
 
-/* Bottom Chat / Search Bar */
+
 .home-ai-chat-bar-container {
     width: 100%;
     max-width: 700px;
@@ -3346,7 +3346,7 @@ body.chat-drawer-open .app-content {
     font-size: 1.2rem;
 }
 
-/* My Page Redesigned Components */
+
 
 .mypage-header-card {
     background: linear-gradient(135deg, var(--primary-color) 0%, #0369a1 100%);
@@ -3452,7 +3452,7 @@ body.chat-drawer-open .app-content {
     margin-bottom: 4px;
 }
 
-/* Interest Stats Card in My Page */
+
 .interest-stats-card {
     background-color: var(--bg-color);
     border: 1px solid var(--border-color);
@@ -3483,16 +3483,16 @@ body.chat-drawer-open .app-content {
     }
 }
 
-/* ========================================== */
-/* 追加: 属性タグ・診断・先回り提案のスタイル */
-/* ========================================== */
 
-/* 1. カードバッジ & タグ */
+
+
+
+
 .card-match-badge {
     position: absolute;
     top: 16px;
     left: 95px;
-    /* Prefecture badgeの横に配置 */
+    
     background: linear-gradient(135deg, #ec4899, #8b5cf6);
     color: #ffffff;
     box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
@@ -3531,7 +3531,7 @@ body.chat-drawer-open .app-content {
     font-size: 0.875rem;
 }
 
-/* 2. マイページ：詳細トラベルプロフィール分析 */
+
 .pref-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -3572,7 +3572,7 @@ body.chat-drawer-open .app-content {
     gap: 6px;
 }
 
-/* 3. 予定画面：先回り自動提案 */
+
 .ai-proactive-view {
     display: flex;
     flex-direction: column;
@@ -3617,7 +3617,7 @@ body.chat-drawer-open .app-content {
     background: linear-gradient(to bottom, var(--primary-color), #3b82f6);
 }
 
-/* Fallback / Offline Notice Styles */
+
 .fallback-notice-banner {
     background-color: rgba(249, 115, 22, 0.08);
     border: 1px solid rgba(249, 115, 22, 0.2);
@@ -3641,7 +3641,7 @@ body.chat-drawer-open .app-content {
     vertical-align: middle;
 }
 
-/* Community Interactive Elements */
+
 .compatibility-container {
     margin-top: 14px;
     display: flex;
@@ -3701,7 +3701,7 @@ body.chat-drawer-open .app-content {
     margin-top: 2px;
 }
 
-/* Compatibility Themes */
+
 .compat-perfect {
     background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.01));
     border-color: rgba(16, 185, 129, 0.25);
@@ -3742,7 +3742,7 @@ body.chat-drawer-open .app-content {
     color: #8b5cf6;
 }
 
-/* Dark mode adjustments for compatibility text */
+
 body.theme-mc-dark .compat-perfect {
     color: #a7f3d0;
 }
@@ -3759,7 +3759,7 @@ body.theme-mc-dark .compat-unique {
     color: #ddd6fe;
 }
 
-/* Reactions styling */
+
 .reactions-bar {
     display: flex;
     gap: 8px;
@@ -4151,29 +4151,28 @@ header,
     box-sizing: border-box !important;
 }
 
-/* ===================================================================== */
-/* UI SCALE-UP (responsive sizing)                                        */
-/* PC / Tablet / Phone を適切なサイズに。すべて rem 指定なので             */
-/* html { font-size: var(--app-font-size) } により文字サイズスライダーが効く。 */
-/* ===================================================================== */
+
+
+
+
+
 :root {
-    --content-max: 1100px;      /* PC 共通コンテナ幅 */
-    --content-narrow: 900px;    /* マイページ・設定の幅 */
-    --card-h-pc: clamp(460px, calc(100dvh - 400px), 620px); /* スワイプカード高さ(PC) */
-    --tap-min: 44px;            /* 最小クリック領域 */
-    --thumb-w: 160px;           /* 保存スポットのサムネイル幅 */
-    --thumb-h: 210px;           /* 保存スポットのサムネイル高さ */
+    --content-max: 1100px;      
+    --content-narrow: 900px;    
+    --card-h-pc: clamp(460px, calc(100dvh - 400px), 620px); 
+    --tap-min: 44px;            
+    --thumb-w: 160px;           
+    --thumb-h: 210px;           
 }
 
-/* 入力欄は iOS の自動ズーム防止のため 16px 以上。
-   !important: 各コンポーネントの個別 rem 指定を上書きするため。 */
+
 input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
 select,
 textarea {
     font-size: max(16px, 1rem) !important;
 }
 
-/* クリック領域は最低 44px */
+
 .btn-primary,
 .btn-text,
 .btn-large,
@@ -4195,16 +4194,14 @@ textarea {
     min-height: var(--tap-min);
 }
 
-/* 見た目を変えずにタップ領域だけ拡張 */
+
 .thumbnail-star-btn::before {
     content: '';
     position: absolute;
     inset: -8px;
 }
 
-/* script.js のインライン style(font-size: 0.7〜0.85rem)の上書き。
-   !important: インライン style は通常の CSS では上書きできないため。
-   rem 指定なので文字サイズスライダーは有効のまま。 */
+
 [style*="font-size: 0.65rem"],
 [style*="font-size:0.65rem"],
 [style*="font-size: 0.7rem"],
@@ -4221,7 +4218,7 @@ textarea {
     font-size: 0.875rem !important;
 }
 
-/* ---------- ヘッダー / 下部ナビ ---------- */
+
 .header-title {
     font-size: 1.4rem;
 }
@@ -4239,7 +4236,7 @@ textarea {
     font-size: 2.1rem;
 }
 
-/* ---------- スワイプ画面 ---------- */
+
 .filter-select {
     font-size: 0.95rem;
 }
@@ -4272,7 +4269,7 @@ textarea {
     font-size: 0.8rem;
 }
 
-/* ---------- ホーム: 保存スポットのサムネイル ---------- */
+
 .saved-spot-thumbnail-card {
     width: var(--thumb-w);
     height: var(--thumb-h);
@@ -4290,21 +4287,21 @@ textarea {
     font-size: 0.875rem;
 }
 
-/* ===================================================================== */
-/* TABLET (768px〜): 下部ナビを少し大きく                                  */
-/* ===================================================================== */
+
+
+
 @media (min-width: 768px) {
     .sidebar-item {
         font-size: 1rem;
     }
 }
 
-/* ===================================================================== */
-/* PC (1024px〜)                                                           */
-/* ===================================================================== */
+
+
+
 @media (min-width: 1024px) {
 
-    /* 下部ナビ(高さ 90px のまま、アイコンとラベルのみ拡大) */
+    
     .sidebar-nav ul {
         max-width: 900px;
     }
@@ -4318,7 +4315,7 @@ textarea {
         font-size: 2.2rem;
     }
 
-    /* スワイプカード: 幅 〜520px / 高さは vh 基準の clamp() */
+    
     #card-stack {
         width: min(520px, 92%);
         max-width: 520px;
@@ -4340,10 +4337,10 @@ textarea {
         font-size: 1.6rem;
     }
 
-    /* 探す画面: フィルターのバーをカード幅に揃え、セレクトを均等幅にして文字切れを防ぐ */
+    
     .filter-bar {
         width: min(520px, 92%);
-        max-width: 520px !important; /* 共通の max-width:100% !important を上書き */
+        max-width: 520px !important; 
         padding: 0 12px;
         flex-wrap: nowrap;
         gap: 8px;
@@ -4357,7 +4354,7 @@ textarea {
         text-overflow: clip;
     }
 
-    /* ホーム: 1 画面(ヘッダー60px〜下部ナビ90px)に収まる 2 カラム + 下部チャットバー */
+    
     #view-home {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
@@ -4375,7 +4372,7 @@ textarea {
         overflow-y: auto !important;
     }
 
-    /* 左カラム: 空状態 / ヒーローを縦に伸ばし、中身を縦中央に配置 */
+    
     .home-empty-state,
     .home-hero-card {
         grid-area: hero;
@@ -4464,7 +4461,7 @@ textarea {
         padding-bottom: 24px;
     }
 
-    /* 保存スポット 0 件: 点線枠の空状態カードで右カラムを埋める */
+    
     .saved-spots-empty {
         flex: 1;
         display: flex;
@@ -4492,7 +4489,7 @@ textarea {
         font-size: 1rem;
     }
 
-    /* チャットバーは 2 カラムの下に全幅(最大 1100px)で配置 */
+    
     .home-ai-chat-bar-container {
         grid-area: chat;
         max-width: none;
@@ -4502,9 +4499,9 @@ textarea {
         min-height: 56px;
     }
 
-    /* 予定画面: 左右 2 カラム(いいねリスト / フォーム・結果) */
+    
     .plan-view-container {
-        max-width: var(--content-max) !important; /* 共通の max-width:100% !important を上書き */
+        max-width: var(--content-max) !important; 
         padding: 36px;
     }
 
@@ -4517,11 +4514,11 @@ textarea {
         height: clamp(480px, calc(100dvh - 300px), 720px);
     }
 
-    /* マイページ・設定 */
+    
     #view-settings,
     .mypage-sections-container,
     .mypage-header-card {
-        max-width: var(--content-narrow) !important; /* 共通の max-width:100% !important を上書き */
+        max-width: var(--content-narrow) !important; 
     }
 
     .mypage-header-card {
@@ -4531,7 +4528,7 @@ textarea {
     }
 }
 
-/* サンプルスポット明示バッジ */
+
 .card-sample-badge {
     position: absolute;
     top: 14px;

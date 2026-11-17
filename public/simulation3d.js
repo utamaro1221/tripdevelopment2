@@ -103,7 +103,7 @@ function createCustomMarkerIcon(category) {
 }
 
 function getApiUrl(path) {
-    const base = "https://tripdevelopment2.onrender.com";
+    const base = window.location.port === "3000" ? window.location.origin : "http://localhost:3000";
     return `${base}${path}`;
 }
 
@@ -428,7 +428,7 @@ function animateStep(timestamp) {
     const delta = (timestamp - (animateStep._lastTimestamp || timestamp)) / 1000;
     animateStep._lastTimestamp = timestamp;
     const totalDistKm = simTotalDistance / 1000;
-    const baseSpeedMps = totalDistKm > 100 ? 32 + Math.min(1, (totalDistKm - 100) / 400) * 268 : 32;
+    const baseSpeedMps = 30;
     const currentMps = baseSpeedMps * simSpeed;
     const totalDist = Math.max(1, simTotalDistance);
     simProgress += (currentMps * delta) / totalDist;
@@ -609,6 +609,9 @@ export async function open3DRouteSimulation(plan) {
     simCurrentHeading = null;
     simCurrentZoom = 16;
     simCurrentTilt = 60;
+    simSpeed = 1.0;
+    const sliderEl = document.getElementById("simSpeedSlider");
+    if (sliderEl) sliderEl.value = "1";
 
     if (simRoutePolyline) {
         simRoutePolyline.setMap(null);

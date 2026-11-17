@@ -103,7 +103,7 @@ function createCustomMarkerIcon(category) {
 }
 
 function getApiUrl(path) {
-    const base = "https://tripdevelopment2.onrender.com";
+    const base = window.location.port === "3000" ? window.location.origin : "http://localhost:3000";
     return `${base}${path}`;
 }
 
@@ -122,22 +122,50 @@ async function getSimAuthHeaders() {
 
 export async function loadGoogleMaps() {
     if (simGoogleMapsLoaded && window.google && window.google.maps) {
+        if (window.google.maps.importLibrary) {
+            try {
+                await Promise.all([
+                    google.maps.importLibrary("maps"),
+                    google.maps.importLibrary("geometry"),
+                    google.maps.importLibrary("routes"),
+                    google.maps.importLibrary("geocoding"),
+                    google.maps.importLibrary("places"),
+                    google.maps.importLibrary("marker")
+                ]);
+            } catch (e) {}
+        }
         return;
     }
     if (window.google && window.google.maps && window.google.maps.importLibrary) {
         await Promise.all([
             google.maps.importLibrary("maps"),
-            google.maps.importLibrary("geometry")
+            google.maps.importLibrary("geometry"),
+            google.maps.importLibrary("routes"),
+            google.maps.importLibrary("geocoding"),
+            google.maps.importLibrary("places"),
+            google.maps.importLibrary("marker")
         ]);
         simGoogleMapsLoaded = true;
         return;
     }
     return new Promise((resolve, reject) => {
         let attempts = 0;
-        const check = setInterval(() => {
+        const check = setInterval(async () => {
             attempts++;
             if (window.google && window.google.maps) {
                 clearInterval(check);
+                if (window.google.maps.importLibrary) {
+                    try {
+                        await Promise.all([
+                            google.maps.importLibrary("maps"),
+                            google.maps.importLibrary("geometry"),
+                            google.maps.importLibrary("routes"),
+                            google.maps.importLibrary("geocoding"),
+                            google.maps.importLibrary("places"),
+                            google.maps.importLibrary("marker")
+                        ]);
+                    } catch (e) {}
+                }
                 simGoogleMapsLoaded = true;
                 resolve();
             } else if (attempts > 50) {
@@ -221,7 +249,14 @@ export function getPathPointAndHeading(path, progress) {
         for (let i = 1; i < path.length; i++) {
             const p1 = new google.maps.LatLng(path[i - 1].lat, path[i - 1].lng);
             const p2 = new google.maps.LatLng(path[i].lat, path[i].lng);
-            const d = google.maps.geometry.spherical.computeDistanceBetween(p1, p2);
+            let d = 0;
+            if (window.google?.maps?.geometry?.spherical?.computeDistanceBetween) {
+                d = google.maps.geometry.spherical.computeDistanceBetween(p1, p2);
+            } else {
+                const dLat = (path[i].lat - path[i - 1].lat) * 111320;
+                const dLng = (path[i].lng - path[i - 1].lng) * 111320 * Math.cos((path[i].lat * Math.PI) / 180);
+                d = Math.sqrt(dLat * dLat + dLng * dLng);
+            }
             total += d;
             path._distances.push(total);
         }
@@ -242,11 +277,20 @@ export function getPathPointAndHeading(path, progress) {
         fraction = (targetDist - path._distances[i]) / segmentDist;
     }
 
-    const p1 = new google.maps.LatLng(currentPoint.lat, currentPoint.lng);
-    const p2 = new google.maps.LatLng(nextPoint.lat, nextPoint.lng);
+    let lat = currentPoint.lat + (nextPoint.lat - currentPoint.lat) * fraction;
+    let lng = currentPoint.lng + (nextPoint.lng - currentPoint.lng) * fraction;
+    let heading = 0;
 
-    const interpPoint = google.maps.geometry.spherical.interpolate(p1, p2, fraction);
-    let heading = google.maps.geometry.spherical.computeHeading(p1, p2);
+    if (window.google?.maps?.geometry?.spherical?.computeHeading) {
+        const p1 = new google.maps.LatLng(currentPoint.lat, currentPoint.lng);
+        const p2 = new google.maps.LatLng(nextPoint.lat, nextPoint.lng);
+        heading = google.maps.geometry.spherical.computeHeading(p1, p2);
+    } else {
+        const y = Math.sin((nextPoint.lng - currentPoint.lng) * Math.PI / 180) * Math.cos(nextPoint.lat * Math.PI / 180);
+        const x = Math.cos(currentPoint.lat * Math.PI / 180) * Math.sin(nextPoint.lat * Math.PI / 180) -
+                  Math.sin(currentPoint.lat * Math.PI / 180) * Math.cos(nextPoint.lat * Math.PI / 180) * Math.cos((nextPoint.lng - currentPoint.lng) * Math.PI / 180);
+        heading = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    }
 
     if (currentPoint.lat === nextPoint.lat && currentPoint.lng === nextPoint.lng) {
         heading = getPathPointAndHeading._lastHeading || 0;
@@ -254,7 +298,7 @@ export function getPathPointAndHeading(path, progress) {
         getPathPointAndHeading._lastHeading = heading;
     }
 
-    return { lat: interpPoint.lat(), lng: interpPoint.lng(), heading: heading };
+    return { lat: lat, lng: lng, heading: heading };
 }
 
 function calculateTotalDistance(path) {
@@ -280,10 +324,12 @@ export function simUpdateHUD(data) {
         const km = (data.distance / 1000).toFixed(1);
         distEl.textContent = `${km} km`;
     }
-    if (timeEl && data.elapsed !== undefined) {
-        const mins = Math.floor(data.elapsed / 60);
-        const secs = Math.floor(data.elapsed % 60);
-        timeEl.textContent = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    if (timeEl && (data.estimatedTime !== undefined || data.elapsed !== undefined)) {
+        const totalSeconds = data.estimatedTime !== undefined ? data.estimatedTime : data.elapsed;
+        const totalMins = Math.floor(totalSeconds / 60);
+        const hours = Math.floor(totalMins / 60);
+        const mins = totalMins % 60;
+        timeEl.textContent = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
     }
     if (progEl && data.progress !== undefined) {
         progEl.style.width = `${Math.round(data.progress * 100)}%`;
@@ -345,7 +391,7 @@ function renderSimOverlay() {
             </button>
             <div class="sim3d-speed-control">
                 <label class="sim3d-speed-label">Speed</label>
-                <input type="range" id="simSpeedSlider" min="1" max="10" value="3" class="sim3d-speed-slider">
+                <input type="range" id="simSpeedSlider" min="0.5" max="10" step="0.5" value="1" class="sim3d-speed-slider">
             </div>
         </div>
     `;
@@ -365,7 +411,7 @@ function renderSimOverlay() {
         reset3DAnimation();
     });
     document.getElementById("simSpeedSlider").addEventListener("input", (e) => {
-        simSpeed = parseFloat(e.target.value) / 3;
+        simSpeed = parseFloat(e.target.value) || 1;
     });
 }
 
@@ -381,13 +427,11 @@ function animateStep(timestamp) {
     const elapsed = (timestamp - simStartTime) / 1000;
     const delta = (timestamp - (animateStep._lastTimestamp || timestamp)) / 1000;
     animateStep._lastTimestamp = timestamp;
-    let baseSpeed = 40;
-    if (simTotalDistance / 40 > 180) {
-        baseSpeed = simTotalDistance / 180;
-    }
-    const currentSpeed = baseSpeed * simSpeed;
+    const totalDistKm = simTotalDistance / 1000;
+    const baseSpeedMps = 30;
+    const currentMps = baseSpeedMps * simSpeed;
     const totalDist = Math.max(1, simTotalDistance);
-    simProgress += (currentSpeed * delta) / totalDist;
+    simProgress += (currentMps * delta) / totalDist;
     simStopPoints.forEach(function(stop, idx) {
         if (simStoppedIndexes.indexOf(idx) !== -1) return;
         const stopProgress = idx / Math.max(simStopPoints.length - 1, 1);
@@ -443,16 +487,45 @@ function animateStep(timestamp) {
         simProgressPolyline.setPath(passedPath);
     }
     if (simMap) {
-        simMap.setCenter({ lat: point.lat, lng: point.lng });
+        if (typeof simMap.moveCamera === "function") {
+            simMap.moveCamera({
+                center: { lat: point.lat, lng: point.lng },
+                heading: point.heading,
+                tilt: 60,
+                zoom: 16
+            });
+        } else {
+            simMap.setCenter({ lat: point.lat, lng: point.lng });
+            if (typeof simMap.setHeading === "function") simMap.setHeading(point.heading);
+            if (typeof simMap.setTilt === "function") simMap.setTilt(60);
+            if (typeof simMap.setZoom === "function") simMap.setZoom(16);
+        }
         if (simVehicleMarker) {
             simVehicleMarker.position = { lat: point.lat, lng: point.lng };
         }
     }
-    const simulatedSpeed = baseSpeed * simSpeed + Math.sin(simProgress * Math.PI * 4) * 5;
+    let baseRealisticSpeed;
+    if (totalDistKm < 5) {
+        baseRealisticSpeed = 40;
+    } else if (totalDistKm < 50) {
+        baseRealisticSpeed = 40 + ((totalDistKm - 5) / 45) * 20;
+    } else {
+        const ratio = Math.min(1, (totalDistKm - 50) / 250);
+        baseRealisticSpeed = 200 + ratio * 85;
+    }
+
+    const wobble = 1 + (Math.sin(simProgress * Math.PI * 8 + timestamp * 0.002) * 0.05);
+    let displaySpeed = baseRealisticSpeed * wobble * simSpeed;
+    displaySpeed = Math.min(300, Math.max(0, displaySpeed));
+
     const traveledDistance = simTotalDistance * simProgress;
+    const traveledKm = traveledDistance / 1000;
+    const estimatedSeconds = baseRealisticSpeed > 0 ? (traveledKm / baseRealisticSpeed) * 3600 : 0;
+
     simUpdateHUD({
-        speed: simulatedSpeed,
+        speed: displaySpeed,
         distance: traveledDistance,
+        estimatedTime: estimatedSeconds,
         elapsed: elapsed,
         progress: simProgress
     });
@@ -467,7 +540,66 @@ function animateStep(timestamp) {
     }
 }
 
+async function resolveLocationCoords(locQuery) {
+    if (!locQuery) return null;
+    if (typeof locQuery === "object" && typeof locQuery.lat === "number" && typeof locQuery.lng === "number") {
+        return { lat: locQuery.lat, lng: locQuery.lng, name: locQuery.name || "" };
+    }
+    if (typeof locQuery === "object" && locQuery.lat && (locQuery.lng || locQuery.lon)) {
+        return {
+            lat: parseFloat(locQuery.lat),
+            lng: parseFloat(locQuery.lng || locQuery.lon),
+            name: locQuery.name || locQuery.destination || ""
+        };
+    }
+    const queryStr = String(locQuery).trim();
+    if (!queryStr) return null;
+
+    try {
+        const { Geocoder } = await google.maps.importLibrary("geocoding");
+        const geocoder = new Geocoder();
+        const geoResult = await new Promise((resolve) => {
+            geocoder.geocode({ address: queryStr, region: "JP" }, (results, status) => {
+                if (status === "OK" && results && results[0] && results[0].geometry && results[0].geometry.location) {
+                    resolve({
+                        lat: results[0].geometry.location.lat(),
+                        lng: results[0].geometry.location.lng(),
+                        name: queryStr
+                    });
+                } else {
+                    resolve(null);
+                }
+            });
+        });
+        if (geoResult) return geoResult;
+    } catch (e) {}
+
+    try {
+        const { Place } = await google.maps.importLibrary("places");
+        if (Place && typeof Place.searchByText === "function") {
+            const placeRes = await Place.searchByText({
+                textQuery: queryStr,
+                fields: ["location", "displayName"]
+            });
+            if (placeRes && placeRes.places && placeRes.places[0] && placeRes.places[0].location) {
+                const loc = placeRes.places[0].location;
+                return {
+                    lat: typeof loc.lat === "function" ? loc.lat() : loc.lat,
+                    lng: typeof loc.lng === "function" ? loc.lng() : loc.lng,
+                    name: queryStr
+                };
+            }
+        }
+    } catch (e) {}
+
+    return null;
+}
+
 export async function open3DRouteSimulation(plan) {
+    if (simAnimationId) {
+        cancelAnimationFrame(simAnimationId);
+        simAnimationId = null;
+    }
     renderSimOverlay();
     simOverlayEl.classList.remove("hidden");
     document.body.style.overflow = "hidden";
@@ -475,8 +607,39 @@ export async function open3DRouteSimulation(plan) {
     simIsPlaying = false;
     simStartTime = null;
     simCurrentHeading = null;
-    simCurrentZoom = 17;
-    simCurrentTilt = 65;
+    simCurrentZoom = 16;
+    simCurrentTilt = 60;
+    simSpeed = 1.0;
+    const sliderEl = document.getElementById("simSpeedSlider");
+    if (sliderEl) sliderEl.value = "1";
+
+    if (simRoutePolyline) {
+        simRoutePolyline.setMap(null);
+        simRoutePolyline = null;
+    }
+    if (simProgressPolyline) {
+        simProgressPolyline.setMap(null);
+        simProgressPolyline = null;
+    }
+    if (simStartMarker) {
+        simStartMarker.setMap(null);
+        simStartMarker = null;
+    }
+    if (simEndMarker) {
+        simEndMarker.setMap(null);
+        simEndMarker = null;
+    }
+    if (simVehicleMarker) {
+        simVehicleMarker.map = null;
+        simVehicleMarker = null;
+    }
+    simWaypointMarkers.forEach(function (m) { m.setMap(null); });
+    simWaypointMarkers = [];
+    if (simStopTimer) {
+        clearTimeout(simStopTimer);
+        simStopTimer = null;
+    }
+
     const destName = plan.destination || "Destination";
     simUpdateHUD({
         speed: 0,
@@ -485,69 +648,185 @@ export async function open3DRouteSimulation(plan) {
         progress: 0,
         destination: destName
     });
-    let startLat = 34.6937;
-    let startLng = 135.5023;
-    let endLat = parseFloat(plan.lat) || 34.9949;
-    let endLng = parseFloat(plan.lon) || 135.7850;
-    let intermediates = [];
-    if (plan.waypoints && plan.waypoints.length >= 2) {
-        const wp = plan.waypoints;
-        endLat = parseFloat(wp[wp.length - 1].lat);
-        endLng = parseFloat(wp[wp.length - 1].lng);
-        intermediates = wp.slice(1, wp.length - 1).map(p => ({ lat: parseFloat(p.lat), lng: parseFloat(p.lng) }));
-    }
+
     await loadGoogleMaps();
-    if (plan.departure) {
-        await new Promise(function(resolve) {
-            const geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ address: plan.departure, region: "JP" }, function(results, status) {
-                if (status === "OK" && results[0]) {
-                    startLat = results[0].geometry.location.lat();
-                    startLng = results[0].geometry.location.lng();
-                    if (plan.waypoints && plan.waypoints.length >= 1) {
-                        plan.waypoints[0].lat = startLat;
-                        plan.waypoints[0].lng = startLng;
-                    }
-                }
-                resolve();
-            });
-        });
-    }
-    const routeData = await fetchRoutesData(startLat, startLng, endLat, endLng, intermediates);
-    if (routeData && routeData.path) {
-        simPathCoords = routeData.path;
-    } else {
-        simPathCoords = generateFallbackLatLngPath(startLat, startLng, endLat, endLng, 100);
-    }
-    if (simPathCoords && simPathCoords.length > 0) {
-        startLat = simPathCoords[0].lat;
-        startLng = simPathCoords[0].lng;
-    }
-    simTotalDistance = calculateTotalDistance(simPathCoords);
-    simWaypointLabels = plan.waypointLabels || [];
-    simStopPoints = (plan.waypoints || []).map(function(wp, i) {
-        return {
+
+    let waypoints = [];
+    if (Array.isArray(plan.waypoints) && plan.waypoints.length >= 2) {
+        waypoints = plan.waypoints.map((wp, idx) => ({
             lat: parseFloat(wp.lat),
-            lng: parseFloat(wp.lng),
-            label: wp.name || (plan.waypointLabels || [])[i] || ("経由地" + i),
+            lng: parseFloat(wp.lng != null ? wp.lng : wp.lon),
+            name: wp.name || wp.label || (idx === 0 ? "出発地" : idx === plan.waypoints.length - 1 ? (plan.destination || "目的地") : ("経由地" + idx)),
+            label: idx === 0 ? "出発地" : idx === plan.waypoints.length - 1 ? (plan.destination || "目的地") : (wp.name || wp.label || ("経由地" + idx)),
             description: wp.description || ""
+        })).filter(wp => !isNaN(wp.lat) && !isNaN(wp.lng));
+    }
+
+    if (waypoints.length < 2) {
+        const departureQuery = plan.departure || (document.getElementById("planStartStation") ? document.getElementById("planStartStation").value : "") || "東京駅";
+        const destinationQuery = plan.destination || (document.getElementById("planTargetName") ? document.getElementById("planTargetName").textContent : "") || "神戸三宮";
+
+        let depPoint = null;
+        if (plan.waypoints && plan.waypoints[0] && !isNaN(parseFloat(plan.waypoints[0].lat))) {
+            depPoint = {
+                lat: parseFloat(plan.waypoints[0].lat),
+                lng: parseFloat(plan.waypoints[0].lng != null ? plan.waypoints[0].lng : plan.waypoints[0].lon),
+                name: plan.waypoints[0].name || departureQuery
+            };
+        } else {
+            depPoint = await resolveLocationCoords(departureQuery);
+        }
+        if (!depPoint) {
+            depPoint = { lat: 35.681236, lng: 139.767125, name: departureQuery };
+        }
+
+        let destPoint = null;
+        if (plan.lat && (plan.lon || plan.lng)) {
+            destPoint = {
+                lat: parseFloat(plan.lat),
+                lng: parseFloat(plan.lon || plan.lng),
+                name: destinationQuery
+            };
+        } else if (plan.waypoints && plan.waypoints.length > 0 && !isNaN(parseFloat(plan.waypoints[plan.waypoints.length - 1].lat))) {
+            const lastWp = plan.waypoints[plan.waypoints.length - 1];
+            destPoint = {
+                lat: parseFloat(lastWp.lat),
+                lng: parseFloat(lastWp.lng != null ? lastWp.lng : lastWp.lon),
+                name: lastWp.name || destinationQuery
+            };
+        } else {
+            destPoint = await resolveLocationCoords(destinationQuery);
+        }
+        if (!destPoint) {
+            destPoint = { lat: 34.6901, lng: 135.1955, name: destinationQuery };
+        }
+
+        waypoints = [
+            { lat: depPoint.lat, lng: depPoint.lng, name: departureQuery, label: "出発地", description: "旅のスタート地点" },
+            { lat: destPoint.lat, lng: destPoint.lng, name: destinationQuery, label: plan.destination || "目的地", description: "旅の目的地" }
+        ];
+    }
+
+    const { DirectionsService } = await google.maps.importLibrary("routes");
+    const directionsService = new DirectionsService();
+    const travelMode = window.google?.maps?.TravelMode?.DRIVING || "DRIVING";
+
+    let detailedPath = [];
+    for (let i = 0; i < waypoints.length - 1; i++) {
+        const fromPt = waypoints[i];
+        const toPt = waypoints[i + 1];
+
+        let segmentCoords = [];
+        try {
+            const res = await new Promise((resolve, reject) => {
+                directionsService.route({
+                    origin: { lat: fromPt.lat, lng: fromPt.lng },
+                    destination: { lat: toPt.lat, lng: toPt.lng },
+                    travelMode: travelMode
+                }, (result, status) => {
+                    if (status === "OK" && result && result.routes && result.routes[0]) {
+                        resolve(result.routes[0]);
+                    } else {
+                        reject(status);
+                    }
+                });
+            });
+
+            if (res && res.overview_path && res.overview_path.length > 0) {
+                for (let k = 0; k < res.overview_path.length; k++) {
+                    const pt = res.overview_path[k];
+                    segmentCoords.push({
+                        lat: typeof pt.lat === "function" ? pt.lat() : Number(pt.lat),
+                        lng: typeof pt.lng === "function" ? pt.lng() : Number(pt.lng)
+                    });
+                }
+            }
+        } catch (e) {
+            segmentCoords = [];
+        }
+
+        if (segmentCoords.length === 0) {
+            segmentCoords = [];
+            const steps = 30;
+            for (let k = 0; k <= steps; k++) {
+                const t = k / steps;
+                segmentCoords.push({
+                    lat: fromPt.lat + (toPt.lat - fromPt.lat) * t,
+                    lng: fromPt.lng + (toPt.lng - fromPt.lng) * t
+                });
+            }
+        }
+
+        if (detailedPath.length > 0 && segmentCoords.length > 0) {
+            detailedPath = detailedPath.concat(segmentCoords.slice(1));
+        } else {
+            detailedPath = detailedPath.concat(segmentCoords);
+        }
+    }
+
+    if (detailedPath.length === 0) {
+        const steps = 30;
+        for (let k = 0; k <= steps; k++) {
+            const t = k / steps;
+            detailedPath.push({
+                lat: waypoints[0].lat + (waypoints[waypoints.length - 1].lat - waypoints[0].lat) * t,
+                lng: waypoints[0].lng + (waypoints[waypoints.length - 1].lng - waypoints[0].lng) * t
+            });
+        }
+    }
+
+    simPathCoords = detailedPath;
+    simPathCoords._totalDist = null;
+    simPathCoords._distances = null;
+    simTotalDistance = calculateTotalDistance(simPathCoords);
+
+    simWaypointLabels = waypoints.map(s => s.label);
+    simStopPoints = waypoints.slice(1).map(function(pt, i) {
+        return {
+            lat: pt.lat,
+            lng: pt.lng,
+            label: pt.label || pt.name || ("経由地" + (i + 1)),
+            description: pt.description || ""
         };
     });
     simStoppedIndexes = [];
-    await initSimMap(startLat, startLng, endLat, endLng, intermediates);
+
+    await initSimMap(waypoints, detailedPath);
 }
 
-async function initSimMap(startLat, startLng, endLat, endLng, intermediates) {
+async function initSimMap(waypoints, detailedPath) {
     const container = document.getElementById("sim3dMapContainer");
     if (!container) return;
     const { AdvancedMarkerElement: ame } = await google.maps.importLibrary("marker");
     AdvancedMarkerElement = ame;
+
+    const startPt = waypoints[0];
+    const endPt = waypoints[waypoints.length - 1];
+    const startLat = startPt.lat;
+    const startLng = startPt.lng;
+    const endLat = endPt.lat;
+    const endLng = endPt.lng;
+
+    let initialHeading = 0;
+    if (detailedPath && detailedPath.length >= 2) {
+        if (window.google?.maps?.geometry?.spherical?.computeHeading) {
+            const p1 = new google.maps.LatLng(detailedPath[0].lat, detailedPath[0].lng);
+            const p2 = new google.maps.LatLng(detailedPath[1].lat, detailedPath[1].lng);
+            initialHeading = google.maps.geometry.spherical.computeHeading(p1, p2);
+        } else {
+            const y = Math.sin((detailedPath[1].lng - detailedPath[0].lng) * Math.PI / 180) * Math.cos(detailedPath[1].lat * Math.PI / 180);
+            const x = Math.cos(detailedPath[0].lat * Math.PI / 180) * Math.sin(detailedPath[1].lat * Math.PI / 180) -
+                      Math.sin(detailedPath[0].lat * Math.PI / 180) * Math.cos(detailedPath[1].lat * Math.PI / 180) * Math.cos((detailedPath[1].lng - detailedPath[0].lng) * Math.PI / 180);
+            initialHeading = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+        }
+    }
+
     if (!simMap) {
         simMap = new google.maps.Map(container, {
             center: { lat: startLat, lng: startLng },
-            zoom: 17,
-            tilt: 65,
-            heading: 0,
+            zoom: 16,
+            tilt: 60,
+            heading: initialHeading,
             mapId: "762efe723963e54aa2efe1dd",
             mapTypeId: "hybrid",
             colorScheme: google.maps.ColorScheme.DARK,
@@ -556,18 +835,28 @@ async function initSimMap(startLat, startLng, endLat, endLng, intermediates) {
         });
     } else {
         simMap.setCenter({ lat: startLat, lng: startLng });
-        simMap.setZoom(17);
-        simMap.setTilt(65);
-        simMap.setHeading(0);
+        simMap.setZoom(16);
+        simMap.setTilt(60);
+        simMap.setHeading(initialHeading);
+    }
+
+    if (simRoutePolyline) {
+        simRoutePolyline.setMap(null);
+        simRoutePolyline = null;
     }
     simRoutePolyline = new google.maps.Polyline({
-        path: simPathCoords,
+        path: detailedPath,
         geodesic: true,
         strokeColor: "#1e293b",
         strokeOpacity: 0.6,
         strokeWeight: 6
     });
     simRoutePolyline.setMap(simMap);
+
+    if (simProgressPolyline) {
+        simProgressPolyline.setMap(null);
+        simProgressPolyline = null;
+    }
     simProgressPolyline = new google.maps.Polyline({
         path: [],
         geodesic: true,
@@ -576,56 +865,79 @@ async function initSimMap(startLat, startLng, endLat, endLng, intermediates) {
         strokeWeight: 6
     });
     simProgressPolyline.setMap(simMap);
+
+    if (window.google?.maps?.maps3d?.Polyline3DElement) {
+        try {
+            const polyline3D = new google.maps.maps3d.Polyline3DElement({
+                coordinates: detailedPath,
+                path: detailedPath,
+                strokeColor: "#1e293b",
+                strokeWidth: 6
+            });
+            if (simMap.append) {
+                simMap.append(polyline3D);
+            }
+        } catch (e) {}
+    }
+
+    if (simStartMarker) {
+        simStartMarker.setMap(null);
+        simStartMarker = null;
+    }
     simStartMarker = new google.maps.Marker({
         position: { lat: startLat, lng: startLng },
         icon: createCustomMarkerIcon("start"),
         title: "出発地",
         map: simMap
     });
+
+    if (simEndMarker) {
+        simEndMarker.setMap(null);
+        simEndMarker = null;
+    }
     simEndMarker = new google.maps.Marker({
         position: { lat: endLat, lng: endLng },
         icon: createCustomMarkerIcon("goal"),
         title: "目的地",
         map: simMap
     });
-    if (Math.random() < 0.08) {
-        simVehicleMarker = new AdvancedMarkerElement({
-            position: { lat: startLat, lng: startLng },
-            map: simMap
-        });
-    } else {
-        const shinkansenEl = document.createElement("div");
-        shinkansenEl.style.fontSize = "32px";
-        shinkansenEl.style.display = "flex";
-        shinkansenEl.style.alignItems = "center";
-        shinkansenEl.style.justifyContent = "center";
-        shinkansenEl.style.width = "40px";
-        shinkansenEl.style.height = "40px";
-        shinkansenEl.style.background = "rgba(255, 255, 255, 0.9)";
-        shinkansenEl.style.borderRadius = "50%";
-        shinkansenEl.style.boxShadow = "0 4px 10px rgba(0, 0, 0, 0.3)";
-        shinkansenEl.style.border = "2px solid #00f3ff";
-        shinkansenEl.innerText = "🚄";
-        simVehicleMarker = new AdvancedMarkerElement({
-            position: { lat: startLat, lng: startLng },
-            map: simMap,
-            content: shinkansenEl
-        });
+
+    if (simVehicleMarker) {
+        simVehicleMarker.map = null;
+        simVehicleMarker = null;
     }
+    const shinkansenEl = document.createElement("div");
+    shinkansenEl.style.fontSize = "32px";
+    shinkansenEl.style.display = "flex";
+    shinkansenEl.style.alignItems = "center";
+    shinkansenEl.style.justifyContent = "center";
+    shinkansenEl.style.width = "40px";
+    shinkansenEl.style.height = "40px";
+    shinkansenEl.style.background = "rgba(255, 255, 255, 0.9)";
+    shinkansenEl.style.borderRadius = "50%";
+    shinkansenEl.style.boxShadow = "0 4px 10px rgba(0, 0, 0, 0.3)";
+    shinkansenEl.style.border = "2px solid #00f3ff";
+    shinkansenEl.innerText = "🚄";
+    simVehicleMarker = new AdvancedMarkerElement({
+        position: { lat: startLat, lng: startLng },
+        map: simMap,
+        content: shinkansenEl
+    });
+
+    simWaypointMarkers.forEach(m => m.setMap(null));
     simWaypointMarkers = [];
-    if (Array.isArray(intermediates)) {
-        intermediates.forEach(function (wp, i) {
-            const label = simWaypointLabels[i + 1] || ("経由地" + (i + 1));
-            const category = getSpotCategory(label);
-            const marker = new google.maps.Marker({
-                position: { lat: wp.lat, lng: wp.lng },
-                map: simMap,
-                title: label,
-                icon: createCustomMarkerIcon(category)
-            });
-            simWaypointMarkers.push(marker);
+    const intermediateStops = waypoints.slice(1, waypoints.length - 1);
+    intermediateStops.forEach(function (wp, i) {
+        const label = wp.label || wp.name || ("経由地" + (i + 1));
+        const category = getSpotCategory(label);
+        const marker = new google.maps.Marker({
+            position: { lat: wp.lat, lng: wp.lng },
+            map: simMap,
+            title: label,
+            icon: createCustomMarkerIcon(category)
         });
-    }
+        simWaypointMarkers.push(marker);
+    });
 }
 
 function initSimMapFallback(startLat, startLng) {
@@ -711,8 +1023,8 @@ export function reset3DAnimation() {
     simProgress = 0;
     simStartTime = null;
     simCurrentHeading = null;
-    simCurrentZoom = 17;
-    simCurrentTilt = 65;
+    simCurrentZoom = 16;
+    simCurrentTilt = 60;
     if (simProgressPolyline) {
         simProgressPolyline.setPath([]);
     }
@@ -727,8 +1039,8 @@ export function reset3DAnimation() {
         simMap.moveCamera({
             center: { lat: start.lat, lng: start.lng },
             heading: 0,
-            tilt: 65,
-            zoom: 17
+            tilt: 60,
+            zoom: 16
         });
         if (simVehicleMarker) {
             simVehicleMarker.position = { lat: start.lat, lng: start.lng };

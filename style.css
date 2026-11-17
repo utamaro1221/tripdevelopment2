@@ -18,7 +18,7 @@
     --transition-speed: 0.3s;
 }
 
-/* Themes */
+
 body.theme-mc-blue {
     --bg-color: #f0f6fa;
     --sidebar-bg: #ffffff;
@@ -80,7 +80,7 @@ body.theme-mc-dark {
 }
 
 html {
-    /* rem ??????: ??????????(80?120%)?????? */
+    
     font-size: var(--app-font-size);
 }
 
@@ -107,7 +107,7 @@ body {
     display: none !important;
 }
 
-/* App Container and Layout */
+
 .app-container {
     display: flex;
     width: 100%;
@@ -115,7 +115,7 @@ body {
     position: relative;
 }
 
-/* Sidebar Styling (Modern Clean Bottom Navigation Bar) */
+
 .app-sidebar,
 .bottom-nav {
     position: fixed;
@@ -130,9 +130,29 @@ body {
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    transition: transform var(--transition-speed) ease;
-    z-index: 100;
+    transition: transform var(--transition-speed) ease, width 0.3s ease, margin 0.3s ease;
+    z-index: 160000;
     box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.03);
+}
+
+body.chat-drawer-open .bottom-nav {
+    width: calc(100% - 420px) !important;
+    max-width: calc(100% - 420px) !important;
+}
+
+body.chat-drawer-open .app-content {
+    margin-right: 420px;
+    transition: margin-right 0.3s ease;
+}
+
+@media (max-width: 768px) {
+    body.chat-drawer-open .bottom-nav {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    body.chat-drawer-open .app-content {
+        margin-right: 0;
+    }
 }
 
 .sidebar-profile {
@@ -194,7 +214,7 @@ body {
     background: linear-gradient(to bottom, rgba(var(--primary-color-rgb), 0.08), rgba(var(--primary-color-rgb), 0.01));
 }
 
-/* Glowing active indicator line at the top of the item inspired by mandc.tokyo/NIKKE mix */
+
 .sidebar-item.active::after {
     content: '';
     position: absolute;
@@ -207,7 +227,7 @@ body {
     border-radius: 2px;
 }
 
-/* Pulsing outline glow on active icons */
+
 .sidebar-item.active .material-icons {
     transform: scale(1.1);
     filter: drop-shadow(0 0 4px rgba(var(--primary-color-rgb), 0.4));
@@ -235,7 +255,7 @@ body {
     display: none !important;
 }
 
-/* Permanent Top Header */
+
 .mobile-header {
     display: flex;
     position: fixed;
@@ -260,6 +280,7 @@ body {
     font-weight: 800;
     background: linear-gradient(135deg, var(--text-color), var(--primary-color));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: 0.02em;
 }
@@ -280,22 +301,22 @@ body {
     object-fit: cover;
 }
 
-/* App Content Area */
+
 .app-content {
     flex: 1;
     position: relative;
     width: 100%;
     margin-top: 60px;
-    /* offset top header */
+    
     margin-bottom: 90px;
-    /* offset bottom bar */
+    
     height: calc(100dvh - 150px);
     overflow: hidden;
     background-color: var(--bg-color);
     transition: background-color var(--transition-speed);
 }
 
-/* View General Setup */
+
 .view {
     position: absolute;
     inset: 0;
@@ -311,7 +332,7 @@ body {
     opacity: 0;
 }
 
-/* Sidebar Overlay for Mobile */
+
 .sidebar-overlay {
     display: none;
     position: fixed;
@@ -321,7 +342,7 @@ body {
     z-index: 95;
 }
 
-/* Custom Scrollbars */
+
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -340,31 +361,36 @@ body {
     background: var(--text-extra-muted);
 }
 
-/* ------------------------------------- */
-/* VIEW: SWIPE (検索)                  */
-/* ------------------------------------- */
+
+
+
 #view-swipe {
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
-    padding: 24px;
+    padding: 8px 16px;
     padding-bottom: calc(90px + env(safe-area-inset-bottom));
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
-/* Filter Bar styles */
+
 .filter-bar {
-    position: relative;
+    position: sticky;
+    top: 0;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    z-index: 10;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: nowrap;
+    z-index: 20;
     width: 100%;
-    margin: 12px auto 0 auto;
-    flex-shrink: 0;
-    max-width: 100% !important;
+    max-width: 480px;
+    margin: 0 auto 10px auto;
+    padding: 6px 4px;
+    background: var(--bg-color);
+    backdrop-filter: blur(8px);
     box-sizing: border-box !important;
+    flex-shrink: 0;
 }
 
 .filter-select {
@@ -372,14 +398,17 @@ body {
     color: var(--text-color);
     border: 1px solid var(--border-color);
     border-radius: 20px;
-    padding: 8px 16px;
-    font-size: 0.875rem;
+    padding: 8px 10px;
+    font-size: 0.82rem;
     outline: none;
     cursor: pointer;
     transition: border-color 0.2s, box-shadow 0.2s;
-    min-width: 110px;
-    flex: 1 1 auto;
-    max-width: 160px;
+    min-width: 0;
+    flex: 1 1 0;
+    width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .filter-select:focus {
@@ -387,15 +416,16 @@ body {
     box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.12);
 }
 
-/* Card Stack */
+
 #card-stack {
     position: relative;
     width: 92%;
-    height: 520px;
+    height: min(520px, calc(100vh - 240px));
+    min-height: 400px;
     max-height: 520px;
     max-width: 450px;
     overflow: visible;
-    margin: 12px auto 0 auto;
+    margin: 0 auto;
     flex-shrink: 0;
 }
 
@@ -466,7 +496,7 @@ body {
     z-index: 7;
 }
 
-/* Star Button */
+
 .card-star-btn {
     position: absolute;
     bottom: 20px;
@@ -536,11 +566,12 @@ body {
     padding: 12px 80px 12px 20px;
     background: var(--card-bg);
     border-top: 1px solid var(--border-color);
-    pointer-events: none;
     z-index: 6;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
+    box-sizing: border-box;
+    pointer-events: auto;
 }
 
 .card-info h3 {
@@ -554,16 +585,33 @@ body {
 .spot-description {
     font-size: 0.875rem;
     color: var(--text-muted);
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.45;
+    display: block;
+    max-height: 72px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    word-break: break-word;
+    margin: 4px 0 0 0;
+    padding-right: 4px;
+    pointer-events: auto;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
 }
 
-/* Swipe Stamps */
+.spot-description::-webkit-scrollbar {
+    width: 4px;
+}
+
+.spot-description::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.spot-description::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+
 .swipe-stamp {
     position: absolute;
     top: 50px;
@@ -594,7 +642,7 @@ body {
     transform: rotate(-15deg);
 }
 
-/* Empty State / No Cards Screen */
+
 .empty-stack-view {
     display: flex;
     flex-direction: column;
@@ -617,7 +665,7 @@ body {
     max-width: 280px;
 }
 
-/* Swipe Actions (いいね / 興味なしボタン) */
+
 .swipe-actions-container {
     display: flex;
     gap: 20px;
@@ -720,9 +768,9 @@ body {
     }
 }
 
-/* ------------------------------------- */
-/* VIEW: PLAN (予定)                     */
-/* ------------------------------------- */
+
+
+
 .plan-view-container {
     padding: 30px;
     max-width: 900px;
@@ -834,7 +882,7 @@ body {
     color: var(--text-muted);
 }
 
-/* Planning Form & Results Panel */
+
 .planning-panel {
     background-color: var(--sidebar-bg);
     border-radius: 20px;
@@ -892,7 +940,7 @@ body {
     box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.12);
 }
 
-/* Priority Pills Selector */
+
 .priority-pills {
     display: flex;
     flex-wrap: wrap;
@@ -931,7 +979,7 @@ body {
     gap: 12px;
 }
 
-/* Debug Simulator Switch */
+
 .debug-simulator {
     display: flex;
     align-items: center;
@@ -944,7 +992,7 @@ body {
     cursor: pointer;
 }
 
-/* AI Results Loading View */
+
 .loading-view {
     display: flex;
     flex-direction: column;
@@ -970,7 +1018,7 @@ body {
     }
 }
 
-/* Boat Spinner and Progress Bar */
+
 .boat-spinner-container {
     position: relative;
     width: 80px;
@@ -1013,7 +1061,7 @@ body {
     }
 }
 
-/* Shinkansen Progress Bar */
+
 .progress-container {
     width: 100%;
     max-width: 320px;
@@ -1070,7 +1118,7 @@ body {
     letter-spacing: 0.05em;
 }
 
-/* AI Generated Itinerary and Hotel Results */
+
 .ai-results-view {
     display: flex;
     flex-direction: column;
@@ -1157,7 +1205,7 @@ body {
     font-size: 1.15rem;
 }
 
-/* API Error state style */
+
 .api-error-card {
     background-color: rgba(239, 68, 68, 0.05);
     border: 1px solid rgba(239, 68, 68, 0.2);
@@ -1198,12 +1246,12 @@ body {
     transform: translateY(1px);
 }
 
-/* ------------------------------------- */
-/* VIEW: HOME (ホーム & データ管理)       */
-/* ------------------------------------- */
+
+
+
 #view-home {
-    padding: 24px 20px;
-    overflow-y: auto;
+    padding: 24px 20px 120px !important;
+    overflow-y: auto !important;
     gap: 20px;
     align-items: center;
     width: 100%;
@@ -1360,9 +1408,9 @@ body {
     margin-top: 2px;
 }
 
-/* ------------------------------------- */
-/* VIEW: DATA (スタンド能力値)          */
-/* ------------------------------------- */
+
+
+
 #view-data {
     padding: 30px;
     box-sizing: border-box;
@@ -1388,7 +1436,7 @@ body {
     color: var(--text-muted);
 }
 
-/* Stand Name Display */
+
 .stand-badge-container {
     background: linear-gradient(135deg, rgba(var(--primary-color-rgb), 0.06), rgba(var(--primary-color-rgb), 0.01));
     border: 1px solid rgba(var(--primary-color-rgb), 0.2);
@@ -1433,9 +1481,9 @@ body {
     margin: 0 auto;
 }
 
-/* ------------------------------------- */
-/* VIEW: SETTINGS (設定)                 */
-/* ------------------------------------- */
+
+
+
 #view-settings {
     padding: 30px;
     box-sizing: border-box;
@@ -1544,9 +1592,9 @@ body {
     accent-color: var(--primary-color);
 }
 
-/* ------------------------------------- */
-/* MODAL & TOAST                         */
-/* ------------------------------------- */
+
+
+
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -1692,7 +1740,7 @@ body {
     padding: 40px 0;
 }
 
-/* Toast Notifications */
+
 .toast-container {
     position: fixed;
     bottom: 24px;
@@ -1733,7 +1781,7 @@ body {
     }
 }
 
-/* Recommendation Banner */
+
 .recommendation-banner {
     position: absolute;
     top: 20px;
@@ -1787,7 +1835,7 @@ body {
     transform: scale(1.05);
 }
 
-/* Share View Layout */
+
 .shared-plans-panel,
 .my-shareable-panel {
     background-color: var(--sidebar-bg);
@@ -1826,7 +1874,7 @@ body {
     max-height: 700px;
 }
 
-/* Shared Plan Card */
+
 .shared-plan-card {
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
@@ -1901,7 +1949,7 @@ body {
     margin-bottom: 8px;
 }
 
-/* Itinerary Preview Collapse/Expand */
+
 .shared-itinerary-preview {
     position: relative;
     max-height: 110px;
@@ -1957,7 +2005,7 @@ body {
     width: auto;
 }
 
-/* My Shareable Item */
+
 .my-shareable-item {
     display: flex;
     justify-content: space-between;
@@ -1987,14 +2035,14 @@ body {
     color: var(--text-muted);
 }
 
-/* Responsive adjustment for share view */
+
 @media (max-width: 992px) {
     .share-view-container {
         grid-template-columns: 1fr !important;
     }
 }
 
-/* Firebase Auth UI Styles */
+
 .auth-status-card {
     display: flex;
     align-items: center;
@@ -2049,14 +2097,14 @@ body {
 
 
 
-/* Launch Screen & Opening Animation Styles */
+
 .launch-screen {
     position: fixed;
     inset: 0;
     width: 100vw;
     height: 100dvh;
     background-color: #0c111d;
-    /* 深みのあるブラックアウト */
+    
     z-index: 99999;
     display: flex;
     flex-direction: column;
@@ -2224,7 +2272,7 @@ body {
     }
 }
 
-/* 飛行機の螺旋軌道アニメーション */
+
 .moving-plane {
     offset-path: url(#spiral-path);
     offset-rotate: auto;
@@ -2255,7 +2303,7 @@ body {
     }
 }
 
-/* 新幹線の楕円軌道アニメーション */
+
 .moving-train {
     offset-path: url(#circle-path);
     offset-rotate: auto;
@@ -2274,7 +2322,7 @@ body {
     }
 }
 
-/* オンボーディングパネルのスライドインスタイル */
+
 .onboarding-panel {
     position: absolute;
     bottom: 0;
@@ -2319,7 +2367,7 @@ body {
     gap: 12px;
 }
 
-/* Responsive Overrides */
+
 @media (max-width: 768px) {
     .sidebar-nav ul {
         gap: 6px;
@@ -2339,7 +2387,7 @@ body {
         gap: 12px;
     }
 
-    /* Mobile Launch Screen Layout Overrides */
+    
     .launch-screen .animation-container {
         max-height: 360px;
         transform: translateY(-50px);
@@ -2412,7 +2460,7 @@ body {
 
 @media (min-width: 769px) {
 
-    /* PC Launch Screen Layout (More Impact) */
+    
     .launch-screen .animation-container {
         max-width: 650px;
         max-height: 650px;
@@ -2462,22 +2510,26 @@ body {
     }
 }
 
-/* AI Chatbot Drawer Style */
+
 .chat-drawer {
     position: fixed;
     top: 0;
+    bottom: 90px;
     right: 0;
     width: 100%;
-    max-width: 440px;
-    height: 100%;
+    max-width: min(420px, 100vw);
+    height: calc(100% - 90px);
     background-color: var(--card-bg);
     border-left: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
     box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
     z-index: 150000;
     display: flex;
     flex-direction: column;
     transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     transform: translateX(0);
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .chat-drawer.hidden {
@@ -2486,19 +2538,23 @@ body {
     pointer-events: none;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
     .chat-drawer {
-        top: auto;
-        bottom: 0;
-        height: 85%;
+        top: 60px;
+        bottom: 90px;
+        left: auto;
+        right: 0;
+        width: 100%;
+        max-width: 100vw;
+        height: calc(100% - 150px);
         border-left: none;
         border-top: 1px solid var(--border-color);
-        border-radius: 24px 24px 0 0;
-        transform: translateY(0);
+        border-bottom: 1px solid var(--border-color);
+        box-sizing: border-box;
     }
 
     .chat-drawer.hidden {
-        transform: translateY(100%);
+        transform: translateX(100%);
     }
 }
 
@@ -2601,12 +2657,65 @@ body {
 }
 
 .chat-drawer-footer {
-    padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
+    padding: 10px 12px;
     background-color: var(--card-bg);
     border-top: 1px solid var(--border-color);
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    flex-shrink: 0;
 }
 
-/* Skeleton loader for AI typing */
+#chatBotForm {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    overflow: hidden;
+}
+
+#chatPrefecture,
+#chatBotForm .filter-select {
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
+    min-width: 0 !important;
+    max-width: 86px !important;
+    width: 86px !important;
+    margin: 0 !important;
+    padding: 6px 14px 6px 8px !important;
+    font-size: 0.8rem !important;
+    height: 38px !important;
+    box-sizing: border-box !important;
+}
+
+#chatInput {
+    flex: 1 !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    padding: 8px 12px !important;
+    height: 38px !important;
+    font-size: 0.875rem !important;
+}
+
+#chatBotForm button[type="submit"] {
+    flex-shrink: 0 !important;
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    max-width: 38px !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 10px !important;
+}
+
+
 .chat-typing-bubble {
     display: flex;
     gap: 4px;
@@ -2668,11 +2777,11 @@ body {
     }
 }
 
-/* ================================================================= */
-/* NEW CUSTOM STYLES (Kinki Wander Travel Premium UX Refinement)     */
-/* ================================================================= */
 
-/* Accordion for advanced settings */
+
+
+
+
 .advanced-settings-accordion {
     margin-top: 16px;
     border: 1px solid var(--border-color);
@@ -2701,7 +2810,7 @@ body {
     transform: rotate(180deg);
 }
 
-/* Category Filter Tag Pills in Swipe view */
+
 .category-filters {
     display: flex;
     gap: 8px;
@@ -2709,12 +2818,12 @@ body {
     padding: 4px 0;
     width: 100%;
     scrollbar-width: none;
-    /* Hide scrollbar in Firefox */
+    
 }
 
 .category-filters::-webkit-scrollbar {
     display: none;
-    /* Hide scrollbar in Webkit browsers */
+    
 }
 
 .filter-pill, .filter-btn {
@@ -2746,9 +2855,9 @@ body {
     box-shadow: 0 4px 10px rgba(var(--primary-color-rgb), 0.2);
 }
 
-/* Home Screen Redesigned Components */
 
-/* Empty State Card */
+
+
 .home-empty-state {
     width: 100%;
     max-width: 700px;
@@ -2793,7 +2902,7 @@ body {
     width: 100%;
 }
 
-/* Image-backed Hero Card */
+
 .home-hero-card {
     width: 100%;
     max-width: 700px;
@@ -2899,7 +3008,7 @@ body {
     font-weight: 500;
 }
 
-/* Horizontal Spot Thumbnail List */
+
 .home-section {
     width: 100%;
     max-width: 700px;
@@ -3017,6 +3126,7 @@ body {
     z-index: 2;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     line-height: 1.2;
@@ -3057,7 +3167,7 @@ body {
     font-size: 1.1rem;
 }
 
-/* Upcoming Plans List on Home */
+
 .home-plans-list {
     display: flex;
     flex-direction: column;
@@ -3106,7 +3216,7 @@ body {
     flex-shrink: 0;
 }
 
-/* 旅行予定 削除ボタン */
+
 .home-plan-delete-btn {
     background: none;
     border: none;
@@ -3138,7 +3248,7 @@ body {
     font-size: 1.1rem;
 }
 
-/* 旅行予定 もっと見るボタン */
+
 .home-plans-toggle-btn {
     width: 100%;
     background: var(--card-bg);
@@ -3173,7 +3283,7 @@ body {
     transform: rotate(180deg);
 }
 
-/* Bottom Chat / Search Bar */
+
 .home-ai-chat-bar-container {
     width: 100%;
     max-width: 700px;
@@ -3236,7 +3346,7 @@ body {
     font-size: 1.2rem;
 }
 
-/* My Page Redesigned Components */
+
 
 .mypage-header-card {
     background: linear-gradient(135deg, var(--primary-color) 0%, #0369a1 100%);
@@ -3342,7 +3452,7 @@ body {
     margin-bottom: 4px;
 }
 
-/* Interest Stats Card in My Page */
+
 .interest-stats-card {
     background-color: var(--bg-color);
     border: 1px solid var(--border-color);
@@ -3373,16 +3483,16 @@ body {
     }
 }
 
-/* ========================================== */
-/* 追加: 属性タグ・診断・先回り提案のスタイル */
-/* ========================================== */
 
-/* 1. カードバッジ & タグ */
+
+
+
+
 .card-match-badge {
     position: absolute;
     top: 16px;
     left: 95px;
-    /* Prefecture badgeの横に配置 */
+    
     background: linear-gradient(135deg, #ec4899, #8b5cf6);
     color: #ffffff;
     box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
@@ -3421,7 +3531,7 @@ body {
     font-size: 0.875rem;
 }
 
-/* 2. マイページ：詳細トラベルプロフィール分析 */
+
 .pref-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -3462,7 +3572,7 @@ body {
     gap: 6px;
 }
 
-/* 3. 予定画面：先回り自動提案 */
+
 .ai-proactive-view {
     display: flex;
     flex-direction: column;
@@ -3507,7 +3617,7 @@ body {
     background: linear-gradient(to bottom, var(--primary-color), #3b82f6);
 }
 
-/* Fallback / Offline Notice Styles */
+
 .fallback-notice-banner {
     background-color: rgba(249, 115, 22, 0.08);
     border: 1px solid rgba(249, 115, 22, 0.2);
@@ -3531,7 +3641,7 @@ body {
     vertical-align: middle;
 }
 
-/* Community Interactive Elements */
+
 .compatibility-container {
     margin-top: 14px;
     display: flex;
@@ -3591,7 +3701,7 @@ body {
     margin-top: 2px;
 }
 
-/* Compatibility Themes */
+
 .compat-perfect {
     background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.01));
     border-color: rgba(16, 185, 129, 0.25);
@@ -3632,7 +3742,7 @@ body {
     color: #8b5cf6;
 }
 
-/* Dark mode adjustments for compatibility text */
+
 body.theme-mc-dark .compat-perfect {
     color: #a7f3d0;
 }
@@ -3649,7 +3759,7 @@ body.theme-mc-dark .compat-unique {
     color: #ddd6fe;
 }
 
-/* Reactions styling */
+
 .reactions-bar {
     display: flex;
     gap: 8px;
@@ -4041,29 +4151,28 @@ header,
     box-sizing: border-box !important;
 }
 
-/* ===================================================================== */
-/* UI SCALE-UP (responsive sizing)                                        */
-/* PC / Tablet / Phone を適切なサイズに。すべて rem 指定なので             */
-/* html { font-size: var(--app-font-size) } により文字サイズスライダーが効く。 */
-/* ===================================================================== */
+
+
+
+
+
 :root {
-    --content-max: 1100px;      /* PC 共通コンテナ幅 */
-    --content-narrow: 900px;    /* マイページ・設定の幅 */
-    --card-h-pc: clamp(460px, calc(100dvh - 400px), 620px); /* スワイプカード高さ(PC) */
-    --tap-min: 44px;            /* 最小クリック領域 */
-    --thumb-w: 160px;           /* 保存スポットのサムネイル幅 */
-    --thumb-h: 210px;           /* 保存スポットのサムネイル高さ */
+    --content-max: 1100px;      
+    --content-narrow: 900px;    
+    --card-h-pc: clamp(460px, calc(100dvh - 400px), 620px); 
+    --tap-min: 44px;            
+    --thumb-w: 160px;           
+    --thumb-h: 210px;           
 }
 
-/* 入力欄は iOS の自動ズーム防止のため 16px 以上。
-   !important: 各コンポーネントの個別 rem 指定を上書きするため。 */
+
 input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
 select,
 textarea {
     font-size: max(16px, 1rem) !important;
 }
 
-/* クリック領域は最低 44px */
+
 .btn-primary,
 .btn-text,
 .btn-large,
@@ -4085,16 +4194,14 @@ textarea {
     min-height: var(--tap-min);
 }
 
-/* 見た目を変えずにタップ領域だけ拡張 */
+
 .thumbnail-star-btn::before {
     content: '';
     position: absolute;
     inset: -8px;
 }
 
-/* script.js のインライン style(font-size: 0.7〜0.85rem)の上書き。
-   !important: インライン style は通常の CSS では上書きできないため。
-   rem 指定なので文字サイズスライダーは有効のまま。 */
+
 [style*="font-size: 0.65rem"],
 [style*="font-size:0.65rem"],
 [style*="font-size: 0.7rem"],
@@ -4111,7 +4218,7 @@ textarea {
     font-size: 0.875rem !important;
 }
 
-/* ---------- ヘッダー / 下部ナビ ---------- */
+
 .header-title {
     font-size: 1.4rem;
 }
@@ -4129,7 +4236,7 @@ textarea {
     font-size: 2.1rem;
 }
 
-/* ---------- スワイプ画面 ---------- */
+
 .filter-select {
     font-size: 0.95rem;
 }
@@ -4162,7 +4269,7 @@ textarea {
     font-size: 0.8rem;
 }
 
-/* ---------- ホーム: 保存スポットのサムネイル ---------- */
+
 .saved-spot-thumbnail-card {
     width: var(--thumb-w);
     height: var(--thumb-h);
@@ -4180,21 +4287,21 @@ textarea {
     font-size: 0.875rem;
 }
 
-/* ===================================================================== */
-/* TABLET (768px〜): 下部ナビを少し大きく                                  */
-/* ===================================================================== */
+
+
+
 @media (min-width: 768px) {
     .sidebar-item {
         font-size: 1rem;
     }
 }
 
-/* ===================================================================== */
-/* PC (1024px〜)                                                           */
-/* ===================================================================== */
+
+
+
 @media (min-width: 1024px) {
 
-    /* 下部ナビ(高さ 90px のまま、アイコンとラベルのみ拡大) */
+    
     .sidebar-nav ul {
         max-width: 900px;
     }
@@ -4208,7 +4315,7 @@ textarea {
         font-size: 2.2rem;
     }
 
-    /* スワイプカード: 幅 〜520px / 高さは vh 基準の clamp() */
+    
     #card-stack {
         width: min(520px, 92%);
         max-width: 520px;
@@ -4230,24 +4337,24 @@ textarea {
         font-size: 1.6rem;
     }
 
-    /* 探す画面: フィルターのバーをカード幅に揃え、セレクトを均等幅にして文字切れを防ぐ */
+    
     .filter-bar {
         width: min(520px, 92%);
-        max-width: 520px !important; /* 共通の max-width:100% !important を上書き */
+        max-width: 520px !important; 
         padding: 0 12px;
         flex-wrap: nowrap;
         gap: 8px;
     }
 
-    .filter-select {
+    .filter-bar .filter-select {
         flex: 1 1 0;
         min-width: 140px;
         max-width: none;
-        padding: 8px 12px; /* 左右 12px で「都道府県: すべて」を最後まで表示 */
+        padding: 8px 12px;
         text-overflow: clip;
     }
 
-    /* ホーム: 1 画面(ヘッダー60px〜下部ナビ90px)に収まる 2 カラム + 下部チャットバー */
+    
     #view-home {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
@@ -4255,17 +4362,17 @@ textarea {
             "hero  saved"
             "plans saved"
             "chat  chat";
-        grid-template-rows: minmax(320px, 1fr) auto auto; /* 左右の高さを揃えて画面いっぱいに。足りない時のみスクロール */
+        grid-template-rows: minmax(320px, 1fr) auto auto;
         align-content: stretch;
         align-items: stretch;
         column-gap: 24px;
         row-gap: 16px;
-        padding: 20px max(28px, calc((100% - var(--content-max)) / 2));
-        max-width: 100% !important; /* 末尾の共通 max-width:100% !important と同値(幅は padding で 1100px に制限) */
-        overflow-y: auto;
+        padding: 20px max(28px, calc((100% - var(--content-max)) / 2)) 120px !important;
+        max-width: 100% !important;
+        overflow-y: auto !important;
     }
 
-    /* 左カラム: 空状態 / ヒーローを縦に伸ばし、中身を縦中央に配置 */
+    
     .home-empty-state,
     .home-hero-card {
         grid-area: hero;
@@ -4294,21 +4401,20 @@ textarea {
 
     .home-empty-state h3,
     .hero-dest {
-        font-size: 1.5rem; /* タイトル 1.5rem */
+        font-size: 1.5rem;
     }
 
     .home-empty-state p,
     .hero-label,
     .weather-desc {
-        font-size: 1rem; /* 説明 1rem */
-    }
-
-    .home-empty-state .btn-large {
-        min-height: 52px; /* ボタン高さ 52px 以上 */
         font-size: 1rem;
     }
 
-    /* 予定リストは高さを制限し、多い時だけ内部スクロール */
+    .home-empty-state .btn-large {
+        min-height: 52px;
+        font-size: 1rem;
+    }
+
     #homePlansSection {
         grid-area: plans;
         max-height: clamp(140px, 30dvh, 300px);
@@ -4318,12 +4424,17 @@ textarea {
     #homePlansSection .home-plans-list {
         overflow-y: auto;
         min-height: 0;
+        max-height: 100%;
+        padding-bottom: 16px;
     }
 
-    /* 右カラム: 保存スポットを左と同じ高さのパネルにする */
     .home-section:not(#homePlansSection) {
         grid-area: saved;
         min-height: 0;
+        max-height: clamp(340px, 60dvh, 650px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
         padding: 20px;
         background: var(--card-bg);
         border: 1px solid var(--border-color);
@@ -4336,7 +4447,7 @@ textarea {
     }
 
     .section-title {
-        font-size: 1.25rem; /* 保存スポット見出し 1.25rem */
+        font-size: 1.25rem;
     }
 
     .saved-spots-scroll {
@@ -4347,9 +4458,10 @@ textarea {
         overflow-x: visible;
         overflow-y: auto;
         gap: 16px;
+        padding-bottom: 24px;
     }
 
-    /* 保存スポット 0 件: 点線枠の空状態カードで右カラムを埋める */
+    
     .saved-spots-empty {
         flex: 1;
         display: flex;
@@ -4377,7 +4489,7 @@ textarea {
         font-size: 1rem;
     }
 
-    /* チャットバーは 2 カラムの下に全幅(最大 1100px)で配置 */
+    
     .home-ai-chat-bar-container {
         grid-area: chat;
         max-width: none;
@@ -4387,9 +4499,9 @@ textarea {
         min-height: 56px;
     }
 
-    /* 予定画面: 左右 2 カラム(いいねリスト / フォーム・結果) */
+    
     .plan-view-container {
-        max-width: var(--content-max) !important; /* 共通の max-width:100% !important を上書き */
+        max-width: var(--content-max) !important; 
         padding: 36px;
     }
 
@@ -4402,11 +4514,11 @@ textarea {
         height: clamp(480px, calc(100dvh - 300px), 720px);
     }
 
-    /* マイページ・設定 */
+    
     #view-settings,
     .mypage-sections-container,
     .mypage-header-card {
-        max-width: var(--content-narrow) !important; /* 共通の max-width:100% !important を上書き */
+        max-width: var(--content-narrow) !important; 
     }
 
     .mypage-header-card {
@@ -4414,4 +4526,77 @@ textarea {
         margin-left: auto;
         margin-right: auto;
     }
+}
+
+
+.card-sample-badge {
+    position: absolute;
+    top: 14px;
+    right: 56px;
+    background: rgba(100, 116, 139, 0.88);
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    z-index: 3;
+}
+
+.demo-lock-widget {
+    position: fixed;
+    bottom: 24px;
+    left: 20px;
+    z-index: 100050;
+    display: flex;
+    align-items: center;
+    user-select: none;
+}
+
+@media (max-width: 768px) {
+    .demo-lock-widget {
+        bottom: 96px;
+        left: 12px;
+    }
+}
+
+.demo-lock-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--border-color);
+    border-radius: 9999px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.demo-lock-btn:hover {
+    opacity: 1;
+    background: #ffffff;
+    color: var(--text-main);
+    transform: translateY(-1px);
+}
+
+.demo-lock-btn.active {
+    opacity: 0.9;
+    color: #1d4ed8;
+    background: rgba(239, 246, 255, 0.95);
+    border-color: #93c5fd;
+}
+
+.demo-lock-btn.active:hover {
+    opacity: 1;
+    background: #eff6ff;
+    border-color: #3b82f6;
 }

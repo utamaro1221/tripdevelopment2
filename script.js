@@ -1,4 +1,4 @@
-﻿import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
 import {
     getAuth,
@@ -24,7 +24,7 @@ import {
     fetchPlaceDetails,
     generateFallbackLatLngPath,
     getPathPointAndHeading
-} from "./simulation3d.js";
+} from "./simulation3d.js?v=3.0.0";
 
 window.open3DRouteSimulation = open3DRouteSimulation;
 window.close3DRouteSimulation = close3DRouteSimulation;
@@ -38,7 +38,6 @@ window.fetchPlaceDetails = fetchPlaceDetails;
 window.generateFallbackLatLngPath = generateFallbackLatLngPath;
 window.getPathPointAndHeading = getPathPointAndHeading;
 
-// Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyC9Sk685SKTMaPEdzGlG4k9ud5JN6A4STE",
     authDomain: "tora-1c525.firebaseapp.com",
@@ -49,7 +48,6 @@ const firebaseConfig = {
     measurementId: "G-HQXJFMSH4T"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 window._auth = auth;
@@ -62,16 +60,12 @@ try {
 }
 window._analytics = analytics;
 
-// 認証確定を待つ Promise (A6: 初回 onAuthStateChanged コールバックで解決)
 let resolveAuthReady;
 export const authReadyPromise = new Promise((resolve) => {
     resolveAuthReady = resolve;
 });
 window.authReadyPromise = authReadyPromise;
 
-// ==========================================
-// 🛡️ XSS防止・サニタイズユーティリティ (A7)
-// ==========================================
 function escapeHTML(str) {
     if (str == null) return "";
     return String(str)
@@ -93,9 +87,6 @@ function sanitizeUrl(url) {
 }
 window.sanitizeUrl = sanitizeUrl;
 
-// ==========================================
-// 🛡️ 認証ヘッダー取得ユーティリティ (A6)
-// ==========================================
 async function getAuthHeaders() {
     await authReadyPromise;
     const headers = { 'Content-Type': 'application/json' };
@@ -112,9 +103,6 @@ async function getAuthHeaders() {
 window.getAuthHeaders = getAuthHeaders;
 
 
-// ==========================================
-// 🌟 写真取得用のキャッシュ・キュー・重複排除
-// ==========================================
 const pendingPhotoRequests = new Map();
 
 class AsyncQueue {
@@ -149,9 +137,6 @@ class AsyncQueue {
 
 const photoQueue = new AsyncQueue(3);
 
-// ==========================================
-// 🌟 429エラー対策: 画像の遅延読み込み (Lazy Loading) オブザーバー
-// ==========================================
 const imageObserver = new IntersectionObserver((entries, observer) => {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -175,9 +160,6 @@ const imageObserver = new IntersectionObserver((entries, observer) => {
     threshold: 0.1
 });
 
-// ==========================================
-// 🌟 本物の Google Places API を呼び出す関数
-// ==========================================
 const NO_IMAGE_URL = "https://placehold.co/800x600/e2e8f0/94a3b8?text=No+Image";
 
 window.fetchPlacePhoto = async function (placeName) {
@@ -187,7 +169,6 @@ window.fetchPlacePhoto = async function (placeName) {
         return placeName;
     }
 
-    // 1. sessionStorage キャッシュ確認（同一 placeName は再リクエストしない）
     const cacheKey = `place_photo_${placeName}`;
     try {
         const cached = sessionStorage.getItem(cacheKey);
@@ -196,30 +177,25 @@ window.fetchPlacePhoto = async function (placeName) {
         }
     } catch (e) { }
 
-    // 2. 同一 placeName の進行中 Promise があれば共有（重複リクエスト排除）
     if (pendingPhotoRequests.has(placeName)) {
         return pendingPhotoRequests.get(placeName);
     }
 
     const requestPromise = (async () => {
         try {
-            // 認証確定を待つ
             await authReadyPromise;
 
-            // 未ログイン状態（currentUser が null）のときは API を呼ばずスキップ
             if (!auth || !auth.currentUser) {
                 return NO_IMAGE_URL;
             }
 
-            // 同時実行キュー（同時3件に制限）経由で実行
             return await photoQueue.enqueue(async () => {
-                // キュー待機中にキャッシュされたか再チェック
                 try {
                     const cached = sessionStorage.getItem(cacheKey);
                     if (cached) return cached;
                 } catch (e) { }
 
-                const url = new URL("https://tripdevelopment2.onrender.com/api/travel/places");
+                const url = new URL(getApiUrl("/api/travel/places"));
 
                 const doFetch = async (forceRefresh = false) => {
                     let token = null;
@@ -246,7 +222,6 @@ window.fetchPlacePhoto = async function (placeName) {
 
                 let response = await doFetch(false);
 
-                // 401 が返ったときは getIdToken(true) で強制更新して 1 回だけ再試行
                 if (response && response.status === 401 && auth && auth.currentUser) {
                     console.warn(`[Places API 401] トークンを強制更新して再試行します: ${placeName}`);
                     response = await doFetch(true);
@@ -260,7 +235,7 @@ window.fetchPlacePhoto = async function (placeName) {
                 const data = await response.json();
                 if (data.places && data.places.length > 0 && data.places[0].photos && data.places[0].photos.length > 0) {
                     const photoName = data.places[0].photos[0].name;
-                    const photoUrl = `https://tripdevelopment2.onrender.com/api/travel/photo?name=${encodeURIComponent(photoName)}&maxWidthPx=800`;
+                    const photoUrl = `${getApiUrl("/api/travel/photo")}?name=${encodeURIComponent(photoName)}&maxWidthPx=800`;
                     try {
                         sessionStorage.setItem(cacheKey, photoUrl);
                     } catch (e) { }
@@ -348,9 +323,6 @@ window.toggleNameDisplayMode = function () {
     });
 };
 
-// ==========================================
-// 1. 観光スポットデータ定義 (全国・モックデータ)
-// ==========================================
 const kinkiPlaces = [
     {
         id: 101,
@@ -1426,9 +1398,6 @@ const kinkiPlaces = [
     }
 ];
 
-// ==========================================
-// 1-B. 都道府県別リアル名所プリセット & 動的生成ロジック
-// ==========================================
 const PREFECTURE_COORDINATES = {
     "北海道": { lat: 43.064, lon: 141.346 },
     "青森": { lat: 40.824, lon: 140.740 },
@@ -1484,7 +1453,6 @@ function normalizePrefectureName(pref) {
     return pref.replace(/(県|府|都)$/, "");
 }
 
-// 主要都道府県のリアルな名所プリセットデータ
 const PRESET_REAL_SPOTS = {
     "東京": [
         {
@@ -2302,7 +2270,6 @@ const PRESET_REAL_SPOTS = {
     ]
 };
 
-// 多彩な観光スポット生成用テンプレート (47都道府県すべてに対応)
 const SPOT_TEMPLATES = [
     {
         nameSuffix: "スカイパノラマ展望台",
@@ -2486,7 +2453,90 @@ const SPOT_TEMPLATES = [
     }
 ];
 
-// 動的スポット生成関数
+const REGION_PREFECTURES = {
+    "region:hokkaido_tohoku": ["北海道", "青森", "岩手", "宮城", "秋田", "山形", "福島"],
+    "region:kanto": ["茨城", "栃木", "群馬", "埼玉", "千葉", "東京", "神奈川"],
+    "region:chubu": ["新潟", "富山", "石川", "福井", "山梨", "長野", "岐阜", "静岡", "愛知"],
+    "region:kinki": ["三重", "滋賀", "京都", "大阪", "兵庫", "奈良", "和歌山"],
+    "region:chugoku": ["鳥取", "島根", "岡山", "広島", "山口"],
+    "region:shikoku": ["徳島", "香川", "愛媛", "高知"],
+    "region:kyushu_okinawa": ["福岡", "佐賀", "長崎", "熊本", "大分", "宮崎", "鹿児島", "沖縄"]
+};
+
+const VALID_PREF_VALUES = new Set([
+    "all",
+    "region:hokkaido_tohoku", "region:kanto", "region:chubu", "region:kinki", "region:chugoku", "region:shikoku", "region:kyushu_okinawa",
+    "北海道", "青森", "岩手", "宮城", "秋田", "山形", "福島",
+    "茨城", "栃木", "群馬", "埼玉", "千葉", "東京", "神奈川",
+    "新潟", "富山", "石川", "福井", "山梨", "長野", "岐阜", "静岡", "愛知",
+    "三重", "滋賀", "京都", "大阪", "兵庫", "奈良", "和歌山",
+    "鳥取", "島根", "岡山", "広島", "山口",
+    "徳島", "香川", "愛媛", "高知",
+    "福岡", "佐賀", "長崎", "熊本", "大分", "宮崎", "鹿児島", "沖縄"
+]);
+
+function getSavedPrefecture() {
+    try {
+        const saved = localStorage.getItem("selectedPrefecture");
+        if (saved && VALID_PREF_VALUES.has(saved)) {
+            return saved;
+        }
+    } catch (e) {}
+    return "all";
+}
+
+function saveSelectedPrefecture(val) {
+    if (VALID_PREF_VALUES.has(val)) {
+        try {
+            localStorage.setItem("selectedPrefecture", val);
+        } catch (e) {}
+    }
+}
+
+function interleaveByPrefecture(places) {
+    if (places.length <= 1) return places;
+    const prefMap = new Map();
+    places.forEach(p => {
+        const pref = p.prefecture || "その他";
+        if (!prefMap.has(pref)) prefMap.set(pref, []);
+        prefMap.get(pref).push(p);
+    });
+
+    const keys = Array.from(prefMap.keys());
+    for (let i = keys.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [keys[i], keys[j]] = [keys[j], keys[i]];
+    }
+    for (const k of keys) {
+        const arr = prefMap.get(k);
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+    }
+
+    const result = [];
+    let lastPref = null;
+    let hasMore = true;
+
+    while (hasMore) {
+        hasMore = false;
+        const availableKeys = keys.filter(k => prefMap.get(k).length > 0);
+        if (availableKeys.length === 0) break;
+
+        let chosenKey = availableKeys.find(k => k !== lastPref);
+        if (!chosenKey) {
+            chosenKey = availableKeys[0];
+        }
+
+        const item = prefMap.get(chosenKey).shift();
+        result.push(item);
+        lastPref = chosenKey;
+        hasMore = true;
+    }
+    return result;
+}
+
 function generateDynamicSpots(prefecture, neededCount, startId = 10000) {
     const coords = PREFECTURE_COORDINATES[prefecture] || { lat: 35.689, lon: 139.692 };
     const generated = [];
@@ -2511,15 +2561,15 @@ function generateDynamicSpots(prefecture, neededCount, startId = 10000) {
             companion: [...tmpl.companion],
             budget: tmpl.budget,
             transport: tmpl.transport,
-            purpose: tmpl.purpose
+            purpose: tmpl.purpose,
+            isSample: true
         });
     }
     return generated;
 }
 
-// 都道府県ごとに15〜20件の観光スポットを確実に確保する関数
-function ensurePrefectureSpots(prefInput, targetCount = 16) {
-    if (!prefInput || prefInput === "all") {
+function ensurePrefectureSpots(prefInput, targetCount = 10) {
+    if (!prefInput || prefInput === "all" || prefInput.startsWith("region:")) {
         return;
     }
     const normPref = normalizePrefectureName(prefInput);
@@ -2533,7 +2583,6 @@ function ensurePrefectureSpots(prefInput, targetCount = 16) {
     const existingNames = new Set(kinkiPlaces.map(p => p.name));
     const newSpots = [];
 
-    // 1. 主要県リアルプリセットにあれば優先追加
     if (PRESET_REAL_SPOTS[normPref]) {
         for (const spot of PRESET_REAL_SPOTS[normPref]) {
             if (!existingNames.has(spot.name) && newSpots.length < needed) {
@@ -2543,9 +2592,9 @@ function ensurePrefectureSpots(prefInput, targetCount = 16) {
         }
     }
 
-    // 2. まだ不足があれば動的ジェネレータで補完
-    if (newSpots.length < needed) {
-        const stillNeeded = needed - newSpots.length;
+    const currentTotal = existing.length + newSpots.length;
+    if (currentTotal < 3) {
+        const stillNeeded = Math.min(3 - currentTotal, needed - newSpots.length);
         const maxId = kinkiPlaces.reduce((max, p) => Math.max(max, p.id || 0), 3000);
         const dynamicSpots = generateDynamicSpots(normPref, stillNeeded, maxId + 1);
         for (const dSpot of dynamicSpots) {
@@ -2561,8 +2610,6 @@ function ensurePrefectureSpots(prefInput, targetCount = 16) {
     }
 }
 
-// 2. モックホテルデータ (楽天トラベル連携用)
-// ==========================================
 const mockHotels = {
     "京都": [
         { name: "嵐山 辨慶", rating: "4.8", price: "￥28,000〜", desc: "嵐山の大自然を望む極上の温泉旅館。川のせせらぎと季節の会席料理を堪能。" },
@@ -2594,9 +2641,6 @@ const mockHotels = {
     ]
 };
 
-// ==========================================
-// 3. アプリの状態管理 (Local Storage 連携)
-// ==========================================
 let likes = JSON.parse(localStorage.getItem("kw_likes")) || [];
 let anmaris = JSON.parse(localStorage.getItem("kw_anmaris")) || [];
 let favorites = JSON.parse(localStorage.getItem("kw_favorites")) || [];
@@ -2655,7 +2699,6 @@ if (!sharedPlans || sharedPlans.length === 0) {
     localStorage.setItem("kw_shared_plans", JSON.stringify(sharedPlans));
 }
 
-// アカウント・UI設定の読み込み
 let userName = localStorage.getItem("kw_username") || "トラベラー";
 let userAvatar = localStorage.getItem("kw_avatar") || "traveler";
 let headerTitle = localStorage.getItem("kw_headertitle");
@@ -2668,7 +2711,6 @@ let currentFontSize = localStorage.getItem("kw_fontsize") || "100";
 let currentLanguage = localStorage.getItem("kw_lang") || "ja";
 
 
-// カード関連の一時状態
 let activeFilters = { season: "all", category: "all" };
 let currentCardPool = [];
 let nextPoolIndex = 0;
@@ -2705,14 +2747,12 @@ window.tryEnteringApp = function () {
         const panel = document.getElementById("onboarding-panel");
         if (panel) {
             panel.classList.remove("hidden");
-            // Force reflow
             void panel.offsetWidth;
             panel.classList.add("slide-in");
         }
     }
 };
 
-// ログイン状態の監視とUI更新
 let isAuthReadyResolved = false;
 onAuthStateChanged(auth, (user) => {
     if (!isAuthReadyResolved) {
@@ -2722,7 +2762,6 @@ onAuthStateChanged(auth, (user) => {
     isAuthStateResolved = true;
     updateAuthUI(user);
     if (user) {
-        // ログイン確定後、プレースホルダー状態の表示中カードがあれば写真を再取得
         refreshVisiblePlacePhotos();
     }
     if (isSplashAnimationFinished) {
@@ -2759,7 +2798,6 @@ function updateAuthUI(user) {
 
     if (user) {
         if (user.isAnonymous) {
-            // ゲストログイン状態
             userName = "ゲストトラベラー";
             if (nameEl) nameEl.textContent = userName;
             if (statusEl) statusEl.textContent = "ゲストモードで利用中";
@@ -2786,11 +2824,9 @@ function updateAuthUI(user) {
                 `;
             }
 
-            // ゲストは共有機能を使えない
             if (shareLoggedOut) shareLoggedOut.classList.remove("hidden");
             if (shareLoggedIn) shareLoggedIn.classList.add("hidden");
         } else {
-            // 本ログイン状態
             userName = user.displayName || user.email.split('@')[0];
             if (nameEl) nameEl.textContent = userName;
             if (statusEl) statusEl.textContent = "アカウント同期中 (連携済み)";
@@ -2817,12 +2853,10 @@ function updateAuthUI(user) {
                 `;
             }
 
-            // ログイン済みの場合は共有機能を利用可能
             if (shareLoggedOut) shareLoggedOut.classList.add("hidden");
             if (shareLoggedIn) shareLoggedIn.classList.remove("hidden");
         }
     } else {
-        // 未ログイン状態
         userName = localStorage.getItem("kw_username") || "トラベラー";
         if (nameEl) nameEl.textContent = userName;
         if (statusEl) statusEl.textContent = "全国エリア探索中";
@@ -2849,21 +2883,16 @@ function updateAuthUI(user) {
             `;
         }
 
-        // 未ログインは共有機能を使えない
         if (shareLoggedOut) shareLoggedOut.classList.remove("hidden");
         if (shareLoggedIn) shareLoggedIn.classList.add("hidden");
     }
 }
 
-// ==========================================
-// 4. 初期化処理 (アプリ起動時)
-// ==========================================
 window.onload = function () {
     initApp();
 };
 
 function initApp() {
-    // 起動スプラッシュの3秒タイマー
     setTimeout(() => {
         isSplashAnimationFinished = true;
         if (isAuthStateResolved) {
@@ -2871,7 +2900,6 @@ function initApp() {
         }
     }, 3000);
 
-    // UIの設定反映
     applyTheme(currentTheme);
     applyFontSize(currentFontSize);
     applyAccountSettings();
@@ -2882,30 +2910,24 @@ function initApp() {
 
 
 
-    // テーマボタンのアクティブ表示同期
     document.querySelectorAll(".theme-btn").forEach(b => b.classList.remove("active"));
     if (currentTheme === "mc-blue") document.getElementById("btnThemeMcBlue")?.classList.add("active");
     if (currentTheme === "mc-emerald") document.getElementById("btnThemeMcEmerald")?.classList.add("active");
     if (currentTheme === "mc-amber") document.getElementById("btnThemeMcAmber")?.classList.add("active");
     if (currentTheme === "mc-dark") document.getElementById("btnThemeMcDark")?.classList.add("active");
 
-    // 「興味なし」リストの自動削除 (15日経過したものをパージ)
     purgeOldAnmaris();
 
-    // 検索カードプールの準備 (初期おすすめスポット反映)
     loadInitialSpot();
 
-    // ホームカウントとリストの表示
     updateGridCounts();
     updateCountdown();
     simulateWeather();
     renderSavedSpotsHome();
     renderHomePlans();
 
-    // チャート表示の更新
     updateChart();
 
-    // 共有リストの更新
     renderShareView();
 
     const rubyBtn = document.getElementById("rubi-switch");
@@ -2929,9 +2951,6 @@ function saveToStorage() {
     localStorage.setItem("kw_lang", currentLanguage);
 
 }
-// ==========================================
-// 5. 共通UI：ナビゲーション・サイドバー
-// ==========================================
 window.toggleSidebar = function () {
     const sidebar = document.getElementById("appSidebar");
     const overlay = document.getElementById("sidebarOverlay");
@@ -2940,19 +2959,15 @@ window.toggleSidebar = function () {
 };
 
 window.switchView = function (viewId, element) {
-    // 全てのViewを非表示にする
     document.querySelectorAll(".view").forEach(v => v.classList.add("hidden"));
 
-    // 対象のViewを表示する
     const target = document.getElementById(`view-${viewId}`);
     if (target) target.classList.remove("hidden");
 
-    // サイドバーのメニュー項目のアクティブ状態更新
     document.querySelectorAll(".sidebar-item").forEach(item => item.classList.remove("active"));
     if (element) {
         element.classList.add("active");
     } else {
-        // 設定などで外部から呼ばれた場合のアクティブ項目同期
         const items = document.querySelectorAll(".sidebar-item");
         items.forEach(item => {
             const labelText = item.querySelector("span:last-child").textContent;
@@ -2964,7 +2979,6 @@ window.switchView = function (viewId, element) {
         });
     }
 
-    // 各画面特有の更新トリガー
     if (viewId === "mypage") {
         updateGridCounts();
         updateChart();
@@ -2993,7 +3007,6 @@ window.switchView = function (viewId, element) {
         if (err) err.classList.add("hidden");
     }
 
-    // モバイル用サイドバーを閉じる
     const sidebar = document.getElementById("appSidebar");
     const overlay = document.getElementById("sidebarOverlay");
     if (sidebar && sidebar.classList.contains("open")) {
@@ -3002,8 +3015,7 @@ window.switchView = function (viewId, element) {
     }
 };
 
-// Toast通知表示
-function showToast(message) {
+function showToast(message, duration = 1200) {
     const container = document.getElementById("toastContainer");
     if (!container) return;
     const toast = document.createElement("div");
@@ -3020,23 +3032,159 @@ function showToast(message) {
     toast.appendChild(textSpan);
     container.appendChild(toast);
 
-    // 1.2秒後にフェードアウトして削除
+    const displayTime = typeof duration === "number" && duration > 0 ? duration : 1200;
     setTimeout(() => {
         toast.style.transition = "opacity 0.3s ease, transform 0.3s ease";
         toast.style.opacity = "0";
         toast.style.transform = "translateY(-10px)";
         setTimeout(() => toast.remove(), 300);
-    }, 1200);
+    }, displayTime);
 }
 
-// ==========================================
-// 6. 検索機能 (スワイプ & プリフェッチ)
-// ==========================================
-// 6. 検索機能 (スワイプ & プリフェッチ & 連続動作)
-// ==========================================
+let isDemoLockActive = false;
+let lastDemoToastTime = 0;
+
+function isExternalUrl(targetUrl) {
+    if (!targetUrl || typeof targetUrl !== "string") {
+        return false;
+    }
+    const trimmed = targetUrl.trim();
+    if (!trimmed || trimmed === "#" || trimmed.startsWith("#") || trimmed.startsWith("javascript:")) {
+        return false;
+    }
+    if (trimmed.startsWith("mailto:") || trimmed.startsWith("tel:")) {
+        return true;
+    }
+    try {
+        const parsed = new URL(trimmed, window.location.href);
+        if (parsed.origin === window.location.origin) {
+            return false;
+        }
+        if (parsed.origin === "http://127.0.0.1:5500" || parsed.origin === "http://localhost:5500" || parsed.origin === "http://127.0.0.1:3000" || parsed.origin === "http://localhost:3000") {
+            return false;
+        }
+        return true;
+    } catch (e) {
+        if (/^https?:\/\//i.test(trimmed)) {
+            return !trimmed.startsWith(window.location.origin) && !trimmed.startsWith("http://127.0.0.1:5500") && !trimmed.startsWith("http://localhost:5500") && !trimmed.startsWith("http://127.0.0.1:3000") && !trimmed.startsWith("http://localhost:3000");
+        }
+        return false;
+    }
+}
+
+function showDemoBlockedToast() {
+    const now = Date.now();
+    if (now - lastDemoToastTime < 800) {
+        return;
+    }
+    lastDemoToastTime = now;
+    showToast("展示デモ中のため外部サイトへの移動は制限されています", 2500);
+}
+
+function updateDemoLockUI() {
+    const btn = document.getElementById("demoLockBtn");
+    const icon = document.getElementById("demoLockIcon");
+    const label = document.getElementById("demoLockLabel");
+    if (!btn) return;
+    if (isDemoLockActive) {
+        btn.classList.add("active");
+        if (icon) icon.textContent = "lock";
+        if (label) label.textContent = "展示ロック ON";
+    } else {
+        btn.classList.remove("active");
+        if (icon) icon.textContent = "lock_open";
+        if (label) label.textContent = "展示ロック OFF";
+    }
+}
+
+function toggleDemoLock() {
+    isDemoLockActive = !isDemoLockActive;
+    sessionStorage.setItem("demoLockState", isDemoLockActive ? "1" : "0");
+    updateDemoLockUI();
+    if (isDemoLockActive) {
+        showToast("展示デモモードを開始しました（外部リンクを制限）", 2500);
+    } else {
+        showToast("展示デモモードを解除しました", 2000);
+    }
+}
+
+window.toggleDemoLock = toggleDemoLock;
+
+function initDemoLock() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const demoParam = urlParams.get("demo");
+    const savedState = sessionStorage.getItem("demoLockState");
+    if (demoParam === "1" || demoParam === "true") {
+        isDemoLockActive = savedState === null ? true : (savedState === "1");
+    } else if (demoParam === "0" || demoParam === "false") {
+        isDemoLockActive = false;
+    } else {
+        isDemoLockActive = savedState === "1";
+    }
+    updateDemoLockUI();
+
+    const btn = document.getElementById("demoLockBtn");
+    if (btn) {
+        btn.onclick = () => toggleDemoLock();
+    }
+}
+
+function handleExternalLinkEvent(event) {
+    if (!isDemoLockActive) {
+        return;
+    }
+    const anchor = event.target && typeof event.target.closest === "function" ? event.target.closest("a") : null;
+    if (!anchor) {
+        return;
+    }
+    const href = anchor.getAttribute("href") || anchor.href;
+    if (isExternalUrl(href)) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof event.stopImmediatePropagation === "function") {
+            event.stopImmediatePropagation();
+        }
+        showDemoBlockedToast();
+    }
+}
+
+document.addEventListener("click", handleExternalLinkEvent, true);
+document.addEventListener("auxclick", handleExternalLinkEvent, true);
+
+document.addEventListener("submit", (event) => {
+    if (!isDemoLockActive) return;
+    const form = event.target;
+    if (form && form.action && isExternalUrl(form.action)) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof event.stopImmediatePropagation === "function") {
+            event.stopImmediatePropagation();
+        }
+        showDemoBlockedToast();
+    }
+}, true);
+
+const nativeWindowOpen = window.open;
+window.open = function (url, target, features) {
+    if (isDemoLockActive && isExternalUrl(url)) {
+        showDemoBlockedToast();
+        return null;
+    }
+    return nativeWindowOpen.call(window, url, target, features);
+};
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initDemoLock);
+} else {
+    initDemoLock();
+}
+
 let isSwipeAnimating = false; // スワイプアニメーション中の二重操作ガード
 
 window.applyFilters = function () {
+    isSwipeAnimating = false;
+    isDragging = false;
+
     const seasonSelect = document.getElementById("filterSeason");
     const catSelect = document.getElementById("filterCategory");
     const prefSelect = document.getElementById("filterPrefecture");
@@ -3044,12 +3192,17 @@ window.applyFilters = function () {
     const selectedPref = prefSelect ? prefSelect.value : "all";
     const selectedTag = tagSelect ? tagSelect.value : "all";
 
-    // 🌟 1. 観光スポット候補の増量: 選択された都道府県のスポットを動的に16件確保
+    saveSelectedPrefecture(selectedPref);
+
     if (selectedPref !== "all") {
-        ensurePrefectureSpots(selectedPref, 16);
+        if (selectedPref.startsWith("region:")) {
+            const regionPrefs = REGION_PREFECTURES[selectedPref] || [];
+            regionPrefs.forEach(p => ensurePrefectureSpots(p, 6));
+        } else {
+            ensurePrefectureSpots(selectedPref, 12);
+        }
     } else {
-        // 「すべて」の場合も主要都道府県を中心に充実させる
-        ["東京", "北海道", "京都", "大阪", "沖縄", "福岡", "神奈川"].forEach(p => ensurePrefectureSpots(p, 10));
+        ["東京", "北海道", "京都", "大阪", "沖縄", "福岡", "神奈川"].forEach(p => ensurePrefectureSpots(p, 6));
     }
 
     const tagToCategoryMap = {
@@ -3072,11 +3225,24 @@ window.applyFilters = function () {
         const matchSeason = (activeFilters.season === "all" || place.season === activeFilters.season || (place.season && place.season.includes("通年")));
         const matchCat = (activeFilters.category === "all" || place.category === activeFilters.category);
         const normPlacePref = normalizePrefectureName(place.prefecture);
-        const matchPref = (normSelectedPref === "all" ||
-            normPlacePref === normSelectedPref ||
-            place.prefecture === selectedPref ||
-            place.prefecture.startsWith(normSelectedPref) ||
-            normSelectedPref.startsWith(normPlacePref));
+
+        let matchPref = false;
+        if (selectedPref === "all") {
+            matchPref = true;
+        } else if (selectedPref.startsWith("region:")) {
+            const regionPrefs = REGION_PREFECTURES[selectedPref] || [];
+            matchPref = regionPrefs.some(p => {
+                const normP = normalizePrefectureName(p);
+                return normPlacePref === normP || place.prefecture === p || place.prefecture.startsWith(normP) || normP.startsWith(normPlacePref);
+            });
+        } else {
+            matchPref = (normSelectedPref === "all" ||
+                normPlacePref === normSelectedPref ||
+                place.prefecture === selectedPref ||
+                place.prefecture.startsWith(normSelectedPref) ||
+                normSelectedPref.startsWith(normPlacePref));
+        }
+
         const matchTag = (selectedCategory === "all" || place.category === selectedCategory);
         const isAlreadySelected = likes.some(l => l.id === place.id) || anmaris.some(a => a.id === place.id);
 
@@ -3095,12 +3261,14 @@ window.applyFilters = function () {
             place.tempCompatibilityScore = calculateCompatibilityScore(place);
         });
         currentCardPool.sort((a, b) => b.tempCompatibilityScore - a.tempCompatibilityScore);
+    } else if (selectedPref === "all" || selectedPref.startsWith("region:")) {
+        currentCardPool = interleaveByPrefecture(currentCardPool);
     }
 
     nextPoolIndex = 0;
     renderStack();
 
-    if (currentCardPool.length === 0 && selectedPref === "all") {
+    if (currentCardPool.length === 0) {
         const existingNames = kinkiPlaces.map(p => p.name);
         fetchGeminiPlaces(existingNames).then(newPlaces => {
             if (newPlaces && newPlaces.length > 0) {
@@ -3122,7 +3290,6 @@ window.startPersonalizedSearch = function () {
 
     recommendationMode = true;
 
-    // UIのバナー表示と更新
     const banner = document.getElementById("personalizedRecommendationBanner");
     const genreText = document.getElementById("recommendationGenreName");
     if (banner) banner.classList.remove("hidden");
@@ -3130,7 +3297,6 @@ window.startPersonalizedSearch = function () {
 
     showToast(`💡 ${topGenreLabel}特化レコメンドモードを開始しました！`);
 
-    // スワイプ画面に切り替える
     switchView("swipe");
 };
 
@@ -3177,8 +3343,6 @@ function renderStack() {
 
     if (container) container.classList.remove("hidden");
 
-    // 最初のカードと、バックグラウンドでの待機カード(最大3枚)をDOMに追加
-    // 重なり順のため、後ろのカードを先に挿入する
     const cardsToLoad = Math.min(3, currentCardPool.length);
     for (let i = cardsToLoad - 1; i >= 0; i--) {
         const place = currentCardPool[i];
@@ -3187,7 +3351,6 @@ function renderStack() {
     }
 }
 
-// カードの事前読み込み (プリフェッチ画像)
 function prefetchNextImages() {
     if (currentCardPool.length > 1) {
         const prefetchCount = Math.min(4, currentCardPool.length);
@@ -3204,7 +3367,6 @@ function prefetchNextImages() {
 function calculateCompatibilityScore(place) {
     let score = 0;
 
-    // 1. 同行者
     if (place.companion) {
         let maxCompPref = 0;
         place.companion.forEach(c => {
@@ -3215,17 +3377,14 @@ function calculateCompatibilityScore(place) {
         score += maxCompPref;
     }
 
-    // 2. 予算
     if (place.budget && detailedPrefs.budget[place.budget]) {
         score += detailedPrefs.budget[place.budget];
     }
 
-    // 3. 移動手段
     if (place.transport && detailedPrefs.transport[place.transport]) {
         score += detailedPrefs.transport[place.transport];
     }
 
-    // 4. 目的
     if (place.purpose && detailedPrefs.purpose[place.purpose]) {
         score += detailedPrefs.purpose[place.purpose];
     }
@@ -3279,7 +3438,6 @@ function getSugSeasonBadgeHtml(season) {
 function createCardElement(data, isTopCard) {
     const card = document.createElement("div");
     card.className = "swipe-card spot-card";
-    // 表示優先順位の設定
     card.style.zIndex = isTopCard ? 5 : 1;
     if (!isTopCard) {
         card.style.pointerEvents = "none";
@@ -3303,6 +3461,7 @@ function createCardElement(data, isTopCard) {
             <img src="${safeImg}" class="card-img" alt="${safeName}" onerror="this.onerror=null;this.src='${NO_IMAGE_URL}'">
             <span class="card-prefecture-badge">📍 ${safePref}</span>
             ${getSeasonBadgeHtml(data.season)}
+            ${data.isSample ? '<span class="card-sample-badge">サンプル</span>' : ''}
             ${isRecommended ? `<span class="card-match-badge"><span class="material-icons" style="font-size: 0.95rem; vertical-align: middle;">bolt</span>AIマッチ度 ${matchScore}%</span>` : ''}
             <div class="swipe-stamp stamp-like">いいね</div>
             <div class="swipe-stamp stamp-anmari">興味なし</div>
@@ -3356,12 +3515,10 @@ window.toggleFavorite = function (starBtn, event, id) {
     updateGridCounts();
 };
 
-// 🌟 2. スワイプ完了と連続表示の制御ロジック
 function completeCardSwipe(cardEl, direction, placeData) {
     if (isSwipeAnimating) return;
     isSwipeAnimating = true;
 
-    // スワイプ判定スタンプの表示強調
     const stampLike = cardEl.querySelector(".stamp-like");
     const stampAnmari = cardEl.querySelector(".stamp-anmari");
     if (direction === "like") {
@@ -3372,17 +3529,14 @@ function completeCardSwipe(cardEl, direction, placeData) {
         if (stampLike) stampLike.style.opacity = "0";
     }
 
-    // 画面外へのスムーズなスワイプアウト演出
     const moveX = direction === "like" ? 900 : -900;
     const rotateAngle = direction === "like" ? 35 : -35;
     cardEl.style.transition = "transform 0.32s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.32s ease";
     cardEl.style.transform = `translateX(${moveX}px) rotate(${rotateAngle}deg)`;
     cardEl.style.opacity = "0";
 
-    // データ処理（いいね/興味なし、スタンドパラメータ計算）
     handleSwipeAction(direction, placeData);
 
-    // アニメーション完了後に次のカードへ切り替え（DOMの全再構築を避けてチラつきを防止）
     setTimeout(() => {
         const stack = document.getElementById("card-stack");
         if (cardEl.parentNode === stack) {
@@ -3397,7 +3551,6 @@ function completeCardSwipe(cardEl, direction, placeData) {
             return;
         }
 
-        // 残っているDOMカードの中から、新しい最前面カード（最後のDOM子要素）を有効化
         if (stack) {
             const remainingCards = stack.querySelectorAll(".swipe-card");
             if (remainingCards.length > 0) {
@@ -3408,7 +3561,6 @@ function completeCardSwipe(cardEl, direction, placeData) {
                 prefetchNextImages();
             }
 
-            // スタックの背面に控えるカードを1枚補充（常に最大3枚の重なりを維持）
             const currentDomCount = stack.querySelectorAll(".swipe-card").length;
             if (currentDomCount < 3 && currentCardPool.length > currentDomCount) {
                 const backIndex = currentDomCount;
@@ -3432,8 +3584,7 @@ function initCardDrag(card, data) {
 
     card.addEventListener("pointerdown", e => {
         if (isSwipeAnimating) return;
-        // お気に入りボタンをクリックした時はカードのドラッグを開始しない
-        if (e.target.closest('.card-star-btn')) {
+        if (e.target.closest('.card-star-btn') || e.target.closest('.spot-description')) {
             return;
         }
         isDragging = true;
@@ -3448,11 +3599,9 @@ function initCardDrag(card, data) {
         currentX = e.clientX - startX;
         currentY = e.clientY - startY;
 
-        // 傾きと回転
         const rotate = currentX * 0.08;
         card.style.transform = `translate(${currentX}px, ${currentY}px) rotate(${rotate}deg)`;
 
-        // スワイプスタンプの透明度コントロール
         if (currentX > 30) {
             const opacity = Math.min(1, (currentX - 30) / 100);
             if (stampLike) stampLike.style.opacity = opacity;
@@ -3470,12 +3619,10 @@ function initCardDrag(card, data) {
     card.addEventListener("pointerup", e => {
         if (!isDragging) return;
 
-        // スワイプ判定 (120px以上移動)
         if (Math.abs(currentX) > 120 && !isSwipeAnimating) {
             const dir = currentX > 0 ? "like" : "anmari";
             completeCardSwipe(card, dir, data);
         } else {
-            // 元の位置に戻す
             card.style.transition = "transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.2)";
             card.style.transform = "translateX(0) rotate(0deg)";
             if (stampLike) stampLike.style.opacity = 0;
@@ -3508,7 +3655,6 @@ function handleSwipeAction(type, data) {
     }
     saveToStorage();
     updateGridCounts();
-    // スタンドパラメータのリアルタイム計算
     calculateStandStats();
 }
 
@@ -3530,7 +3676,6 @@ window.swipeTopCard = function (direction) {
     const remainingCards = stack.querySelectorAll(".swipe-card");
     if (remainingCards.length === 0) return;
 
-    // 最前面カード（最後の子要素）
     const topCard = remainingCards[remainingCards.length - 1];
     if (!topCard) return;
 
@@ -3538,9 +3683,6 @@ window.swipeTopCard = function (direction) {
     completeCardSwipe(topCard, direction, data);
 };
 
-// ==========================================
-// 7. 予定機能 (入力テンプレート & AI・ホテル提案)
-// ==========================================
 function renderLikedList() {
     const listContainer = document.getElementById("likedList");
     if (!listContainer) return;
@@ -3573,7 +3715,8 @@ function renderLikedList() {
         div.querySelector(".liked-item-info").addEventListener("click", () => selectPlanTarget(item, div));
         div.querySelector(".sim3d-launch-mini-btn").addEventListener("click", (e) => {
             e.stopPropagation();
-            open3DRouteSimulation({ destination: item.name, lat: item.lat, lon: item.lon });
+            const startVal = document.getElementById("planStartStation")?.value || "東京駅";
+            open3DRouteSimulation({ destination: item.name, departure: startVal, lat: item.lat, lon: item.lon });
         });
         listContainer.appendChild(div);
     });
@@ -3589,7 +3732,6 @@ function selectPlanTarget(item, element) {
         }
     });
 
-    // プレースホルダーと先回り自動提案ビューを非表示にし、フォームを表示する
     const placeholder = document.getElementById("planFormPlaceholder");
     if (placeholder) placeholder.classList.add("hidden");
     const proactiveView = document.getElementById("aiProactiveView");
@@ -3690,11 +3832,10 @@ window.backToPlanForm = function () {
 };
 
 function getApiUrl(path) {
-    const base = "https://tripdevelopment2.onrender.com";
+    const base = window.location.port === "3000" ? window.location.origin : "http://localhost:3000";
     return `${base}${path}`;
 }
 
-// Safely fetch and parse JSON, checking response.ok first to avoid JSON parsing errors on HTML/text errors.
 async function safeFetchJson(url, options = {}) {
     await authReadyPromise;
     const opts = { ...options };
@@ -3730,13 +3871,29 @@ async function safeFetchJson(url, options = {}) {
 
 
 
-// Gemini APIを中継サーバー経由で呼び出し、AIを用いて新しい観光地を生成する関数
 async function fetchGeminiPlaces(excludeNames = []) {
     const url = getApiUrl("/api/travel/generate");
     const excludeStr = excludeNames.length > 0 ? `ただし、以下の観光地はすでに登録済みまたはスワイプ済みであるため、絶対に含めないでください: ${excludeNames.join(", ")}` : "";
 
-    const selectedPrefecture = document.getElementById('filterPrefecture').value;
-    const prefInstruction = selectedPrefecture === 'all' ? '日本全国の観光スポットの中から提案してください。' : `日本全国の観光スポットの中から、選択された都道府県（${selectedPrefecture}）に絞って提案してください。`;
+    const selectedPrefecture = document.getElementById('filterPrefecture') ? document.getElementById('filterPrefecture').value : 'all';
+    let prefInstruction;
+    if (selectedPrefecture === 'all') {
+        prefInstruction = '日本全国の観光スポットの中から提案してください。';
+    } else if (selectedPrefecture.startsWith('region:')) {
+        const regionNames = {
+            'region:hokkaido_tohoku': '北海道・東北地方',
+            'region:kanto': '関東地方',
+            'region:chubu': '中部地方',
+            'region:kinki': '近畿地方',
+            'region:chugoku': '中国地方',
+            'region:shikoku': '四国地方',
+            'region:kyushu_okinawa': '九州・沖縄地方'
+        };
+        const rName = regionNames[selectedPrefecture] || '該当地域';
+        prefInstruction = `日本全国の観光スポットの中から、${rName}に絞って提案してください。`;
+    } else {
+        prefInstruction = `日本全国の観光スポットの中から、選択された都道府県（${selectedPrefecture}）に絞って提案してください。`;
+    }
 
     const promptText = `
 ${prefInstruction}スワイプ型旅行アプリで表示する魅力的な観光スポット（名所、歴史的建造物、温泉、グルメ街、自然など）を新たに「5件」考案し、日本語のJSON形式で出力してください。
@@ -3817,7 +3974,6 @@ ${excludeStr}
     }
 }
 
-// AIでの観光地追加ボタンのアクション
 window.generatePlacesWithAI = async function () {
     const stack = document.getElementById("card-stack");
     const container = document.getElementById("swipeActionsContainer");
@@ -4011,10 +4167,88 @@ window.generateTravelPlan = async function (event) {
     let fastMode = false;
 
     try {
+        const resolvePlaceCoords = async (queryText) => {
+            if (!queryText || !String(queryText).trim()) return null;
+            const q = String(queryText).trim();
+            try {
+                await loadGoogleMaps();
+                const { Geocoder } = await google.maps.importLibrary("geocoding");
+                const { Place } = await google.maps.importLibrary("places");
+                const geocoder = new Geocoder();
+                const geoLoc = await new Promise((resolve) => {
+                    geocoder.geocode({ address: q, region: "JP" }, (results, status) => {
+                        if (status === "OK" && results && results[0] && results[0].geometry && results[0].geometry.location) {
+                            const loc = results[0].geometry.location;
+                            resolve({ lat: loc.lat(), lng: loc.lng() });
+                        } else {
+                            resolve(null);
+                        }
+                    });
+                });
+                if (geoLoc) return geoLoc;
+                if (Place && typeof Place.searchByText === "function") {
+                    const placeRes = await Place.searchByText({
+                        textQuery: q,
+                        fields: ["location", "displayName"]
+                    });
+                    if (placeRes && placeRes.places && placeRes.places[0] && placeRes.places[0].location) {
+                        const loc = placeRes.places[0].location;
+                        return {
+                            lat: typeof loc.lat === "function" ? loc.lat() : Number(loc.lat),
+                            lng: typeof loc.lng === "function" ? loc.lng() : Number(loc.lng)
+                        };
+                    }
+                }
+            } catch (e) {}
+            return null;
+        };
+
+        const resolvedStart = await resolvePlaceCoords(startStationVal);
+        const startCoords = resolvedStart || { lat: 34.7024, lng: 135.4959 };
+        const destQuery = `${targetPref && targetPref !== "all" ? targetPref + " " : ""}${activePlanTarget.name || ""}`.trim();
+        const resolvedDest = await resolvePlaceCoords(destQuery);
+        const destCoords = resolvedDest || (
+            typeof activePlanTarget.lat === "number" && !isNaN(activePlanTarget.lat) && typeof (activePlanTarget.lon ?? activePlanTarget.lng) === "number"
+                ? { lat: Number(activePlanTarget.lat), lng: Number(activePlanTarget.lon ?? activePlanTarget.lng) }
+                : { lat: 34.6901, lng: 135.1955 }
+        );
+
+        const buildOrderedWaypoints = (rawList) => {
+            const startWp = {
+                lat: startCoords.lat,
+                lng: startCoords.lng,
+                name: startStationVal || "出発地",
+                description: "出発地"
+            };
+            const endWp = {
+                lat: destCoords.lat,
+                lng: destCoords.lng,
+                name: activePlanTarget.name || "目的地",
+                description: "目的地"
+            };
+            const middle = [];
+            if (Array.isArray(rawList) && rawList.length > 2) {
+                for (let i = 1; i < rawList.length - 1; i++) {
+                    const wp = rawList[i];
+                    const wLat = parseFloat(wp && wp.lat);
+                    const wLng = parseFloat(wp && (wp.lng != null ? wp.lng : wp.lon));
+                    if (!isNaN(wLat) && !isNaN(wLng) && Math.abs(wLat - destCoords.lat) < 0.5 && Math.abs(wLng - destCoords.lng) < 0.5) {
+                        middle.push({
+                            lat: wLat,
+                            lng: wLng,
+                            name: wp.name || ("経由地" + middle.length),
+                            description: wp.description || ""
+                        });
+                    }
+                }
+            }
+            return [startWp, ...middle, endWp];
+        };
+
         const cachedPlan = STATIC_PLAN_CACHE[targetPref];
         if (cachedPlan) {
             const itineraryText = cachedPlan.getItinerary(activePlanTarget.name, selectedNightsText, peopleVal, budgetVal);
-            const waypoints = [...cachedPlan.waypoints];
+            const waypoints = buildOrderedWaypoints(cachedPlan.waypoints);
 
             const hotelList = document.getElementById("hotelList");
             hotelList.innerHTML = "";
@@ -4051,8 +4285,8 @@ window.generateTravelPlan = async function (event) {
                 nights: nightsVal,
                 people: peopleVal,
                 budget: budgetVal,
-                lat: activePlanTarget.lat,
-                lon: activePlanTarget.lon,
+                lat: destCoords.lat,
+                lon: destCoords.lng,
                 itineraryText: itineraryText,
                 waypoints: waypoints
             };
@@ -4073,7 +4307,7 @@ window.generateTravelPlan = async function (event) {
         }
 
         let itineraryText = "";
-        let waypoints = [];
+        let rawWaypoints = [];
 
         try {
             const geminiResult = await fetchGeminiItinerary(
@@ -4081,7 +4315,7 @@ window.generateTravelPlan = async function (event) {
                 peopleVal, budgetVal, currentPriority, othersVal, startStationVal
             );
             itineraryText = geminiResult.itineraryText || "";
-            waypoints = Array.isArray(geminiResult.waypoints) ? geminiResult.waypoints : [];
+            rawWaypoints = Array.isArray(geminiResult.waypoints) ? geminiResult.waypoints : [];
             showToast("✨ AIがあなたの旅行スタンドに合わせた特製プランを生成しました！");
         } catch (apiErr) {
             console.warn("AIプラン生成に失敗したため、推奨テンプレートを表示します:", apiErr);
@@ -4092,66 +4326,7 @@ window.generateTravelPlan = async function (event) {
             showToast("⚠️ AI生成制限のため、推奨テンプレートでプランを作成しました。");
         }
 
-        let startCoords = null;
-        try {
-            if (startStationVal && startStationVal.trim()) {
-                startCoords = await new Promise((resolve, reject) => {
-                    if (!window.google || !window.google.maps || !window.google.maps.Geocoder) {
-                        reject(new Error("Geocoder not available"));
-                        return;
-                    }
-                    const geocoder = new google.maps.Geocoder();
-                    geocoder.geocode({ address: startStationVal }, (results, status) => {
-                        if (status === "OK" && results && results[0]) {
-                            const loc = results[0].geometry.location;
-                            resolve({ lat: loc.lat(), lng: loc.lng() });
-                        } else {
-                            reject(new Error("Geocoding status: " + status));
-                        }
-                    });
-                });
-            }
-        } catch (geocodeErr) {
-            console.warn("Geocoding failed:", geocodeErr);
-        }
-
-        if (startCoords) {
-            if (waypoints.length > 0) {
-                waypoints[0] = {
-                    lat: startCoords.lat,
-                    lng: startCoords.lng,
-                    name: startStationVal || waypoints[0].name || "出発地",
-                    description: waypoints[0].description || "出発地"
-                };
-            } else {
-                waypoints = [
-                    { lat: startCoords.lat, lng: startCoords.lng, name: startStationVal || "出発地", description: "出発地" },
-                    { lat: (startCoords.lat + activePlanTarget.lat) / 2, lng: (startCoords.lng + activePlanTarget.lon) / 2, name: "経由地", description: "ルート上の経由地" },
-                    { lat: activePlanTarget.lat, lng: activePlanTarget.lon, name: activePlanTarget.name, description: "目的地" }
-                ];
-            }
-        } else {
-            if (waypoints.length > 0) {
-                if (typeof waypoints[0].lat !== 'number' || typeof waypoints[0].lng !== 'number') {
-                    const fallbackLat = 34.7024;
-                    const fallbackLng = 135.4959;
-                    waypoints[0] = {
-                        lat: fallbackLat,
-                        lng: fallbackLng,
-                        name: startStationVal || "出発地 (梅田)",
-                        description: "出発地 (フォールバック)"
-                    };
-                }
-            } else {
-                const fallbackLat = 34.7024;
-                const fallbackLng = 135.4959;
-                waypoints = [
-                    { lat: fallbackLat, lng: fallbackLng, name: startStationVal || "出発地 (梅田)", description: "出発地 (フォールバック)" },
-                    { lat: (fallbackLat + activePlanTarget.lat) / 2, lng: (fallbackLng + activePlanTarget.lon) / 2, name: "経由地", description: "ルート上の経由地" },
-                    { lat: activePlanTarget.lat, lng: activePlanTarget.lon, name: activePlanTarget.name, description: "目的地" }
-                ];
-            }
-        }
+        const waypoints = buildOrderedWaypoints(rawWaypoints);
 
         let hotels = [];
         let isHotelFallback = false;
@@ -4248,8 +4423,8 @@ window.generateTravelPlan = async function (event) {
             nights: nightsVal,
             people: peopleVal,
             budget: budgetVal,
-            lat: activePlanTarget.lat,
-            lon: activePlanTarget.lon,
+            lat: destCoords.lat,
+            lon: destCoords.lng,
             itineraryText: itineraryText,
             waypoints: waypoints
         };
@@ -4315,15 +4490,18 @@ function bind3DSimButton(planData) {
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
         newBtn.addEventListener("click", () => {
+            const departureVal = planData.departure || document.getElementById("planStartStation")?.value || "東京駅";
+            const destinationVal = planData.destination || document.getElementById("planTargetName")?.textContent || "目的地";
             const wps = planData.waypoints || [];
             const labels = wps.map(function (wp, i) {
                 if (i === 0) return "出発地";
-                if (i === wps.length - 1) return planData.destination || "目的地";
+                if (i === wps.length - 1) return destinationVal;
                 return "経由地" + i;
             });
             const enrichedPlan = Object.assign({}, planData, {
                 waypointLabels: labels,
-                departure: planData.departure || document.getElementById("planStartStation")?.value || ""
+                departure: departureVal,
+                destination: destinationVal
             });
             open3DRouteSimulation(enrichedPlan);
         });
@@ -4346,10 +4524,8 @@ function bindCalendarButton(planData) {
     }
 }
 
-// 再試行
 window.retryPlanGeneration = function () {
     document.getElementById("planError").classList.add("hidden");
-    // フォーム送信をトリガー
     const mockEvent = { preventDefault: () => { } };
     generateTravelPlan(mockEvent);
 };
@@ -4385,9 +4561,6 @@ function generateItineraryText(name, pref, date, nightsText, people, budget, pri
     return startStr + details;
 }
 
-// ==========================================
-// 8. ホーム機能 (「興味なし」データ自動削除 & 管理)
-// ==========================================
 function purgeOldAnmaris() {
     const now = Date.now();
     const fifteenDaysMs = 15 * 24 * 60 * 60 * 1000;
@@ -4401,7 +4574,6 @@ function purgeOldAnmaris() {
     saveToStorage();
     const deletedCount = initialCount - anmaris.length;
     if (deletedCount > 0) {
-        // わずかに遅らせてトーストを表示
         setTimeout(() => {
             showToast(`🧹 15日以上経過した「興味なし」データを ${deletedCount} 件自動クリーンアップしました。`);
         }, 1000);
@@ -4446,7 +4618,6 @@ function updateCountdown() {
     if (homeEmptyState) homeEmptyState.classList.add("hidden");
     if (homeHeroCard) homeHeroCard.classList.remove("hidden");
 
-    // 未来の予定を日付でソートして直近のものを取得
     const sortedPlans = [...plans].filter(p => new Date(p.date) >= new Date().setHours(0, 0, 0, 0))
         .sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -4490,7 +4661,6 @@ function updateCountdown() {
     renderHomePlans();
 }
 
-// 天気予報を表示する関数 (サーバー中継で本物のデータを取得。エラー時は自動でモックにフォールバック)
 async function simulateWeather() {
     const weatherIcon = document.getElementById("heroWeatherIcon");
     const weatherTemp = document.getElementById("heroWeatherTemp");
@@ -4552,7 +4722,6 @@ async function simulateWeather() {
     } catch (err) {
         console.warn("本物の天気データの取得に失敗したため、モックデータに切り替えます:", err);
 
-        // 都府県に基づくダミー天候 (フォールバック)
         const weatherData = {
             "京都": { icon: "🌸", temp: "19°C", desc: "穏やかな晴れのち薄曇り" },
             "大阪": { icon: "☀️", temp: "24°C", desc: "快晴・絶好の食べ歩き日和" },
@@ -4570,7 +4739,6 @@ async function simulateWeather() {
     }
 }
 
-// 天気アイコンコードを絵文字にマッピングするヘルパー関数
 function getWeatherIconEmoji(iconCode) {
     if (!iconCode) return "🌤️";
     const map = {
@@ -4588,9 +4756,6 @@ function getWeatherIconEmoji(iconCode) {
     return map[prefix] || "🌤️";
 }
 
-// ---------------------------
-// ホームスライダー（横スライド・Nike風）
-// ---------------------------
 let currentSlide = 0;
 let sliderInterval;
 
@@ -4599,7 +4764,6 @@ window.goToSlide = function (index) {
     const dots = document.querySelectorAll(".dot");
     if (!track) return;
 
-    // トラックを横方向に移動 (各スライド幅は50%なので、インデックス倍して移動)
     track.style.transform = `translate3d(-${index * 50}%, 0, 0)`;
 
     dots.forEach((d, i) => d.classList.toggle("active", i === index));
@@ -4629,9 +4793,6 @@ function initSliderSwipe() {
     });
 }
 
-// ==========================================
-// 9. データ機能 (スタンドパラメータロジック)
-// ==========================================
 let standStats = [50, 50, 50, 50, 50, 50]; // 温泉・癒やし, 自然・景観, 歴史・文化, グルメ, アクティビティ, 都市・ショッピング
 let myChart = null;
 
@@ -4643,7 +4804,6 @@ function calculateStandStats() {
     let active = 10;
     let urban = 10;
 
-    // 1. いいね(likes)からの加算
     likes.forEach(item => {
         if (item.category === "healing") healing += 25;
         if (item.category === "nature") nature += 25;
@@ -4658,7 +4818,6 @@ function calculateStandStats() {
         if (item.tags.includes("都市") || item.tags.includes("観光")) urban += 20;
     });
 
-    // 2. 興味なし(anmaris)からの減算 (嗜好の除外を表現)
     anmaris.forEach(item => {
         if (item.category === "healing") healing -= 10;
         if (item.category === "nature") nature -= 10;
@@ -4673,7 +4832,6 @@ function calculateStandStats() {
         if (item.tags.includes("都市") || item.tags.includes("観光")) urban -= 8;
     });
 
-    // 3. 予定(plans)からの加算
     plans.forEach(plan => {
         const spot = kinkiPlaces.find(p => p.name === plan.destination);
         if (spot) {
@@ -4692,7 +4850,6 @@ function calculateStandStats() {
         }
     });
 
-    // 10から100の間にクランプ
     standStats = [
         Math.min(100, Math.max(10, healing)),
         Math.min(100, Math.max(10, nature)),
@@ -4702,7 +4859,6 @@ function calculateStandStats() {
         Math.min(100, Math.max(10, urban))
     ];
 
-    // 新属性タグ（同行者, 予算レンジ, 移動手段, 目的・シーン）の重み計算
     let companions = { "一人旅": 0, "カップル": 0, "友人グループ": 0, "子連れ": 0 };
     let budgets = { "低予算": 0, "スタンダード": 0, "ラグジュアリー": 0 };
     let transports = { "自家用車": 0, "公共交通機関": 0, "徒歩": 0 };
@@ -4739,7 +4895,6 @@ function calculateStandStats() {
         addDetailedWeights(item, isFav ? 3 : 1);
     });
 
-    // 割合（％）に変換
     if (totalCompanions > 0) {
         for (let k in companions) companions[k] = Math.round((companions[k] / totalCompanions) * 100);
     } else {
@@ -4778,7 +4933,6 @@ function updateStandProfile() {
     let standName = "トラベラー・スター";
     let rankText = "C";
 
-    // 突出したステータスに基づくスタンド名生成
     if (highestIndex === 0) standName = "温泉の守護神 (スパ・ガーディアン)";
     else if (highestIndex === 1) standName = "大自然の開拓者 (フォレスト・ウォーカー)";
     else if (highestIndex === 2) standName = "歴史の探求者 (クロニクル・アーカイブ)";
@@ -4786,7 +4940,6 @@ function updateStandProfile() {
     else if (highestIndex === 4) standName = "冒険のアスリート (ワイルド・チャレンジャー)";
     else if (highestIndex === 5) standName = "都市のナビゲーター (アーバン・エクスプローラー)";
 
-    // バランスが良い場合
     const sum = standStats.reduce((a, b) => a + b, 0);
     const avg = sum / 6;
     let isBalanced = true;
@@ -4797,7 +4950,6 @@ function updateStandProfile() {
         standName = "調和の旅人 (ハーモニアス・ジャーニー)";
     }
 
-    // ランク決定
     if (avg >= 85) rankText = "A (超極上トラベラー)";
     else if (avg >= 70) rankText = "B (アクティブトラベラー)";
     else if (avg >= 55) rankText = "C (標準的プランナー)";
@@ -4819,7 +4971,6 @@ function updateChart() {
     const ctx = canvas.getContext("2d");
     if (myChart) myChart.destroy();
 
-    // テーマ色によるチャート線の色変更
     let themeColor = "#007cff";
     if (currentTheme === "mc-emerald") themeColor = "#10b981";
     else if (currentTheme === "mc-amber") themeColor = "#f59e0b";
@@ -4869,7 +5020,6 @@ function renderDetailedPrefBars() {
     if (!companionContainer || !budgetContainer || !transportContainer || !purposeContainer) return;
 
     function buildBarsHTML(obj) {
-        // 値の大きい順にソート
         const sorted = Object.entries(obj).sort((a, b) => b[1] - a[1]);
         return sorted.map(([key, val]) => `
             <div class="pref-bar-row" style="display: flex; align-items: center; gap: 8px; font-size: 0.75rem; margin-bottom: 6px;">
@@ -4888,9 +5038,6 @@ function renderDetailedPrefBars() {
     purposeContainer.innerHTML = buildBarsHTML(detailedPrefs.purpose);
 }
 
-// ==========================================
-// 10. 設定機能 (アカウント、テーマ、文字サイズ)
-// ==========================================
 window.updateSettingsFromUI = function () {
     const usernameInput = document.getElementById("settingsUsername");
     const headerTitleInput = document.getElementById("settingsHeaderTitle");
@@ -4916,19 +5063,16 @@ window.selectAvatar = function (seed, element) {
 function applyAccountSettings() {
     const userAvatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${userAvatar}`;
 
-    // サイドバー更新
     const nameEl = document.getElementById("userName");
     const avatarImg = document.getElementById("userAvatar");
     if (nameEl) nameEl.textContent = userName;
     if (avatarImg) avatarImg.src = userAvatarUrl;
 
-    // モバイルヘッダー更新
     const mobileHeaderTitle = document.getElementById("headerTitle");
     const headerAvatarImg = document.getElementById("headerUserAvatar");
     if (mobileHeaderTitle) mobileHeaderTitle.textContent = headerTitle;
     if (headerAvatarImg) headerAvatarImg.src = userAvatarUrl;
 
-    // マイページ更新
     const myPageName = document.getElementById("myPageName");
     const myPageAvatar = document.getElementById("myPageAvatar");
     if (myPageName) myPageName.textContent = userName;
@@ -4940,7 +5084,6 @@ window.changeTheme = function (theme) {
     currentTheme = theme;
 
     let themeLabel = "M&C ブルー";
-    // ボタンのアクティブ状態更新
     if (theme === "mc-blue") {
         document.getElementById("btnThemeMcBlue")?.classList.add("active");
         themeLabel = "M&C ブルー";
@@ -4992,9 +5135,6 @@ window.changeLanguage = function (lang) {
     }
 };
 
-// ==========================================
-// 11. モーダルダイアログ (一覧表示)
-// ==========================================
 window.openModal = function (type) {
     const overlay = document.getElementById("modal-overlay");
     const title = document.getElementById("modalTitle");
@@ -5098,17 +5238,14 @@ function renderModalList(type, list, container) {
     }).join("");
 }
 
-// 予定の詳細表示
 window.viewItineraryDetails = function (planId) {
     const plan = plans.find(p => p.id === planId);
     if (!plan) return;
 
     closeModal();
 
-    // 予定タブを表示し、結果表示に切り替える
     switchView("plan");
 
-    // いいねリストで該当スポットを選択状態にする
     renderLikedList();
 
     const planFormPlaceholder = document.getElementById("planFormPlaceholder");
@@ -5120,7 +5257,6 @@ window.viewItineraryDetails = function (planId) {
     const planError = document.getElementById("planError");
     if (planError) planError.classList.add("hidden");
 
-    // ホテル推薦をこの府県に合わせて表示
     const hotels = (mockHotels[plan.prefecture] || []).map(item => ({ ...item, address: item.desc }));
     const hotelList = document.getElementById("hotelList");
     hotelList.innerHTML = "";
@@ -5154,7 +5290,6 @@ window.viewItineraryDetails = function (planId) {
 
     document.getElementById("aiPlanText").innerHTML = formatItineraryHtml(plan.itineraryText);
 
-    // アクセス情報表示
     const transitText = transitAccessRoutes[plan.destination] || "公共交通機関の情報が見つかりませんでした。詳細なルートはナビアプリ等でご確認ください。";
     const transitEl = document.getElementById("aiPlanTransitText");
     if (transitEl) transitEl.textContent = transitText;
@@ -5165,7 +5300,6 @@ window.viewItineraryDetails = function (planId) {
     bind3DSimButton(plan);
 };
 
-// モーダル内の項目削除
 window.deleteModalItem = function (type, id) {
     if (type === "anmari") {
         anmaris = anmaris.filter(a => a.id !== id);
@@ -5175,7 +5309,6 @@ window.deleteModalItem = function (type, id) {
         favorites = favorites.filter(f => f.id !== id);
     } else if (type === "recent-likes") {
         likes = likes.filter(l => l.id !== id);
-        // いいねが消えたら、予定画面側も影響されるので再読込
         if (activePlanTarget && activePlanTarget.id === id) {
             activePlanTarget = null;
             document.getElementById("planForm").classList.add("hidden");
@@ -5190,7 +5323,6 @@ window.deleteModalItem = function (type, id) {
     simulateWeather();
     calculateStandStats();
 
-    // モーダルのDOMを再描画
     const body = document.getElementById("modalBody");
     const list = type === "anmari" ? anmaris :
         type === "plans" ? plans :
@@ -5212,15 +5344,11 @@ window.deleteModalItem = function (type, id) {
     showToast("項目を削除しました。");
 };
 
-// ==========================================
-// 12. プラン共有・コミュニティ機能の制御ロジック
-// ==========================================
 window.renderShareView = function () {
     const sharedListContainer = document.getElementById("sharedPlansList");
     const myPlansContainer = document.getElementById("myPlansToShare");
     if (!sharedListContainer || !myPlansContainer) return;
 
-    // 1. みんなの投稿プランを描画
     sharedListContainer.innerHTML = "";
     if (sharedPlans.length === 0) {
         sharedListContainer.innerHTML = `<div class="modal-empty">投稿されたプランはありません。</div>`;
@@ -5296,7 +5424,6 @@ window.renderShareView = function () {
         });
     }
 
-    // 2. マイプランの投稿候補を描画
     myPlansContainer.innerHTML = "";
     if (plans.length === 0) {
         myPlansContainer.innerHTML = `<div class="modal-empty" style="padding: 16px;">作成した旅行予定がありません。「予定」タブからAIプランを生成すると、ここに表示されて共有できます。</div>`;
@@ -5392,7 +5519,6 @@ window.sharePlan = function (planId) {
     const plan = plans.find(p => p.id === planId);
     if (!plan) return;
 
-    // 既に共有されているかチェック
     const isAlreadyShared = sharedPlans.some(sp => sp.author.includes(userName) && sp.destination === plan.destination && sp.date === plan.date);
     if (isAlreadyShared) {
         showToast("このプランは既に共有されています。");
@@ -5443,13 +5569,9 @@ window.useSharedPlan = function (sharedPlanId) {
 
     showToast(`📅 「${sp.destination}」のプランをあなたの予定にコピーしました！`);
 
-    // ホーム画面へ遷移して追加された予定を表示
     switchView("home");
 };
 
-// ==========================================
-// 13. Firebase Authentication 制御ロジック
-// ==========================================
 let isSignUpMode = false; // デフォルトはログイン（サインイン）モード
 
 function clearAuthInputs() {
@@ -5582,9 +5704,6 @@ window.handlePasswordReset = async function (event) {
     }
 };
 
-// ==========================================
-// 14. AIチャットボット (旅行相談窓口) 制御ロジック
-// ==========================================
 
 window.openChatDrawer = function () {
     const drawer = document.getElementById("chat-drawer");
@@ -5592,6 +5711,7 @@ window.openChatDrawer = function () {
         drawer.classList.remove("hidden");
         drawer.style.transform = "translateX(0)";
     }
+    document.body.classList.add("chat-drawer-open");
 };
 
 window.closeChatDrawer = function () {
@@ -5600,6 +5720,7 @@ window.closeChatDrawer = function () {
         drawer.classList.add("hidden");
         drawer.style.transform = "translateX(100%)";
     }
+    document.body.classList.remove("chat-drawer-open");
     chatHistory = [];
 };
 
@@ -5673,9 +5794,6 @@ function removeTypingIndicator(id) {
     if (el) el.remove();
 }
 
-// ==========================================
-// handleSendChatMessage - チャットメッセージ送信
-// ==========================================
 window.handleSendChatMessage = async function (event) {
     event.preventDefault();
     const input = document.getElementById("chatInput");
@@ -5689,7 +5807,19 @@ window.handleSendChatMessage = async function (event) {
     const prefSelect = document.getElementById("chatPrefecture");
     let apiMessageText = messageText;
     if (prefSelect && prefSelect.value !== "all") {
-        const prefVal = prefSelect.value;
+        let prefVal = prefSelect.value;
+        if (prefVal.startsWith("region:")) {
+            const regionNames = {
+                'region:hokkaido_tohoku': '北海道・東北',
+                'region:kanto': '関東',
+                'region:chubu': '中部',
+                'region:kinki': '近畿',
+                'region:chugoku': '中国地方',
+                'region:shikoku': '四国',
+                'region:kyushu_okinawa': '九州・沖縄'
+            };
+            prefVal = regionNames[prefVal] || prefVal;
+        }
         if (!messageText.includes(prefVal)) {
             apiMessageText = `${prefVal} ${messageText}`;
         }
@@ -5784,9 +5914,6 @@ ${targetPlan.itineraryText}
     }
 };
 
-// ==========================================
-// 15. New Custom Helper Functions
-// ==========================================
 window.filterByCategory = function (category) {
     document.querySelectorAll("#categoryFilterRow .filter-btn").forEach(el => {
         if (el.getAttribute("data-category") === category) {
@@ -5860,7 +5987,8 @@ window.renderSavedSpotsHome = function () {
         card.querySelector(".thumbnail-pref").addEventListener("click", () => selectPlanAndGo(item));
         card.querySelector(".thumbnail-sim3d-btn").addEventListener("click", (e) => {
             e.stopPropagation();
-            open3DRouteSimulation({ destination: item.name, lat: item.lat, lon: item.lon });
+            const startVal = document.getElementById("planStartStation")?.value || "東京駅";
+            open3DRouteSimulation({ destination: item.name, departure: startVal, lat: item.lat, lon: item.lon });
         });
         card.dataset.placeName = item.name;
         imageObserver.observe(card);
@@ -5902,7 +6030,6 @@ window.toggleFavoriteFromHome = function (starBtn, event, id) {
         if (starIcon) starIcon.textContent = "star";
         showToast("お気に入りに追加しました！⭐");
 
-        // Ensure starred item is also in Saved Spots (likes)
         if (!likes.some(l => l.id === id)) {
             likes.push(item);
         }
@@ -5934,7 +6061,6 @@ window.renderHomePlans = function () {
 
     if (plansSection) plansSection.classList.remove("hidden");
 
-    // 現在の展開状態を保持
     const isExpanded = plansContainer.dataset.expanded === "true";
     const displayPlans = isExpanded ? plans : plans.slice(0, HOME_PLANS_INITIAL_COUNT);
 
@@ -5958,6 +6084,9 @@ window.renderHomePlans = function () {
 
         card.querySelector(".sim3d-launch-mini-btn").addEventListener("click", (e) => {
             e.stopPropagation();
+            if (!plan.departure) {
+                plan.departure = document.getElementById("planStartStation")?.value || "東京駅";
+            }
             open3DRouteSimulation(plan);
         });
         card.querySelector(".home-plan-item-info").addEventListener("click", () => viewItineraryDetails(plan.id));
@@ -5966,7 +6095,6 @@ window.renderHomePlans = function () {
         plansContainer.appendChild(card);
     });
 
-    // 3件超えている場合は「もっと見る / 折りたたむ」ボタンを追加
     if (plans.length > HOME_PLANS_INITIAL_COUNT) {
         const remaining = plans.length - HOME_PLANS_INITIAL_COUNT;
         const toggleBtn = document.createElement("button");
@@ -6009,9 +6137,6 @@ window.handleHomeCta = function () {
     }
 };
 
-// ==========================================
-// AI 先回り自動提案機能の実装
-// ==========================================
 function generateProactiveItineraryText(title, spots, companion, transport, budget) {
     const dates = new Date();
     dates.setDate(dates.getDate() + 7); // デフォルトで来週
@@ -6051,20 +6176,17 @@ window.renderProactiveSuggestions = function () {
 
     currentSuggestions = [];
 
-    // 1. いいねリストのチェック
     let candidates = [];
     if (likes.length > 0) {
         let unusedLikes = likes.filter(l => !dismissedSuggestions.includes(l.name));
 
         if (unusedLikes.length > 0) {
-            // 府県でグルーピング
             let byPref = {};
             unusedLikes.forEach(l => {
                 if (!byPref[l.prefecture]) byPref[l.prefecture] = [];
                 byPref[l.prefecture].push(l);
             });
 
-            // 府県別のルート提案
             Object.entries(byPref).forEach(([pref, spots]) => {
                 if (spots.length >= 2) {
                     candidates.push({
@@ -6078,7 +6200,6 @@ window.renderProactiveSuggestions = function () {
                         purpose: detailedPrefs.purpose ? Object.entries(detailedPrefs.purpose).sort((a, b) => b[1] - a[1])[0][0] : "リフレッシュ"
                     });
                 } else if (spots.length === 1) {
-                    // 同府県の他スポットを探す
                     let otherSpot = kinkiPlaces.find(p => p.prefecture === pref && p.id !== spots[0].id && !dismissedSuggestions.includes(p.name));
                     if (otherSpot) {
                         candidates.push({
@@ -6092,7 +6213,6 @@ window.renderProactiveSuggestions = function () {
                             purpose: detailedPrefs.purpose ? Object.entries(detailedPrefs.purpose).sort((a, b) => b[1] - a[1])[0][0] : "リフレッシュ"
                         });
                     } else {
-                        // 単一スポットでの提案
                         candidates.push({
                             title: `ゆっくり巡る ${spots[0].name}日帰りリフレッシュ旅`,
                             spots: [spots[0]],
@@ -6109,7 +6229,6 @@ window.renderProactiveSuggestions = function () {
         }
     }
 
-    // 候補が足りない（またはいいねが無い）場合、デフォルトの人気提案を追加
     if (candidates.length < 2) {
         let defaultPairs = [
             {
@@ -6142,7 +6261,6 @@ window.renderProactiveSuggestions = function () {
         });
     }
 
-    // 候補の表示 (最大2件)
     let displayList = candidates.slice(0, 2);
     if (displayList.length === 0) {
         container.innerHTML = `<div class="modal-empty">現在、ご提案できる自動提案ルートがありません。</div>`;
@@ -6154,7 +6272,6 @@ window.renderProactiveSuggestions = function () {
         sug.id = sugId;
         currentSuggestions.push(sug);
 
-        // タイムライン
         let timelineHTML = "";
         if (sug.spots.length === 1) {
             const sName = escapeHTML(sug.spots[0].name);
@@ -6275,7 +6392,6 @@ window.editProactiveSuggestion = function (sugId) {
     const spot = sug.spots[0];
     activePlanTarget = spot;
 
-    // いいねリストで選択
     document.querySelectorAll(".liked-item").forEach(i => {
         if (i.getAttribute("data-id") == spot.id) {
             i.classList.add("selected");
@@ -6355,31 +6471,26 @@ if (filterPref && chatPref) {
     });
 }
 
-// ==========================================
-// 15. アプリ起動時の初期スポット読み込み
-// ==========================================
 window.loadInitialSpot = function () {
+    const initialPref = getSavedPrefecture();
     const prefSelect = document.getElementById("filterPrefecture");
     if (prefSelect) {
-        prefSelect.value = "北海道";
+        prefSelect.value = initialPref;
     }
     const chatPrefSelect = document.getElementById("chatPrefecture");
     if (chatPrefSelect) {
-        chatPrefSelect.value = "北海道";
+        chatPrefSelect.value = initialPref;
     }
-    activeFilters.prefecture = "北海道";
+    activeFilters.prefecture = initialPref;
 
-    // アプリ起動時に探す（スワイプ）画面を表示
     if (typeof switchView === "function") {
         const swipeNav = document.querySelector(".sidebar-item:nth-child(2)");
         switchView("swipe", swipeNav);
     }
 
-    // フィルタを適用してモックデータの「小樽運河」をスポットカードに表示
     applyFilters();
 };
 
-// DOMContentLoaded イベントで初期スポット読み込みを実行
 if (document.readyState === "loading") {
     window.addEventListener("DOMContentLoaded", () => {
         loadInitialSpot();
