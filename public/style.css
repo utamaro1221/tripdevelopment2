@@ -280,6 +280,7 @@ body.chat-drawer-open .app-content {
     font-weight: 800;
     background: linear-gradient(135deg, var(--text-color), var(--primary-color));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: 0.02em;
 }
@@ -3125,6 +3126,7 @@ body.chat-drawer-open .app-content {
     z-index: 2;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     line-height: 1.2;
