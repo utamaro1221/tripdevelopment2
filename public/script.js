@@ -4369,33 +4369,18 @@ window.generateTravelPlan = async function (event) {
         let startCoords = null;
         try {
             if (startStationVal && startStationVal.trim()) {
-                await loadGoogleMaps();
-                if (window.google?.maps?.Geocoder) {
-                    const geocoder = new google.maps.Geocoder();
-                    startCoords = await new Promise((resolve) => {
-                        geocoder.geocode({ address: startStationVal, region: "JP" }, (results, status) => {
-                            if (status === "OK" && results && results[0] && results[0].geometry && results[0].geometry.location) {
-                                const loc = results[0].geometry.location;
-                                resolve({ lat: loc.lat(), lng: loc.lng() });
-                            } else {
-                                resolve(null);
-                            }
-                        });
+                const { Geocoder } = await google.maps.importLibrary("geocoding");
+                const geocoder = new Geocoder();
+                startCoords = await new Promise((resolve) => {
+                    geocoder.geocode({ address: startStationVal, region: "JP" }, (results, status) => {
+                        if (status === "OK" && results && results[0] && results[0].geometry && results[0].geometry.location) {
+                            const loc = results[0].geometry.location;
+                            resolve({ lat: loc.lat(), lng: loc.lng() });
+                        } else {
+                            resolve(null);
+                        }
                     });
-                }
-                if (!startCoords && window.google?.maps?.places?.Place?.searchByText) {
-                    const placeRes = await google.maps.places.Place.searchByText({
-                        textQuery: startStationVal,
-                        fields: ["location"]
-                    });
-                    if (placeRes?.places?.[0]?.location) {
-                        const loc = placeRes.places[0].location;
-                        startCoords = {
-                            lat: typeof loc.lat === "function" ? loc.lat() : loc.lat,
-                            lng: typeof loc.lng === "function" ? loc.lng() : loc.lng
-                        };
-                    }
-                }
+                });
             }
         } catch (geocodeErr) {}
 
