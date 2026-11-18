@@ -402,11 +402,12 @@ body.sim3d-open .bottom-nav {
 #card-stack {
     position: relative;
     width: 92%;
-    height: clamp(360px, calc(100dvh - 280px), 440px);
-    min-height: 360px;
-    max-height: 440px;
+    height: clamp(390px, calc(100dvh - 280px), 445px);
+    min-height: 390px;
+    max-height: 445px;
     max-width: 480px;
-    overflow: visible;
+    overflow: hidden;
+    border-radius: 24px;
     margin: 0 auto;
     flex-shrink: 0;
 }
@@ -418,7 +419,7 @@ body.sim3d-open .bottom-nav {
     left: 0;
     width: 100%;
     max-width: 480px;
-    height: auto;
+    height: 100%;
     max-height: 100%;
     background-color: var(--card-bg);
     border-radius: 24px;
@@ -435,6 +436,10 @@ body.sim3d-open .bottom-nav {
     flex-direction: column;
 }
 
+#card-stack .swipe-card:not(:last-child) .card-info {
+    visibility: hidden;
+}
+
 .swipe-card:active {
     cursor: grabbing;
 }
@@ -442,9 +447,9 @@ body.sim3d-open .bottom-nav {
 .card-img-container {
     position: relative;
     width: 100%;
-    height: clamp(180px, 26dvh, 225px);
+    height: clamp(175px, 24dvh, 215px);
     min-height: 170px;
-    max-height: 28vh;
+    max-height: 26vh;
     flex-shrink: 0;
     overflow: hidden;
     background-color: #f1f5f9;
@@ -547,7 +552,7 @@ body.sim3d-open .bottom-nav {
 
 .card-info {
     position: relative;
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     min-height: 0;
     width: 100%;
     padding: 12px 18px 14px 18px;
@@ -4177,7 +4182,7 @@ header,
 :root {
     --content-max: 1100px;      
     --content-narrow: 900px;    
-    --card-h-pc: clamp(380px, calc(100dvh - 280px), 445px); 
+    --card-h-pc: clamp(390px, calc(100dvh - 280px), 445px); 
     --tap-min: 44px;            
     --thumb-w: 160px;           
     --thumb-h: 210px;           
@@ -4339,14 +4344,14 @@ textarea {
         width: min(540px, 92%);
         max-width: 540px;
         height: var(--card-h-pc);
-        min-height: 380px;
+        min-height: 390px;
         max-height: 445px;
     }
 
     .swipe-card,
     .spot-card {
         max-width: 540px;
-        height: auto;
+        height: 100%;
         max-height: 100%;
     }
 
