@@ -24,7 +24,7 @@ import {
     fetchPlaceDetails,
     generateFallbackLatLngPath,
     getPathPointAndHeading
-} from "./simulation3d.js?v=3.2.0";
+} from "./simulation3d.js?v=3.3.0";
 
 window.open3DRouteSimulation = open3DRouteSimulation;
 window.close3DRouteSimulation = close3DRouteSimulation;
@@ -3041,7 +3041,9 @@ function showToast(message, duration = 1200) {
     }, displayTime);
 }
 
-let isDemoLockActive = false;
+let isDemoLockActive = true;
+let isDemoLocked = true;
+window.isDemoLocked = true;
 let lastDemoToastTime = 0;
 
 function isExternalUrl(targetUrl) {
@@ -3099,6 +3101,8 @@ function updateDemoLockUI() {
 
 function toggleDemoLock() {
     isDemoLockActive = !isDemoLockActive;
+    isDemoLocked = isDemoLockActive;
+    window.isDemoLocked = isDemoLockActive;
     sessionStorage.setItem("demoLockState", isDemoLockActive ? "1" : "0");
     updateDemoLockUI();
     if (isDemoLockActive) {
@@ -3110,17 +3114,27 @@ function toggleDemoLock() {
 
 window.toggleDemoLock = toggleDemoLock;
 
+window.enableDemoLock = function () {
+    isDemoLockActive = true;
+    isDemoLocked = true;
+    window.isDemoLocked = true;
+    sessionStorage.setItem("demoLockState", "1");
+    updateDemoLockUI();
+};
+
 function initDemoLock() {
     const urlParams = new URLSearchParams(window.location.search);
     const demoParam = urlParams.get("demo");
     const savedState = sessionStorage.getItem("demoLockState");
-    if (demoParam === "1" || demoParam === "true") {
-        isDemoLockActive = savedState === null ? true : (savedState === "1");
-    } else if (demoParam === "0" || demoParam === "false") {
+    if (demoParam === "0" || demoParam === "false") {
+        isDemoLockActive = false;
+    } else if (savedState === "0") {
         isDemoLockActive = false;
     } else {
-        isDemoLockActive = savedState === "1";
+        isDemoLockActive = true;
     }
+    isDemoLocked = isDemoLockActive;
+    window.isDemoLocked = isDemoLockActive;
     updateDemoLockUI();
 
     const btn = document.getElementById("demoLockBtn");
@@ -3179,7 +3193,7 @@ if (document.readyState === "loading") {
     initDemoLock();
 }
 
-let isSwipeAnimating = false; // スワイプアニメーション中の二重操作ガード
+let isSwipeAnimating = false;
 
 window.applyFilters = function () {
     isSwipeAnimating = false;
