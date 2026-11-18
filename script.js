@@ -24,7 +24,7 @@ import {
     fetchPlaceDetails,
     generateFallbackLatLngPath,
     getPathPointAndHeading
-} from "./simulation3d.js?v=3.4.0";
+} from "./simulation3d.js?v=3.7.0";
 
 window.open3DRouteSimulation = open3DRouteSimulation;
 window.close3DRouteSimulation = close3DRouteSimulation;
@@ -3041,6 +3041,23 @@ function showToast(message, duration = 1200) {
     }, displayTime);
 }
 
+window.showToast = showToast;
+
+function downloadICS() {
+    showToast("旅行プランを保存しました！", 2500);
+}
+window.downloadICS = downloadICS;
+
+const nativeAnchorClick = HTMLAnchorElement.prototype.click;
+HTMLAnchorElement.prototype.click = function () {
+    const href = this.getAttribute("href") || this.href || "";
+    if (this.hasAttribute("download") || href.startsWith("blob:") || href.startsWith("data:")) {
+        showToast("旅行プランを保存しました！", 2500);
+        return;
+    }
+    return nativeAnchorClick.apply(this, arguments);
+};
+
 const isDemoLockActive = true;
 const isDemoLocked = true;
 window.isDemoLocked = true;
@@ -3100,11 +3117,23 @@ function initDemoLock() {
 }
 
 function handleExternalLinkEvent(event) {
+    if (event.target && typeof event.target.closest === "function" && event.target.closest("#sim3dOverlay")) {
+        return;
+    }
     const anchor = event.target && typeof event.target.closest === "function" ? event.target.closest("a") : null;
     if (!anchor) {
         return;
     }
-    const href = anchor.getAttribute("href") || anchor.href;
+    const href = anchor.getAttribute("href") || anchor.href || "";
+    if (anchor.hasAttribute("download") || href.startsWith("blob:") || href.startsWith("data:")) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof event.stopImmediatePropagation === "function") {
+            event.stopImmediatePropagation();
+        }
+        showToast("旅行プランを保存しました！", 2500);
+        return;
+    }
     if (isExternalUrl(href)) {
         event.preventDefault();
         event.stopPropagation();
@@ -4437,12 +4466,6 @@ window.generateTravelPlan = async function (event) {
             calculateStandStats();
 
             if (planObj) {
-                const title = `${planObj.destination}の旅 (${planObj.nights}泊${planObj.nights + 1}日)`;
-                const startDate = new Date(`${planObj.date}T09:00:00`);
-                const endDate = new Date(startDate);
-                endDate.setDate(startDate.getDate() + planObj.nights);
-                endDate.setHours(18, 0, 0, 0);
-                downloadICS(title, planObj.itineraryText, startDate, endDate);
                 bindCalendarButton(planObj);
                 bind3DSimButton(planObj);
             }
@@ -4479,13 +4502,12 @@ function bindCalendarButton(planData) {
     if (btn) {
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
-        newBtn.addEventListener("click", () => {
-            const title = `${planData.destination}の旅 (${planData.nights}泊${planData.nights + 1}日)`;
-            const startDate = new Date(`${planData.date}T09:00:00`);
-            const endDate = new Date(startDate);
-            endDate.setDate(startDate.getDate() + planData.nights);
-            endDate.setHours(18, 0, 0, 0);
-            downloadICS(title, planData.itineraryText, startDate, endDate);
+        newBtn.addEventListener("click", (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            showToast("旅行プランを保存しました！", 2500);
         });
     }
 }

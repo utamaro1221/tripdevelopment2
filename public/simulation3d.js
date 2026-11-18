@@ -13,7 +13,7 @@ let simCurrentHeading = null;
 let simRoutePolyline = null;
 let simProgressPolyline = null;
 let simCurrentZoom = 17;
-let simCurrentTilt = 65;
+let simCurrentTilt = 60;
 let simStartMarker = null;
 let simEndMarker = null;
 let simWaypointMarkers = [];
@@ -23,6 +23,9 @@ let simStopPoints = [];
 let simStoppedIndexes = [];
 let simStopTimer = null;
 let AdvancedMarkerElement = null;
+let simMapMode = "3d";
+let simCurrentWaypoints = [];
+let simCurrentDetailedPath = [];
 const isDemoLocked = true;
 
 const spotCategories = {
@@ -277,6 +280,9 @@ export function getPathPointAndHeading(path, progress) {
 
     let lat = currentPoint.lat + (nextPoint.lat - currentPoint.lat) * fraction;
     let lng = currentPoint.lng + (nextPoint.lng - currentPoint.lng) * fraction;
+    let alt1 = typeof currentPoint.alt === "number" && !isNaN(currentPoint.alt) ? currentPoint.alt : 0;
+    let alt2 = typeof nextPoint.alt === "number" && !isNaN(nextPoint.alt) ? nextPoint.alt : alt1;
+    let alt = alt1 + (alt2 - alt1) * fraction;
     let heading = 0;
 
     if (window.google?.maps?.geometry?.spherical?.computeHeading) {
@@ -296,7 +302,64 @@ export function getPathPointAndHeading(path, progress) {
         getPathPointAndHeading._lastHeading = heading;
     }
 
-    return { lat: lat, lng: lng, heading: heading };
+    return { lat: lat, lng: lng, alt: alt, heading: heading };
+}
+
+async function populateRouteElevations(path) {
+    if (!Array.isArray(path) || path.length === 0) return;
+    const sampleCount = Math.min(80, path.length);
+    const sampleIndices = [];
+    for (let i = 0; i < sampleCount; i++) {
+        const idx = sampleCount === 1 ? 0 : Math.round((i / (sampleCount - 1)) * (path.length - 1));
+        sampleIndices.push(idx);
+    }
+    let sampleElevations = null;
+    try {
+        const lats = sampleIndices.map(idx => path[idx].lat.toFixed(5)).join(",");
+        const lngs = sampleIndices.map(idx => path[idx].lng.toFixed(5)).join(",");
+        const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lngs}`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data && Array.isArray(data.elevation) && data.elevation.length === sampleIndices.length) {
+                sampleElevations = data.elevation.map(v => (typeof v === "number" && !isNaN(v) ? Math.max(0, v) : 0));
+            }
+        }
+    } catch (e) {}
+
+    if (!sampleElevations) {
+        try {
+            const { ElevationService } = await google.maps.importLibrary("elevation");
+            if (ElevationService) {
+                const elevator = new ElevationService();
+                const locs = sampleIndices.map(idx => ({ lat: path[idx].lat, lng: path[idx].lng }));
+                const elevRes = await elevator.getElevationForLocations({ locations: locs });
+                if (elevRes && Array.isArray(elevRes.results) && elevRes.results.length === sampleIndices.length) {
+                    sampleElevations = elevRes.results.map(r => (r && typeof r.elevation === "number" ? Math.max(0, r.elevation) : 0));
+                }
+            }
+        } catch (e) {}
+    }
+
+    if (!sampleElevations) {
+        for (let i = 0; i < path.length; i++) {
+            path[i].alt = 40;
+        }
+        return;
+    }
+
+    for (let s = 0; s < sampleIndices.length - 1; s++) {
+        const startIdx = sampleIndices[s];
+        const endIdx = sampleIndices[s + 1];
+        const startAlt = sampleElevations[s];
+        const endAlt = sampleElevations[s + 1];
+        const span = Math.max(1, endIdx - startIdx);
+        for (let k = startIdx; k <= endIdx; k++) {
+            const t = (k - startIdx) / span;
+            path[k].alt = startAlt + (endAlt - startAlt) * t;
+        }
+    }
+    path[0].alt = sampleElevations[0];
+    path[path.length - 1].alt = sampleElevations[sampleElevations.length - 1];
 }
 
 function calculateTotalDistance(path) {
@@ -337,9 +400,82 @@ export function simUpdateHUD(data) {
     }
 }
 
+function bindSimControlEvents() {
+    const closeBtn = document.getElementById("simCloseBtn");
+    if (closeBtn) {
+        closeBtn.onclick = function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            close3DRouteSimulation();
+        };
+    }
+    const playBtn = document.getElementById("simPlayBtn");
+    if (playBtn) {
+        playBtn.onclick = function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            start3DAnimation();
+        };
+    }
+    const pauseBtn = document.getElementById("simPauseBtn");
+    if (pauseBtn) {
+        pauseBtn.onclick = function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            pause3DAnimation();
+        };
+    }
+    const resetBtn = document.getElementById("simResetBtn");
+    if (resetBtn) {
+        resetBtn.onclick = function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            reset3DAnimation();
+        };
+    }
+    const modeBtn = document.getElementById("simModeToggleBtn");
+    if (modeBtn) {
+        modeBtn.onclick = function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleSimMapMode();
+        };
+    }
+    const speedSlider = document.getElementById("simSpeedSlider");
+    if (speedSlider) {
+        speedSlider.oninput = function (e) {
+            e.stopPropagation();
+            simSpeed = parseFloat(e.target.value) || 1;
+        };
+        speedSlider.onchange = function (e) {
+            e.stopPropagation();
+            simSpeed = parseFloat(e.target.value) || 1;
+        };
+    }
+    const controlsBar = document.querySelector(".sim3d-controls");
+    if (controlsBar) {
+        controlsBar.onpointerdown = function (e) { e.stopPropagation(); };
+        controlsBar.onmousedown = function (e) { e.stopPropagation(); };
+        controlsBar.ontouchstart = function (e) { e.stopPropagation(); };
+    }
+}
+
 function renderSimOverlay() {
     if (document.getElementById("sim3dOverlay")) {
         simOverlayEl = document.getElementById("sim3dOverlay");
+        if (!document.getElementById("simModeToggleBtn")) {
+            const controls = simOverlayEl.querySelector(".sim3d-controls");
+            if (controls) {
+                const modeBtn = document.createElement("button");
+                modeBtn.type = "button";
+                modeBtn.className = "sim3d-mode-btn";
+                modeBtn.id = "simModeToggleBtn";
+                modeBtn.title = "地図モード切替";
+                modeBtn.innerHTML = `<span class="material-icons" style="font-size:1rem;">view_in_ar</span><span id="simModeToggleLabel">${simMapMode === "3d" ? "2D/ベクター切替" : "リアル3D切替"}</span>`;
+                controls.appendChild(modeBtn);
+            }
+        }
+        bindSimControlEvents();
         return;
     }
     const overlay = document.createElement("div");
@@ -352,7 +488,7 @@ function renderSimOverlay() {
                 <span class="sim3d-title">3D Route Simulation</span>
             </div>
             <div class="sim3d-destination" id="simHudDestination"></div>
-            <button class="sim3d-close-btn" id="simCloseBtn">
+            <button type="button" class="sim3d-close-btn" id="simCloseBtn">
                 <span class="material-icons">close</span>
             </button>
         </div>
@@ -378,52 +514,42 @@ function renderSimOverlay() {
             <div class="sim3d-progress-fill" id="simHudProgress"></div>
         </div>
         <div class="sim3d-controls">
-            <button class="sim3d-ctrl-btn" id="simResetBtn" title="Reset">
+            <button type="button" class="sim3d-ctrl-btn" id="simResetBtn" title="Reset">
                 <span class="material-icons">replay</span>
             </button>
-            <button class="sim3d-ctrl-btn sim3d-ctrl-play" id="simPlayBtn" title="Start">
+            <button type="button" class="sim3d-ctrl-btn sim3d-ctrl-play" id="simPlayBtn" title="Start">
                 <span class="material-icons">play_arrow</span>
             </button>
-            <button class="sim3d-ctrl-btn" id="simPauseBtn" title="Pause">
+            <button type="button" class="sim3d-ctrl-btn" id="simPauseBtn" title="Pause">
                 <span class="material-icons">pause</span>
             </button>
             <div class="sim3d-speed-control">
                 <label class="sim3d-speed-label">Speed</label>
                 <input type="range" id="simSpeedSlider" min="0.5" max="10" step="0.5" value="1" class="sim3d-speed-slider">
             </div>
+            <button type="button" class="sim3d-mode-btn" id="simModeToggleBtn" title="地図モード切替">
+                <span class="material-icons" style="font-size:1rem;">view_in_ar</span>
+                <span id="simModeToggleLabel">2D/ベクター切替</span>
+            </button>
         </div>
     `;
     document.body.appendChild(overlay);
     simOverlayEl = overlay;
-
-    document.getElementById("simCloseBtn").addEventListener("click", () => {
-        close3DRouteSimulation();
-    });
-    document.getElementById("simPlayBtn").addEventListener("click", () => {
-        start3DAnimation();
-    });
-    document.getElementById("simPauseBtn").addEventListener("click", () => {
-        pause3DAnimation();
-    });
-    document.getElementById("simResetBtn").addEventListener("click", () => {
-        reset3DAnimation();
-    });
-    document.getElementById("simSpeedSlider").addEventListener("input", (e) => {
-        simSpeed = parseFloat(e.target.value) || 1;
-    });
+    bindSimControlEvents();
 }
 
 function animateStep(timestamp) {
     if (!simIsPlaying) return;
     const frameDuration = 1000 / 30;
-    if (timestamp - simLastRenderTime < frameDuration) {
+    if (simLastRenderTime && timestamp - simLastRenderTime < frameDuration) {
         simAnimationId = requestAnimationFrame(animateStep);
         return;
     }
     simLastRenderTime = timestamp;
     if (!simStartTime) simStartTime = timestamp;
     const elapsed = (timestamp - simStartTime) / 1000;
-    const delta = (timestamp - (animateStep._lastTimestamp || timestamp)) / 1000;
+    const rawDelta = animateStep._lastTimestamp ? (timestamp - animateStep._lastTimestamp) / 1000 : 0.033;
+    const delta = Math.min(0.2, Math.max(0.005, rawDelta));
     animateStep._lastTimestamp = timestamp;
     const totalDistKm = simTotalDistance / 1000;
     const baseSpeedMps = 30;
@@ -461,6 +587,7 @@ function animateStep(timestamp) {
             simStopTimer = setTimeout(function() {
                 banner.remove();
                 simIsPlaying = true;
+                animateStep._lastTimestamp = null;
                 simAnimationId = requestAnimationFrame(animateStep);
             }, 3000);
         }
@@ -487,36 +614,37 @@ function animateStep(timestamp) {
         }
     }
     passedPath.push({ lat: point.lat, lng: point.lng });
-    if (simProgressPolyline) {
-        if (typeof simProgressPolyline.setPath === "function") {
+    if (simProgressPolyline && typeof simProgressPolyline.setPath === "function") {
+        try {
             simProgressPolyline.setPath(passedPath);
-        } else {
-            simProgressPolyline.coordinates = passedPath.map(function (p) {
-                return { lat: p.lat, lng: p.lng, altitude: 0 };
-            });
-        }
+        } catch (e) {}
     }
     if (simMap) {
-        if (typeof simMap.moveCamera === "function") {
-            simMap.moveCamera({
-                center: { lat: point.lat, lng: point.lng },
-                heading: simCurrentHeading,
-                tilt: 65,
-                zoom: 18
-            });
-        } else if (typeof simMap.setCenter === "function") {
-            simMap.setCenter({ lat: point.lat, lng: point.lng });
-            if (typeof simMap.setHeading === "function") simMap.setHeading(simCurrentHeading);
-            if (typeof simMap.setTilt === "function") simMap.setTilt(65);
-            if (typeof simMap.setZoom === "function") simMap.setZoom(18);
-        } else {
-            simMap.center = { lat: point.lat, lng: point.lng, altitude: 0 };
-            simMap.heading = simCurrentHeading;
-            simMap.tilt = 65;
-            simMap.range = 900;
-        }
+        try {
+            if (typeof simMap.moveCamera === "function") {
+                simMap.moveCamera({
+                    center: { lat: point.lat, lng: point.lng },
+                    heading: simCurrentHeading,
+                    tilt: 60,
+                    zoom: 17
+                });
+            } else if (typeof simMap.setCenter === "function") {
+                simMap.setCenter({ lat: point.lat, lng: point.lng });
+                if (typeof simMap.setHeading === "function") simMap.setHeading(simCurrentHeading);
+                if (typeof simMap.setTilt === "function") simMap.setTilt(60);
+                if (typeof simMap.setZoom === "function") simMap.setZoom(17);
+            } else {
+                const groundAlt = typeof point.alt === "number" && !isNaN(point.alt) ? point.alt : 40;
+                simMap.center = { lat: point.lat, lng: point.lng, altitude: Math.max(40, groundAlt + 40) };
+                simMap.heading = simCurrentHeading;
+                simMap.tilt = 60;
+                simMap.range = 1800;
+            }
+        } catch (e) {}
         if (simVehicleMarker) {
-            simVehicleMarker.position = { lat: point.lat, lng: point.lng };
+            try {
+                simVehicleMarker.position = { lat: point.lat, lng: point.lng };
+            } catch (e) {}
         }
     }
     let baseRealisticSpeed;
@@ -790,6 +918,8 @@ export async function open3DRouteSimulation(plan) {
         }
     }
 
+    await populateRouteElevations(detailedPath);
+
     simPathCoords = detailedPath;
     simPathCoords._totalDist = null;
     simPathCoords._distances = null;
@@ -805,8 +935,34 @@ export async function open3DRouteSimulation(plan) {
         };
     });
     simStoppedIndexes = [];
+    simCurrentWaypoints = waypoints;
+    simCurrentDetailedPath = detailedPath;
 
     await initSimMap(waypoints, detailedPath);
+    bindSimControlEvents();
+}
+
+export async function toggleSimMapMode() {
+    if (!simCurrentWaypoints || simCurrentWaypoints.length < 2 || !simCurrentDetailedPath || simCurrentDetailedPath.length === 0) {
+        return;
+    }
+    const wasPlaying = simIsPlaying;
+    if (simAnimationId) {
+        cancelAnimationFrame(simAnimationId);
+        simAnimationId = null;
+    }
+    simIsPlaying = false;
+    simMapMode = simMapMode === "3d" ? "2d" : "3d";
+    const modeLabel = document.getElementById("simModeToggleLabel");
+    if (modeLabel) {
+        modeLabel.textContent = simMapMode === "3d" ? "2D/ベクター切替" : "リアル3D切替";
+    }
+    simMap = null;
+    await initSimMap(simCurrentWaypoints, simCurrentDetailedPath);
+    bindSimControlEvents();
+    if (wasPlaying) {
+        start3DAnimation();
+    }
 }
 
 async function initSimMap(waypoints, detailedPath) {
@@ -819,9 +975,12 @@ async function initSimMap(waypoints, detailedPath) {
     const startLng = startPt.lng;
     const endLat = endPt.lat;
     const endLng = endPt.lng;
+    const currentPos = simProgress > 0 && detailedPath.length > 0
+        ? getPathPointAndHeading(detailedPath, simProgress)
+        : { lat: startLat, lng: startLng, alt: (detailedPath[0] && detailedPath[0].alt) || 40, heading: 0 };
 
-    let initialHeading = 0;
-    if (detailedPath && detailedPath.length >= 2) {
+    let initialHeading = currentPos.heading || 0;
+    if (simProgress === 0 && detailedPath && detailedPath.length >= 2) {
         let nextIdx = 1;
         while (nextIdx < detailedPath.length - 1 && detailedPath[nextIdx].lat === detailedPath[0].lat && detailedPath[nextIdx].lng === detailedPath[0].lng) {
             nextIdx++;
@@ -839,78 +998,77 @@ async function initSimMap(waypoints, detailedPath) {
     }
     simCurrentHeading = initialHeading;
 
-    try {
-        const maps3dLib = await google.maps.importLibrary("maps3d");
-        const Map3DElement = maps3dLib && maps3dLib.Map3DElement;
-        const Polyline3DElement = maps3dLib && maps3dLib.Polyline3DElement;
-        const Marker3DElement = maps3dLib && maps3dLib.Marker3DElement;
-        const AltitudeMode = maps3dLib && maps3dLib.AltitudeMode;
-        if (Map3DElement && Polyline3DElement) {
-            if (!simMap || typeof simMap.setCenter === "function") {
-                container.innerHTML = "";
-                simMap = new Map3DElement({
-                    center: { lat: startLat, lng: startLng, altitude: 0 },
-                    tilt: 65,
-                    range: 900,
-                    heading: initialHeading,
-                    mode: "HYBRID"
+    if (simMapMode === "3d") {
+        try {
+            const maps3dLib = await google.maps.importLibrary("maps3d");
+            const Map3DElement = maps3dLib && maps3dLib.Map3DElement;
+            const Polyline3DElement = maps3dLib && maps3dLib.Polyline3DElement;
+            const Marker3DElement = maps3dLib && maps3dLib.Marker3DElement;
+            const AltitudeMode = maps3dLib && maps3dLib.AltitudeMode;
+            if (Map3DElement && Polyline3DElement) {
+                const startGroundAlt = typeof currentPos.alt === "number" && !isNaN(currentPos.alt) ? currentPos.alt : 40;
+                if (!simMap || typeof simMap.setCenter === "function") {
+                    container.innerHTML = "";
+                    simMap = new Map3DElement({
+                        center: { lat: currentPos.lat, lng: currentPos.lng, altitude: Math.max(40, startGroundAlt + 40) },
+                        tilt: 60,
+                        range: 1800,
+                        heading: initialHeading,
+                        mode: "HYBRID"
+                    });
+                    simMap.style.width = "100%";
+                    simMap.style.height = "100%";
+                    container.appendChild(simMap);
+                } else {
+                    simMap.center = { lat: currentPos.lat, lng: currentPos.lng, altitude: Math.max(40, startGroundAlt + 40) };
+                    simMap.tilt = 60;
+                    simMap.range = 1800;
+                    simMap.heading = initialHeading;
+                }
+
+                const clampMode = AltitudeMode && AltitudeMode.CLAMP_TO_GROUND ? AltitudeMode.CLAMP_TO_GROUND : "CLAMP_TO_GROUND";
+                simRoutePolyline = new Polyline3DElement({
+                    strokeColor: "#00f3ff",
+                    strokeWidth: 8,
+                    altitudeMode: clampMode,
+                    drawsOccludedSegments: true
                 });
-                simMap.style.width = "100%";
-                simMap.style.height = "100%";
-                container.appendChild(simMap);
-            } else {
-                simMap.center = { lat: startLat, lng: startLng, altitude: 0 };
-                simMap.tilt = 65;
-                simMap.range = 900;
-                simMap.heading = initialHeading;
+                simRoutePolyline.setAttribute("altitude-mode", "CLAMP_TO_GROUND");
+                simRoutePolyline.coordinates = detailedPath.map(function (p) {
+                    return { lat: p.lat, lng: p.lng };
+                });
+                simMap.append(simRoutePolyline);
+                simProgressPolyline = null;
+
+                if (Marker3DElement) {
+                    simStartMarker = new Marker3DElement({
+                        position: { lat: startLat, lng: startLng },
+                        altitudeMode: clampMode,
+                        label: "出発地"
+                    });
+                    simStartMarker.setAttribute("altitude-mode", "CLAMP_TO_GROUND");
+                    simMap.append(simStartMarker);
+
+                    simEndMarker = new Marker3DElement({
+                        position: { lat: endLat, lng: endLng },
+                        altitudeMode: clampMode,
+                        label: "目的地"
+                    });
+                    simEndMarker.setAttribute("altitude-mode", "CLAMP_TO_GROUND");
+                    simMap.append(simEndMarker);
+
+                    simVehicleMarker = new Marker3DElement({
+                        position: { lat: currentPos.lat, lng: currentPos.lng },
+                        altitudeMode: clampMode,
+                        label: "🚄"
+                    });
+                    simVehicleMarker.setAttribute("altitude-mode", "CLAMP_TO_GROUND");
+                    simMap.append(simVehicleMarker);
+                }
+                return;
             }
-
-            const clampMode = AltitudeMode && AltitudeMode.CLAMP_TO_GROUND ? AltitudeMode.CLAMP_TO_GROUND : "CLAMP_TO_GROUND";
-            simRoutePolyline = new Polyline3DElement({
-                strokeColor: "rgba(30, 41, 59, 0.75)",
-                strokeWidth: 8,
-                altitudeMode: clampMode,
-                drawsOccludedSegments: true
-            });
-            simRoutePolyline.coordinates = detailedPath.map(function (p) {
-                return { lat: p.lat, lng: p.lng, altitude: 0 };
-            });
-            simMap.append(simRoutePolyline);
-
-            simProgressPolyline = new Polyline3DElement({
-                strokeColor: "#00f3ff",
-                strokeWidth: 8,
-                altitudeMode: clampMode,
-                drawsOccludedSegments: true
-            });
-            simProgressPolyline.coordinates = [
-                { lat: startLat, lng: startLng, altitude: 0 },
-                { lat: startLat, lng: startLng, altitude: 0 }
-            ];
-            simMap.append(simProgressPolyline);
-
-            if (Marker3DElement) {
-                simStartMarker = new Marker3DElement({
-                    position: { lat: startLat, lng: startLng },
-                    label: "出発地"
-                });
-                simMap.append(simStartMarker);
-
-                simEndMarker = new Marker3DElement({
-                    position: { lat: endLat, lng: endLng },
-                    label: "目的地"
-                });
-                simMap.append(simEndMarker);
-
-                simVehicleMarker = new Marker3DElement({
-                    position: { lat: startLat, lng: startLng },
-                    label: "🚄"
-                });
-                simMap.append(simVehicleMarker);
-            }
-            return;
-        }
-    } catch (e) {}
+        } catch (e) {}
+    }
 
     const { AdvancedMarkerElement: ame } = await google.maps.importLibrary("marker");
     AdvancedMarkerElement = ame;
@@ -918,9 +1076,9 @@ async function initSimMap(waypoints, detailedPath) {
     if (!simMap || typeof simMap.setCenter !== "function") {
         container.innerHTML = "";
         simMap = new google.maps.Map(container, {
-            center: { lat: startLat, lng: startLng },
-            zoom: 18,
-            tilt: 65,
+            center: { lat: currentPos.lat, lng: currentPos.lng },
+            zoom: 17,
+            tilt: 60,
             heading: initialHeading,
             mapId: "762efe723963e54aa2efe1dd",
             renderingType: "VECTOR",
@@ -931,9 +1089,9 @@ async function initSimMap(waypoints, detailedPath) {
         });
     } else {
         simMap.moveCamera({
-            center: { lat: startLat, lng: startLng },
-            zoom: 18,
-            tilt: 65,
+            center: { lat: currentPos.lat, lng: currentPos.lng },
+            zoom: 17,
+            tilt: 60,
             heading: initialHeading
         });
     }
@@ -983,7 +1141,7 @@ async function initSimMap(waypoints, detailedPath) {
     shinkansenEl.style.border = "2px solid #00f3ff";
     shinkansenEl.innerText = "🚄";
     simVehicleMarker = new AdvancedMarkerElement({
-        position: { lat: startLat, lng: startLng },
+        position: { lat: currentPos.lat, lng: currentPos.lng },
         map: simMap,
         content: shinkansenEl
     });
@@ -1073,20 +1231,29 @@ export function close3DRouteSimulation() {
 
 export function start3DAnimation() {
     if (simPathCoords.length === 0) return;
+    if (simAnimationId) {
+        cancelAnimationFrame(simAnimationId);
+        simAnimationId = null;
+    }
     if (simProgress >= 1) {
         simProgress = 0;
         simStartTime = null;
+        simStoppedIndexes = [];
     }
     simIsPlaying = true;
+    simLastRenderTime = 0;
+    animateStep._lastTimestamp = null;
     const playBtn = document.getElementById("simPlayBtn");
     if (playBtn) {
-        playBtn.querySelector(".material-icons").textContent = "play_arrow";
+        const iconEl = playBtn.querySelector(".material-icons");
+        if (iconEl) iconEl.textContent = "play_arrow";
     }
     simAnimationId = requestAnimationFrame(animateStep);
 }
 
 export function pause3DAnimation() {
     simIsPlaying = false;
+    animateStep._lastTimestamp = null;
     if (simAnimationId) {
         cancelAnimationFrame(simAnimationId);
         simAnimationId = null;
@@ -1098,17 +1265,13 @@ export function reset3DAnimation() {
     simProgress = 0;
     simStartTime = null;
     simCurrentHeading = null;
-    simCurrentZoom = 18;
-    simCurrentTilt = 65;
-    if (simProgressPolyline) {
-        if (typeof simProgressPolyline.setPath === "function") {
+    simStoppedIndexes = [];
+    simCurrentZoom = 17;
+    simCurrentTilt = 60;
+    if (simProgressPolyline && typeof simProgressPolyline.setPath === "function") {
+        try {
             simProgressPolyline.setPath([]);
-        } else if (simPathCoords.length > 0) {
-            simProgressPolyline.coordinates = [
-                { lat: simPathCoords[0].lat, lng: simPathCoords[0].lng, altitude: 0 },
-                { lat: simPathCoords[0].lat, lng: simPathCoords[0].lng, altitude: 0 }
-            ];
-        }
+        } catch (e) {}
     }
     simUpdateHUD({
         speed: 0,
@@ -1118,27 +1281,40 @@ export function reset3DAnimation() {
     });
     if (simMap && simPathCoords.length > 0) {
         const start = simPathCoords[0];
-        if (typeof simMap.moveCamera === "function") {
-            simMap.moveCamera({
-                center: { lat: start.lat, lng: start.lng },
-                heading: 0,
-                tilt: 65,
-                zoom: 18
-            });
-        } else {
-            simMap.center = { lat: start.lat, lng: start.lng, altitude: 0 };
-            simMap.heading = 0;
-            simMap.tilt = 65;
-            simMap.range = 900;
-        }
+        const startGroundAlt = typeof start.alt === "number" && !isNaN(start.alt) ? start.alt : 40;
+        try {
+            if (typeof simMap.moveCamera === "function") {
+                simMap.moveCamera({
+                    center: { lat: start.lat, lng: start.lng },
+                    heading: 0,
+                    tilt: 60,
+                    zoom: 17
+                });
+            } else {
+                simMap.center = { lat: start.lat, lng: start.lng, altitude: Math.max(40, startGroundAlt + 40) };
+                simMap.heading = 0;
+                simMap.tilt = 60;
+                simMap.range = 1800;
+            }
+        } catch (e) {}
         if (simVehicleMarker) {
-            simVehicleMarker.position = { lat: start.lat, lng: start.lng };
+            try {
+                simVehicleMarker.position = { lat: start.lat, lng: start.lng };
+            } catch (e) {}
         }
     }
 
     animateStep._lastTimestamp = null;
     const playBtn = document.getElementById("simPlayBtn");
     if (playBtn) {
-        playBtn.querySelector(".material-icons").textContent = "play_arrow";
+        const iconEl = playBtn.querySelector(".material-icons");
+        if (iconEl) iconEl.textContent = "play_arrow";
     }
 }
+
+window.open3DRouteSimulation = open3DRouteSimulation;
+window.close3DRouteSimulation = close3DRouteSimulation;
+window.start3DAnimation = start3DAnimation;
+window.pause3DAnimation = pause3DAnimation;
+window.reset3DAnimation = reset3DAnimation;
+window.toggleSimMapMode = toggleSimMapMode;
