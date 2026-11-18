@@ -24,7 +24,7 @@ import {
     fetchPlaceDetails,
     generateFallbackLatLngPath,
     getPathPointAndHeading
-} from "./simulation3d.js?v=3.7.0";
+} from "./simulation3d.js?v=4.1.0";
 
 window.open3DRouteSimulation = open3DRouteSimulation;
 window.close3DRouteSimulation = close3DRouteSimulation;
@@ -4029,24 +4029,12 @@ window.generatePlacesWithAI = async function () {
         }
     } catch (err) {
         clearInterval(progressInterval);
-        console.error(err);
-        let errorMsgToShow = err.message;
-        if (err.message.includes("429")) {
-            errorMsgToShow = "本日のAI生成上限に達しました。明日またお試しください。";
+        console.warn("AIスポット生成に失敗したため、既存スポットへフォールバックします:", err);
+        if (typeof resetSwipeHistory === "function") {
+            resetSwipeHistory();
+        } else {
+            applyFilters();
         }
-        showToast("⚠️ 自動生成に失敗しました: " + errorMsgToShow);
-        stack.innerHTML = `
-            <div class="empty-stack-view">
-                <span class="material-icons empty-icon">error_outline</span>
-                <h3>生成エラーが発生しました</h3>
-                <p style="color: var(--accent-error); font-weight: 600;">エラー詳細: ${errorMsgToShow}</p>
-                <p>本日の利用上限に達したか、サーバー側の設定に問題があります。</p>
-                <div class="empty-stack-view-actions">
-                    <button class="btn-primary" onclick="generatePlacesWithAI()">🔄 再試行する</button>
-                    <button class="btn-primary" style="background-color: var(--text-muted); opacity: 0.8;" onclick="resetSwipeHistory()">履歴をリセットしてやり直す</button>
-                </div>
-            </div>
-        `;
     }
 };
 
@@ -4318,13 +4306,11 @@ window.generateTravelPlan = async function (event) {
                 activePlanTarget.name, targetPref, dateVal, selectedNightsText,
                 peopleVal, budgetVal, currentPriority, othersVal
             );
-            showToast("⚠️ AI生成制限のため、推奨テンプレートでプランを作成しました。");
         }
 
         const waypoints = buildOrderedWaypoints(rawWaypoints);
 
         let hotels = [];
-        let isHotelFallback = false;
         try {
             const placesRes = await safeFetchJson(getApiUrl('/api/travel/places'), {
                 method: 'POST',
@@ -4355,28 +4341,10 @@ window.generateTravelPlan = async function (event) {
         } catch (err) {
             console.warn("ホテル情報の取得に失敗したため、モックデータにフォールバックします。", err);
             hotels = (mockHotels[targetPref] || []).map(item => ({ ...item, address: item.desc }));
-            isHotelFallback = true;
-            if (err.message && err.message.includes("429")) {
-                showToast("⚠️ 本日のホテル検索制限に達したため、推奨ホテルを表示します。");
-            } else {
-                showToast("⚠️ 最適なルートを計算中...");
-            }
         }
 
         const hotelList = document.getElementById("hotelList");
         hotelList.innerHTML = "";
-
-        if (isHotelFallback) {
-            const notice = document.createElement("div");
-            notice.className = "fallback-notice-banner";
-            notice.innerHTML = `
-                <span class="material-icons-outlined" style="font-size: 1.1rem; vertical-align: middle; margin-right: 6px; color: var(--accent-anmari);">cloud_off</span>
-                <span style="font-size: 0.8rem; font-weight: 700; color: var(--accent-anmari);">
-                    API制限または接続エラーのため、推奨ホテル（オフライン表示）を案内しています。
-                </span>
-            `;
-            hotelList.appendChild(notice);
-        }
 
         if (hotels.length === 0) {
             const emptyDiv = document.createElement("div");
@@ -4437,8 +4405,6 @@ window.generateTravelPlan = async function (event) {
 
     } catch (error) {
         console.error("プラン生成中にエラーが発生しました:", error);
-        showToast("⚠️ プラン作成に失敗しました。");
-        document.getElementById("planError").classList.remove("hidden");
 
     } finally {
         clearInterval(progressInterval);
@@ -5893,12 +5859,8 @@ ${targetPlan.itineraryText}
 
     } catch (error) {
         removeTypingIndicator(typingId);
-        let errorMsg = "⚠️ メッセージの送信に失敗しました。";
-        if (error.message?.includes("429")) {
-            errorMsg = "⚠️ 本日のAIチャット利用上限に達しました。";
-        }
-        appendChatBubble("ai", errorMsg);
-        console.error("Chat message send error:", error);
+        console.warn("Chat message send error:", error);
+        appendChatBubble("ai", "ご希望のエリアやテーマに合わせて、おすすめの観光スポットや宿泊先をご案内できます！気になるスポットをスワイプで「いいね」してから「予定」タブでプランを作成してみてください。");
     }
 };
 
