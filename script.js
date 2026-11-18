@@ -3493,9 +3493,11 @@ function createCardElement(data, isTopCard) {
             <div class="swipe-stamp stamp-like">いいね</div>
             <div class="swipe-stamp stamp-anmari">興味なし</div>
         </div>
-        <button class="card-star-btn ${isStarred ? 'starred' : ''}" onclick="toggleFavorite(this, event, ${data.id})"><span class="material-icons-outlined star-icon">${isStarred ? 'star' : 'star_border'}</span></button>
         <div class="card-info">
-            <h3><span class="place-name" data-original-name="${safeName}">${getDisplayName(data.name)}</span></h3>
+            <div class="card-title-row">
+                <h3><span class="place-name" data-original-name="${safeName}">${getDisplayName(data.name)}</span></h3>
+                <button class="card-star-btn ${isStarred ? 'starred' : ''}" onclick="toggleFavorite(this, event, ${data.id})"><span class="material-icons-outlined star-icon">${isStarred ? 'star' : 'star_border'}</span></button>
+            </div>
             <div class="card-tags-container">
                 <span class="tag-pill"><span class="material-icons">people</span>${safeCompanion}</span>
                 <span class="tag-pill"><span class="material-icons">payments</span>${safeBudget}</span>
