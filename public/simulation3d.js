@@ -26,7 +26,22 @@ let AdvancedMarkerElement = null;
 let simMapMode = "3d";
 let simCurrentWaypoints = [];
 let simCurrentDetailedPath = [];
+let isTogglingSimMode = false;
 const isDemoLocked = true;
+
+async function fetchWithSimTimeout(url, options = {}, timeoutMs = 4500) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+function clearSimArrivalBanners() {
+    document.querySelectorAll(".sim3d-arrival-banner").forEach(el => el.remove());
+}
 
 const spotCategories = {
     "清水寺": "history",
@@ -181,7 +196,7 @@ export async function fetchRoutesData(originLat, originLng, destLat, destLng, in
     try {
         const url = getApiUrl("/api/travel/routes");
         const headers = await getSimAuthHeaders();
-        const response = await fetch(url, {
+        const response = await fetchWithSimTimeout(url, {
             method: "POST",
             headers: headers,
             body: JSON.stringify({
@@ -189,7 +204,7 @@ export async function fetchRoutesData(originLat, originLng, destLat, destLng, in
                 destination: { lat: destLat, lng: destLng },
                 intermediates: intermediates
             })
-        });
+        }, 5000);
         if (!response.ok) {
             throw new Error(`Routes API Error: ${response.status}`);
         }
@@ -207,11 +222,11 @@ export async function fetchPlaceDetails(query) {
     try {
         const url = getApiUrl("/api/travel/places");
         const headers = await getSimAuthHeaders();
-        const response = await fetch(url, {
+        const response = await fetchWithSimTimeout(url, {
             method: "POST",
             headers: headers,
             body: JSON.stringify({ textQuery: query, purpose: "spot" })
-        });
+        }, 5000);
         if (!response.ok) {
             throw new Error(`Places API Error: ${response.status}`);
         }
@@ -317,7 +332,7 @@ async function populateRouteElevations(path) {
     try {
         const lats = sampleIndices.map(idx => path[idx].lat.toFixed(5)).join(",");
         const lngs = sampleIndices.map(idx => path[idx].lng.toFixed(5)).join(",");
-        const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lngs}`);
+        const res = await fetchWithSimTimeout(`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lngs}`, {}, 3500);
         if (res.ok) {
             const data = await res.json();
             if (data && Array.isArray(data.elevation) && data.elevation.length === sampleIndices.length) {
@@ -566,7 +581,13 @@ function animateStep(timestamp) {
                 cancelAnimationFrame(simAnimationId);
                 simAnimationId = null;
             }
+            if (simStopTimer) {
+                clearTimeout(simStopTimer);
+                simStopTimer = null;
+            }
+            clearSimArrivalBanners();
             const banner = document.createElement("div");
+            banner.className = "sim3d-arrival-banner";
             banner.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(15,23,42,0.95);color:#fff;padding:20px 32px;border-radius:16px;font-size:1.2rem;font-weight:800;z-index:99999;text-align:center;border:2px solid #4f8cff;box-shadow:0 8px 32px rgba(79,140,255,0.4);max-width:320px;";
 
             const titleEl = document.createElement("div");
@@ -586,9 +607,12 @@ function animateStep(timestamp) {
             document.body.appendChild(banner);
             simStopTimer = setTimeout(function() {
                 banner.remove();
-                simIsPlaying = true;
-                animateStep._lastTimestamp = null;
-                simAnimationId = requestAnimationFrame(animateStep);
+                simStopTimer = null;
+                if (simOverlayEl && !simOverlayEl.classList.contains("hidden")) {
+                    simIsPlaying = true;
+                    animateStep._lastTimestamp = null;
+                    simAnimationId = requestAnimationFrame(animateStep);
+                }
             }, 3000);
         }
     });
@@ -795,6 +819,7 @@ export async function open3DRouteSimulation(plan) {
         clearTimeout(simStopTimer);
         simStopTimer = null;
     }
+    clearSimArrivalBanners();
 
     const destName = plan.destination || "Destination";
     simUpdateHUD({
@@ -875,7 +900,7 @@ export async function open3DRouteSimulation(plan) {
         let segmentCoords = [];
         try {
             const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson`;
-            const response = await fetch(osrmUrl);
+            const response = await fetchWithSimTimeout(osrmUrl, {}, 4000);
             if (response.ok) {
                 const data = await response.json();
                 const coords = data && data.routes && data.routes[0] && data.routes[0].geometry && data.routes[0].geometry.coordinates;
@@ -890,14 +915,7 @@ export async function open3DRouteSimulation(plan) {
         }
 
         if (segmentCoords.length === 0) {
-            const steps = 60;
-            for (let k = 0; k <= steps; k++) {
-                const t = k / steps;
-                segmentCoords.push({
-                    lat: startLat + (endLat - startLat) * t,
-                    lng: startLng + (endLng - startLng) * t
-                });
-            }
+            segmentCoords = generateFallbackLatLngPath(startLat, startLng, endLat, endLng, 60);
         }
 
         if (detailedPath.length > 0 && segmentCoords.length > 0) {
@@ -943,14 +961,23 @@ export async function open3DRouteSimulation(plan) {
 }
 
 export async function toggleSimMapMode() {
+    if (isTogglingSimMode) return;
     if (!simCurrentWaypoints || simCurrentWaypoints.length < 2 || !simCurrentDetailedPath || simCurrentDetailedPath.length === 0) {
         return;
     }
+    isTogglingSimMode = true;
+    const modeBtn = document.getElementById("simModeToggleBtn");
+    if (modeBtn) modeBtn.disabled = true;
     const wasPlaying = simIsPlaying;
     if (simAnimationId) {
         cancelAnimationFrame(simAnimationId);
         simAnimationId = null;
     }
+    if (simStopTimer) {
+        clearTimeout(simStopTimer);
+        simStopTimer = null;
+    }
+    clearSimArrivalBanners();
     simIsPlaying = false;
     simMapMode = simMapMode === "3d" ? "2d" : "3d";
     const modeLabel = document.getElementById("simModeToggleLabel");
@@ -958,10 +985,15 @@ export async function toggleSimMapMode() {
         modeLabel.textContent = simMapMode === "3d" ? "2D/ベクター切替" : "リアル3D切替";
     }
     simMap = null;
-    await initSimMap(simCurrentWaypoints, simCurrentDetailedPath);
-    bindSimControlEvents();
-    if (wasPlaying) {
-        start3DAnimation();
+    try {
+        await initSimMap(simCurrentWaypoints, simCurrentDetailedPath);
+        bindSimControlEvents();
+        if (wasPlaying) {
+            start3DAnimation();
+        }
+    } finally {
+        if (modeBtn) modeBtn.disabled = false;
+        isTogglingSimMode = false;
     }
 }
 
@@ -1220,6 +1252,7 @@ export function close3DRouteSimulation() {
     simWaypointMarkers = [];
     simWaypointLabels = [];
     if (simStopTimer) { clearTimeout(simStopTimer); simStopTimer = null; }
+    clearSimArrivalBanners();
     simStopPoints = [];
     simStoppedIndexes = [];
     if (simOverlayEl) {
@@ -1235,6 +1268,11 @@ export function start3DAnimation() {
         cancelAnimationFrame(simAnimationId);
         simAnimationId = null;
     }
+    if (simStopTimer) {
+        clearTimeout(simStopTimer);
+        simStopTimer = null;
+    }
+    clearSimArrivalBanners();
     if (simProgress >= 1) {
         simProgress = 0;
         simStartTime = null;
@@ -1258,10 +1296,16 @@ export function pause3DAnimation() {
         cancelAnimationFrame(simAnimationId);
         simAnimationId = null;
     }
+    if (simStopTimer) {
+        clearTimeout(simStopTimer);
+        simStopTimer = null;
+    }
+    clearSimArrivalBanners();
 }
 
 export function reset3DAnimation() {
     pause3DAnimation();
+    clearSimArrivalBanners();
     simProgress = 0;
     simStartTime = null;
     simCurrentHeading = null;

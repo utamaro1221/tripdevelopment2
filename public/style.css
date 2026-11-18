@@ -757,7 +757,7 @@ body.sim3d-open .bottom-nav {
 
 
 .plan-view-container {
-    padding: 30px;
+    padding: 30px 30px 110px 30px;
     max-width: 900px;
     width: 100%;
     margin: 0 auto;
@@ -1470,7 +1470,7 @@ body.sim3d-open .bottom-nav {
 
 
 #view-settings {
-    padding: 30px;
+    padding: 30px 30px 110px 30px;
     box-sizing: border-box;
     overflow-y: auto;
     width: 100%;
@@ -3406,7 +3406,7 @@ body.sim3d-open .bottom-nav {
 }
 
 .mypage-sections-container {
-    padding: 24px;
+    padding: 24px 24px 110px 24px;
     display: flex;
     flex-direction: column;
     gap: 28px;
@@ -4523,7 +4523,7 @@ textarea {
     
     .plan-view-container {
         max-width: var(--content-max) !important; 
-        padding: 36px;
+        padding: 36px 36px 120px 36px;
     }
 
     .plan-grid {

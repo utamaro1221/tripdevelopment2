@@ -8,19 +8,18 @@ const { createRemoteJWKSet, jwtVerify } = require('jose');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// リバースプロキシ環境（Render等）対応
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled Rejection:', reason);
+});
+
 app.set('trust proxy', 1);
 
-// =================================================================
-// A2. 静的ファイルの公開範囲を public/ ディレクトリに限定
-// (server.js, package.json, .env 等の漏洩防止)
-// =================================================================
 app.use(express.static(path.join(__dirname, 'public')));
 
-// =================================================================
-// A3. CORS ホワイトリスト設定
-// 環境変数 ALLOWED_ORIGINS (カンマ区切り) に設定されたオリジンのみ許可
-// =================================================================
 const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
     : [
@@ -35,7 +34,6 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 
 const corsOptions = {
     origin: function (origin, callback) {
-        // 同一オリジン (originが空) またはホワイトリストに一致する場合は許可
         if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
             return callback(null, true);
         }
@@ -45,17 +43,21 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// =================================================================
-// A4. ボディサイズ制限 (100kb)
-// =================================================================
 app.use(express.json({ limit: '100kb' }));
 
-// =================================================================
-// A4. レート制限ミドルウェア (IP単位)
-// =================================================================
+async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 const generateLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,
-    max: 20, // AI生成系は1分間に20回
+    max: 20,
     message: { error: 'AI生成リクエストが多すぎます。1分後にやり直してください。' },
     standardHeaders: true,
     legacyHeaders: false
@@ -63,7 +65,7 @@ const generateLimiter = rateLimit({
 
 const placesLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,
-    max: 60, // スポット検索は1分間に60回
+    max: 60,
     message: { error: 'スポット検索リクエストが多すぎます。1分後にやり直してください。' },
     standardHeaders: true,
     legacyHeaders: false
@@ -71,7 +73,7 @@ const placesLimiter = rateLimit({
 
 const photoLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,
-    max: 120, // 写真取得は1分間に120回
+    max: 120,
     message: { error: '写真リクエストが多すぎます。1分後にやり直してください。' },
     standardHeaders: true,
     legacyHeaders: false
@@ -79,20 +81,14 @@ const photoLimiter = rateLimit({
 
 const routesLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,
-    max: 30, // ルート計算は1分間に30回
+    max: 30,
     message: { error: 'ルート検索リクエストが多すぎます。1分後にやり直してください。' },
     standardHeaders: true,
     legacyHeaders: false
 });
 
-// =================================================================
-// A4. JST基準の日次利用カウンタと上限管理
-// ※注意: 日次カウンタはインメモリで管理されるため、Render等の再起動や
-//         インスタンスのスピンダウンでリセットされます。
-// =================================================================
 function getJSTDateString() {
     const now = new Date();
-    // UTCに9時間加算してJST日付を算出
     const jstDate = new Date(now.getTime() + (9 * 60 * 60 * 1000));
     return jstDate.toISOString().split('T')[0];
 }
@@ -141,10 +137,6 @@ function checkAndIncrementDailyLimit(apiType) {
     return true;
 }
 
-// =================================================================
-// A6. Firebase ID トークン検証 (JWKSによる軽量検証)
-// /generate, /places, /routes を認証必須化
-// =================================================================
 const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'tora-1c525';
 const JWKS = createRemoteJWKSet(
     new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
@@ -175,23 +167,12 @@ async function authenticateFirebaseUser(req, res, next) {
     }
 }
 
-// =================================================================
-// ヘルパー: 日本国内の緯度経度バリデーション
-// =================================================================
 function isValidJapanLatLng(lat, lng) {
     if (typeof lat !== 'number' || typeof lng !== 'number') return false;
     if (isNaN(lat) || isNaN(lng)) return false;
-    // 日本のおよその緯度・経度範囲 (離島含む): 緯度 20〜46, 経度 122〜154
     return lat >= 20.0 && lat <= 46.0 && lng >= 122.0 && lng <= 154.0;
 }
 
-// =================================================================
-// A5, A8. Gemini API エンドポイント
-// - APIキーは x-goog-api-key ヘッダーで送信
-// - 指示文は systemInstruction に設定
-// - 入力検証 (contents構造・parts数・文字数・モデルサーバー固定)
-// - candidates欠落 / blockReason / finishReason のハンドリング
-// =================================================================
 app.post('/api/travel/generate', generateLimiter, authenticateFirebaseUser, async (req, res) => {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -208,7 +189,6 @@ app.post('/api/travel/generate', generateLimiter, authenticateFirebaseUser, asyn
         return res.status(400).json({ error: 'リクエスト検証エラー: contentsの数が多すぎます（最大20件）。' });
     }
 
-    // contents 内の parts と文字数検証
     for (const content of body.contents) {
         if (!Array.isArray(content.parts) || content.parts.length === 0) {
             return res.status(400).json({ error: 'リクエスト検証エラー: parts配列が不正です。' });
@@ -229,11 +209,9 @@ app.post('/api/travel/generate', generateLimiter, authenticateFirebaseUser, asyn
     }
 
     try {
-        // モデルはサーバー側で固定 (クライアントからの指定は受け付けない)
         const FIXED_MODEL = 'gemini-2.5-flash';
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${FIXED_MODEL}:generateContent`;
 
-        // systemInstruction にルールを移設
         const systemInstructionText =
             "各スポットに付与する季節タグ（season tag）は、プラン全体で提案している季節と必ず一致させること。もし特定の季節に限定されないスポットの場合は『通年』または『通年おすすめ』というタグを出力すること。\n" +
             "ホテル名・施設名・住所・説明文などのすべての固有名詞・場所情報は、必ず日本語（漢字・ひらがな・カタカナ）で出力すること。英語表記（ローマ字含む）は絶対に使用しないこと。";
@@ -249,14 +227,14 @@ app.post('/api/travel/generate', generateLimiter, authenticateFirebaseUser, asyn
             requestPayload.generationConfig = body.generationConfig;
         }
 
-        const response = await fetch(url, {
+        const response = await fetchWithTimeout(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-goog-api-key': apiKey // クエリパラメータではなくヘッダーで安全に渡す
+                'x-goog-api-key': apiKey
             },
             body: JSON.stringify(requestPayload)
-        });
+        }, 12000);
 
         let data;
         try {
@@ -268,190 +246,246 @@ app.post('/api/travel/generate', generateLimiter, authenticateFirebaseUser, asyn
 
         if (!response.ok) {
             console.error("Gemini API Error: API returned error status:", response.status, data);
+            if (response.status === 429) {
+                return res.status(429).json({
+                    error: 'Gemini APIのレート制限（429 Too Many Requests）に達しました。しばらく時間を置いてから再試行してください。',
+                    details: data
+                });
+            }
             return res.status(response.status).json({
-                error: data.error?.message || 'Gemini APIからエラーが返却されました。'
+                error: data.error?.message || `Gemini APIエラー (Status: ${response.status})`,
+                details: data
             });
         }
 
-        // promptFeedback.blockReason の検証
         if (data.promptFeedback && data.promptFeedback.blockReason) {
-            console.warn("Gemini Prompt Blocked:", data.promptFeedback);
-            return res.status(400).json({
-                error: `AIの安全性ポリシーによりリクエストがブロックされました (理由: ${data.promptFeedback.blockReason})。入力内容を変更してお試しください。`,
-                details: data.promptFeedback
+            console.warn("Gemini API blocked prompt:", data.promptFeedback);
+            return res.status(422).json({
+                error: `セーフティフィルタによりリクエストがブロックされました (理由: ${data.promptFeedback.blockReason})。入力内容を変更してお試しください。`
             });
         }
 
-        // candidates の存在チェック
-        const candidate = data.candidates && data.candidates[0];
-        if (!candidate) {
-            console.warn("Gemini no candidates returned:", data);
-            return res.status(502).json({ error: 'AIからの回答候補が生成されませんでした。時間をおいて再試行してください。' });
+        if (!data.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) {
+            console.warn("Gemini API returned empty candidates:", data);
+            return res.status(502).json({
+                error: 'AIからの応答候補（candidates）が空でした。条件を変えて再度お試しください。'
+            });
         }
 
-        // finishReason のハンドリング
-        if (candidate.finishReason && candidate.finishReason !== 'STOP') {
-            console.warn("Gemini candidate finishReason:", candidate.finishReason);
-            if (candidate.finishReason === 'SAFETY') {
-                return res.status(400).json({ error: 'AIの安全性ポリシーに抵触したため出力が中断されました。' });
-            }
-            if (candidate.finishReason === 'MAX_TOKENS') {
-                return res.status(400).json({ error: '生成内容が最大トークン数を超過したため終了しました。日数を減らして再試行してください。' });
-            }
+        const firstCandidate = data.candidates[0];
+        if (firstCandidate.finishReason && firstCandidate.finishReason !== 'STOP' && firstCandidate.finishReason !== 'MAX_TOKENS') {
+            console.warn("Gemini API abnormal finishReason:", firstCandidate.finishReason);
+            return res.status(422).json({
+                error: `AIの生成が中断されました (finishReason: ${firstCandidate.finishReason})。`
+            });
+        }
+
+        const partText = firstCandidate?.content?.parts?.[0]?.text;
+        if (!partText) {
+            console.warn("Gemini API candidate has no text:", firstCandidate);
+            return res.status(502).json({
+                error: 'AIからの応答テキストが空でした。再度お試しください。'
+            });
         }
 
         res.json(data);
-    } catch (err) {
-        console.error("Gemini API Error: Unexpected crash in generation endpoint.", err);
-        res.status(500).json({ error: 'Gemini APIでの生成処理中にサーバー内部エラーが発生しました。' });
+    } catch (error) {
+        console.error("Gemini API Error: Network or internal exception occurred:", error);
+        res.status(500).json({ error: 'サーバー内部で通信エラーが発生しました。', message: error.message });
     }
 });
 
-// =================================================================
-// A5. Google Places API エンドポイント
-// - クライアントからの X-Goog-FieldMask 指定を廃止
-// - purpose ('photo' | 'hotel' | 'spot') に応じた最小 FieldMask をサーバーで決定
-// - textQuery 検証
-// =================================================================
+const FIELD_MASKS = {
+    photo: 'places.id,places.displayName,places.photos',
+    hotel: 'places.id,places.displayName,places.formattedAddress,places.rating,places.priceLevel,places.photos',
+    spot: 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.photos'
+};
+
 app.post('/api/travel/places', placesLimiter, authenticateFirebaseUser, async (req, res) => {
-    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.MAPS_API_KEY || process.env.GOOGLE_API_KEY;
     if (!apiKey) {
-        console.error("Places API Error: GOOGLE_PLACES_API_KEY is not defined in environment variables.");
-        return res.status(500).json({ error: 'サーバー側の Google Places API キー (GOOGLE_PLACES_API_KEY) が設定されていません。' });
+        console.error("Places API Error: GOOGLE_MAPS_API_KEY is not defined in environment variables.");
+        return res.status(500).json({ error: 'Google Maps API key is not configured on the server.' });
     }
 
-    const { textQuery, purpose, languageCode } = req.body || {};
-    if (!textQuery || typeof textQuery !== 'string' || textQuery.trim().length === 0) {
-        return res.status(400).json({ error: 'リクエスト検証エラー: textQuery (文字列) は必須です。' });
-    }
-    if (textQuery.length > 200) {
-        return res.status(400).json({ error: 'リクエスト検証エラー: textQuery が長すぎます（200文字以内）。' });
+    const body = req.body || {};
+    const textQuery = typeof body.textQuery === 'string' ? body.textQuery.trim() : '';
+
+    if (!textQuery || textQuery.length === 0 || textQuery.length > 100) {
+        return res.status(400).json({ error: 'textQuery は1〜100文字の文字列で指定してください。' });
     }
 
     if (!checkAndIncrementDailyLimit('places')) {
-        return res.status(429).json({ error: 'Places APIの1日の利用上限に達しました。明日またお試しください。' });
+        console.error("Places API Error: Daily usage limit reached.");
+        return res.status(429).json({ error: 'Places APIの1日の利用上限に達しました。' });
     }
 
-    // 用途に応じた最小限の FieldMask をサーバー側で固定 (Enterprise SKU の過剰課金を防ぐ)
-    let fieldMask;
-    if (purpose === 'hotel') {
-        fieldMask = 'places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.photos';
-    } else if (purpose === 'spot') {
-        fieldMask = 'places.displayName,places.formattedAddress,places.location,places.photos';
-    } else {
-        // デフォルト: photo のみ必要な場合
-        fieldMask = 'places.displayName,places.photos';
+    const purpose = body.purpose || 'hotel';
+    const fieldMask = FIELD_MASKS[purpose] || FIELD_MASKS.hotel;
+    const maxResultCount = Math.min(Math.max(parseInt(body.maxResultCount, 10) || 5, 1), 10);
+
+    const googlePayload = {
+        textQuery: textQuery,
+        languageCode: 'ja',
+        regionCode: 'JP',
+        maxResultCount: maxResultCount
+    };
+
+    if (body.locationBias && body.locationBias.circle && body.locationBias.circle.center) {
+        const { latitude, longitude } = body.locationBias.circle.center;
+        const radius = Number(body.locationBias.circle.radius) || 5000;
+        if (isValidJapanLatLng(latitude, longitude)) {
+            googlePayload.locationBias = {
+                circle: {
+                    center: { latitude, longitude },
+                    radius: Math.min(Math.max(radius, 500), 50000)
+                }
+            };
+        }
     }
 
     try {
         const url = 'https://places.googleapis.com/v1/places:searchText';
-        const response = await fetch(url, {
+        const response = await fetchWithTimeout(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-Goog-Api-Key': apiKey,
-                'X-Goog-FieldMask': fieldMask
+                'X-Goog-FieldMask': fieldMask,
+                'Accept-Language': 'ja'
             },
-            body: JSON.stringify({
-                textQuery: textQuery.trim(),
-                languageCode: languageCode || 'ja'
-            })
-        });
+            body: JSON.stringify(googlePayload)
+        }, 8000);
 
         let data;
         try {
             data = await response.json();
         } catch (jsonErr) {
-            console.error("Places API Error: Failed to parse JSON response from Places API.", jsonErr);
-            return res.status(502).json({ error: 'Places API からの応答の解析に失敗しました。' });
+            console.error("Places API Error: Failed to parse JSON response.", jsonErr);
+            return res.status(502).json({ error: 'Failed to parse JSON response from Places API.' });
         }
 
         if (!response.ok) {
             console.error("Places API Error: API returned error status:", response.status, data);
-            return res.status(response.status).json({
-                error: data.error?.message || 'Places APIでエラーが発生しました。'
-            });
+            return res.status(response.status).json(data);
         }
 
         res.json(data);
-    } catch (err) {
-        console.error("Places API Error: Unexpected crash in places endpoint.", err);
-        res.status(500).json({ error: 'スポット情報の取得に失敗しました。' });
+    } catch (error) {
+        console.error("Places API Error: Network or internal exception occurred:", error);
+        res.status(500).json({ error: 'Failed to fetch from Places API', message: error.message });
     }
 });
 
-// =================================================================
-// A5. Google Places Photo エンドポイント
-// - name を正規表現で厳格検証
-// - maxWidthPx を 1〜1600 に制限
-// - 失敗時は 404 を返却
-// - 成功時は Cache-Control: public, max-age=86400
-// =================================================================
 const PHOTO_NAME_REGEX = /^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/;
 
 app.get('/api/travel/photo', photoLimiter, async (req, res) => {
-    const { name, maxWidthPx } = req.query;
-    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-
-    if (!name || typeof name !== 'string' || !PHOTO_NAME_REGEX.test(name)) {
-        return res.status(400).json({ error: 'パラメータ "name" の形式が不正です。' });
-    }
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.MAPS_API_KEY || process.env.GOOGLE_API_KEY;
+    const photoName = req.query.name;
 
     if (!apiKey) {
-        console.error("Photo API Error: GOOGLE_PLACES_API_KEY is not defined in environment variables.");
-        return res.status(500).json({ error: 'APIキーが設定されていません。' });
+        console.error("Places Photo API Error: GOOGLE_MAPS_API_KEY is not defined in environment variables.");
+        return res.status(500).json({ error: 'API key not configured' });
     }
+
+    if (!photoName || typeof photoName !== 'string' || !PHOTO_NAME_REGEX.test(photoName)) {
+        return res.status(400).json({ error: 'Invalid photo resource name format.' });
+    }
+
+    const rawWidth = parseInt(req.query.maxWidthPx, 10) || 400;
+    const maxWidthPx = Math.min(Math.max(rawWidth, 100), 800);
 
     if (!checkAndIncrementDailyLimit('photo')) {
-        return res.status(429).json({ error: 'Photo APIの1日の利用上限に達しました。明日またお試しください。' });
+        console.error("Places Photo API Error: Daily usage limit reached.");
+        return res.status(429).json({ error: 'Photo API daily limit reached.' });
     }
 
-    // maxWidthPx: 1〜1600
-    let width = parseInt(maxWidthPx, 10);
-    if (isNaN(width) || width < 1) width = 800;
-    if (width > 1600) width = 1600;
-
     try {
-        const url = `https://places.googleapis.com/v1/${name}/media?maxWidthPx=${width}&key=${apiKey}`;
-        const response = await fetch(url);
+        const url = `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${maxWidthPx}`;
+        const response = await fetchWithTimeout(url, {
+            headers: {
+                'X-Goog-Api-Key': apiKey
+            }
+        }, 7000);
 
         if (!response.ok) {
-            console.warn("Photo API upstream error status:", response.status);
-            return res.status(404).json({ error: '写真が見つかりませんでした。' });
+            console.error("Places Photo API Error: Failed to fetch photo:", response.status);
+            return res.status(response.status).end();
         }
 
-        const contentType = response.headers.get('content-type') || 'image/jpeg';
-        res.setHeader('Content-Type', contentType);
-        res.setHeader('Cache-Control', 'public, max-age=86400'); // 24時間キャッシュ
+        const contentType = response.headers.get('content-type');
+        if (contentType) {
+            res.setHeader('Content-Type', contentType);
+        }
+        res.setHeader('Cache-Control', 'public, max-age=86400');
 
         const arrayBuffer = await response.arrayBuffer();
-        return res.send(Buffer.from(arrayBuffer));
-    } catch (err) {
-        console.error("Photo API Error: Failed to fetch photo:", err.message);
-        return res.status(404).json({ error: '写真の取得に失敗しました。' });
+        const buffer = Buffer.from(arrayBuffer);
+        res.send(buffer);
+    } catch (error) {
+        console.error('Error proxying photo:', error);
+        res.status(500).end();
     }
 });
 
-// =================================================================
-// ルートポリラインデコード関数
-// =================================================================
+app.get('/api/travel/weather', async (req, res) => {
+    const apiKey = process.env.OPENWEATHER_API_KEY;
+    if (!apiKey) {
+        console.error("OpenWeather API Error: OPENWEATHER_API_KEY is not defined in environment variables.");
+        return res.status(500).json({ error: 'OpenWeather API key is not configured on the server.' });
+    }
+
+    const lat = parseFloat(req.query.latitude || req.query.lat);
+    const lon = parseFloat(req.query.longitude || req.query.lon);
+
+    if (!isValidJapanLatLng(lat, lon)) {
+        return res.status(400).json({ error: '日本国内の有効な緯度・経度 (lat, lon) を指定してください。' });
+    }
+
+    if (!checkAndIncrementDailyLimit('weather')) {
+        return res.status(429).json({ error: 'Weather APIの1日の利用上限に達しました。' });
+    }
+
+    try {
+        const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=ja`;
+        const response = await fetchWithTimeout(url, {}, 6000);
+
+        let data;
+        try {
+            data = await response.json();
+        } catch (jsonErr) {
+            console.error("OpenWeather API Error: Failed to parse JSON response.", jsonErr);
+            return res.status(502).json({ error: 'Failed to parse JSON response from OpenWeather API.' });
+        }
+
+        if (!response.ok) {
+            console.error("OpenWeather API Error: API returned error status:", response.status, data);
+            return res.status(response.status).json(data);
+        }
+
+        res.json(data);
+    } catch (error) {
+        console.error("OpenWeather API Error: Network or internal exception occurred:", error);
+        res.status(500).json({ error: 'Failed to fetch from OpenWeather API', message: error.message });
+    }
+});
+
 function decodePolyline(encoded) {
-    const points = [];
-    let index = 0;
-    const len = encoded.length;
-    let lat = 0;
-    let lng = 0;
+    if (!encoded) return [];
+    const poly = [];
+    let index = 0, len = encoded.length;
+    let lat = 0, lng = 0;
+
     while (index < len) {
-        let b;
-        let shift = 0;
-        let result = 0;
+        let b, shift = 0, result = 0;
         do {
             b = encoded.charCodeAt(index++) - 63;
             result |= (b & 0x1f) << shift;
             shift += 5;
         } while (b >= 0x20);
-        const dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+        const dlat = ((result & 1) !== 0 ? ~(result >> 1) : (result >> 1));
         lat += dlat;
+
         shift = 0;
         result = 0;
         do {
@@ -459,116 +493,117 @@ function decodePolyline(encoded) {
             result |= (b & 0x1f) << shift;
             shift += 5;
         } while (b >= 0x20);
-        const dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+        const dlng = ((result & 1) !== 0 ? ~(result >> 1) : (result >> 1));
         lng += dlng;
-        points.push({ lat: lat / 1e5, lng: lng / 1e5 });
+
+        poly.push({ lat: lat / 1e5, lng: lng / 1e5 });
     }
-    return points;
+    return poly;
 }
 
-// =================================================================
-// A4, A5. Google Routes API エンドポイント
-// - レート制限 & 日次上限
-// - GOOGLE_MAPS_API_KEY 存在チェック
-// - intermediates 25件以下
-// - 緯度経度の日本国内範囲バリデーション
-// =================================================================
 app.post('/api/travel/routes', routesLimiter, authenticateFirebaseUser, async (req, res) => {
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.MAPS_API_KEY || process.env.GOOGLE_API_KEY;
     if (!apiKey) {
-        console.error("Routes API Error: GOOGLE_MAPS_API_KEY is not defined.");
-        return res.status(500).json({ error: 'サーバー側の GOOGLE_MAPS_API_KEY が設定されていません。' });
+        console.error("Routes API Error: GOOGLE_MAPS_API_KEY is not defined in environment variables.");
+        return res.status(500).json({ error: 'Google Maps API key is not configured on the server.' });
+    }
+
+    const { origin, destination, intermediates } = req.body || {};
+    if (!origin || !destination || !isValidJapanLatLng(Number(origin.lat), Number(origin.lng)) || !isValidJapanLatLng(Number(destination.lat), Number(destination.lng))) {
+        return res.status(400).json({ error: '日本国内の有効な origin および destination 座標が必要です。' });
+    }
+
+    if (intermediates && (!Array.isArray(intermediates) || intermediates.length > 5)) {
+        return res.status(400).json({ error: 'intermediates は最大5件までの配列で指定してください。' });
     }
 
     if (!checkAndIncrementDailyLimit('routes')) {
-        return res.status(429).json({ error: 'Routes APIの1日の利用上限に達しました。明日またお試しください。' });
+        console.error("Routes API Error: Daily usage limit reached.");
+        return res.status(429).json({ error: 'Routes APIの1日の利用上限に達しました。' });
     }
 
     try {
-        const { origin, destination, intermediates } = req.body || {};
-        if (!origin || !destination) {
-            return res.status(400).json({ error: "リクエスト検証エラー: origin と destination が必要です。" });
-        }
-
-        const oLat = parseFloat(origin.lat);
-        const oLng = parseFloat(origin.lng);
-        const dLat = parseFloat(destination.lat);
-        const dLng = parseFloat(destination.lng);
-
-        if (!isValidJapanLatLng(oLat, oLng)) {
-            return res.status(400).json({ error: "リクエスト検証エラー: origin の座標が日本国内の有効範囲外です。" });
-        }
-        if (!isValidJapanLatLng(dLat, dLng)) {
-            return res.status(400).json({ error: "リクエスト検証エラー: destination の座標が日本国内の有効範囲外です。" });
-        }
-
+        const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
         const requestBody = {
             origin: {
                 location: {
-                    latLng: { latitude: oLat, longitude: oLng }
+                    latLng: { latitude: Number(origin.lat), longitude: Number(origin.lng) }
                 }
             },
             destination: {
                 location: {
-                    latLng: { latitude: dLat, longitude: dLng }
+                    latLng: { latitude: Number(destination.lat), longitude: Number(destination.lng) }
                 }
             },
-            travelMode: "DRIVE"
+            travelMode: 'DRIVE',
+            routingPreference: 'TRAFFIC_AWARE',
+            computeAlternativeRoutes: false,
+            languageCode: 'ja-JP',
+            units: 'METRIC'
         };
 
-        if (Array.isArray(intermediates)) {
-            if (intermediates.length > 25) {
-                return res.status(400).json({ error: "リクエスト検証エラー: intermediates は最大25件までです。" });
-            }
-            const validatedIntermediates = [];
-            for (let i = 0; i < intermediates.length; i++) {
-                const p = intermediates[i];
-                const pLat = parseFloat(p.lat);
-                const pLng = parseFloat(p.lng);
-                if (!isValidJapanLatLng(pLat, pLng)) {
-                    return res.status(400).json({
-                        error: `リクエスト検証エラー: 経由地 #${i + 1} の座標が日本国内の有効範囲外です。`
-                    });
-                }
-                validatedIntermediates.push({
+        if (Array.isArray(intermediates) && intermediates.length > 0) {
+            const validIntermediates = intermediates.filter(pt => pt && isValidJapanLatLng(Number(pt.lat), Number(pt.lng)));
+            if (validIntermediates.length > 0) {
+                requestBody.intermediates = validIntermediates.map(pt => ({
                     location: {
-                        latLng: { latitude: pLat, longitude: pLng }
+                        latLng: { latitude: Number(pt.lat), longitude: Number(pt.lng) }
                     }
-                });
-            }
-            if (validatedIntermediates.length > 0) {
-                requestBody.intermediates = validatedIntermediates;
+                }));
             }
         }
 
-        const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
-            method: "POST",
+        const response = await fetchWithTimeout(url, {
+            method: 'POST',
             headers: {
-                "Content-Type": "application/json",
-                "X-Goog-Api-Key": apiKey,
-                "X-Goog-FieldMask": "routes.polyline.encodedPolyline"
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': apiKey,
+                'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline'
             },
             body: JSON.stringify(requestBody)
-        });
+        }, 8000);
+
+        let data;
+        try {
+            data = await response.json();
+        } catch (jsonErr) {
+            console.error("Routes API Error: Failed to parse JSON response.", jsonErr);
+            return res.status(502).json({ error: 'Failed to parse JSON response from Routes API.' });
+        }
 
         if (!response.ok) {
-            const errData = await response.text();
-            console.error("Google Routes API upstream error:", response.status, errData);
-            return res.status(response.status).json({ error: "Google Routes API error" });
+            console.error("Routes API Error: API returned error status:", response.status, data);
+            return res.status(response.status).json(data);
         }
 
-        const data = await response.json();
-        if (data.routes && data.routes.length > 0 && data.routes[0].polyline && data.routes[0].polyline.encodedPolyline) {
-            const path = decodePolyline(data.routes[0].polyline.encodedPolyline);
-            return res.json({ path });
+        const route = data.routes && data.routes[0];
+        if (!route) {
+            return res.status(404).json({ error: 'No route found.' });
         }
-        return res.json({ path: [] });
+
+        const encodedPolyline = route.polyline && route.polyline.encodedPolyline;
+        const decodedPath = decodePolyline(encodedPolyline);
+
+        res.json({
+            distanceMeters: route.distanceMeters || 0,
+            duration: route.duration || '0s',
+            encodedPolyline: encodedPolyline || '',
+            path: decodedPath
+        });
     } catch (error) {
-        console.error("Routes endpoint error:", error);
-        return res.status(500).json({ error: "ルート生成中に内部エラーが発生しました。" });
+        console.error("Routes API Error: Network or internal exception occurred:", error);
+        res.status(500).json({ error: 'Failed to fetch from Routes API', message: error.message });
     }
 });
 
+app.use((err, req, res, next) => {
+    console.error("Express Error Middleware:", err.message || err);
+    if (res.headersSent) {
+        return next(err);
+    }
+    res.status(err.status || 500).json({ error: 'Internal Server Error' });
+});
+
 app.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT}`);
+    console.log(`Server is running on http://localhost:${PORT}`);
 });

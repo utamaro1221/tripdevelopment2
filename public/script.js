@@ -24,7 +24,7 @@ import {
     fetchPlaceDetails,
     generateFallbackLatLngPath,
     getPathPointAndHeading
-} from "./simulation3d.js?v=4.1.0";
+} from "./simulation3d.js?v=4.2.0";
 
 window.open3DRouteSimulation = open3DRouteSimulation;
 window.close3DRouteSimulation = close3DRouteSimulation;
@@ -63,6 +63,7 @@ window._analytics = analytics;
 let resolveAuthReady;
 export const authReadyPromise = new Promise((resolve) => {
     resolveAuthReady = resolve;
+    setTimeout(() => resolve(null), 2500);
 });
 window.authReadyPromise = authReadyPromise;
 
@@ -213,11 +214,18 @@ window.fetchPlacePhoto = async function (placeName) {
                         'Authorization': `Bearer ${token}`
                     };
 
-                    return await fetch(url, {
-                        method: 'POST',
-                        headers: headers,
-                        body: JSON.stringify({ textQuery: placeName, purpose: "photo", languageCode: "ja" })
-                    });
+                    const controller = new AbortController();
+                    const timer = setTimeout(() => controller.abort(), 5000);
+                    try {
+                        return await fetch(url, {
+                            method: 'POST',
+                            headers: headers,
+                            body: JSON.stringify({ textQuery: placeName, purpose: "photo", languageCode: "ja" }),
+                            signal: controller.signal
+                        });
+                    } finally {
+                        clearTimeout(timer);
+                    }
                 };
 
                 let response = await doFetch(false);
@@ -2641,10 +2649,21 @@ const mockHotels = {
     ]
 };
 
-let likes = JSON.parse(localStorage.getItem("kw_likes")) || [];
-let anmaris = JSON.parse(localStorage.getItem("kw_anmaris")) || [];
-let favorites = JSON.parse(localStorage.getItem("kw_favorites")) || [];
-let plans = JSON.parse(localStorage.getItem("kw_plans")) || [];
+function safeParseStorage(key, fallback) {
+    try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return fallback;
+        const parsed = JSON.parse(raw);
+        return Array.isArray(fallback) ? (Array.isArray(parsed) ? parsed : fallback) : (parsed != null ? parsed : fallback);
+    } catch (e) {
+        return fallback;
+    }
+}
+
+let likes = safeParseStorage("kw_likes", []);
+let anmaris = safeParseStorage("kw_anmaris", []);
+let favorites = safeParseStorage("kw_favorites", []);
+let plans = safeParseStorage("kw_plans", []);
 let detailedPrefs = {
     companion: { "一人旅": 25, "カップル": 25, "友人グループ": 25, "子連れ": 25 },
     budget: { "低予算": 33, "スタンダード": 34, "ラグジュアリー": 33 },
@@ -2693,22 +2712,32 @@ const defaultSharedPlans = [
     }
 ];
 
-let sharedPlans = JSON.parse(localStorage.getItem("kw_shared_plans"));
+let sharedPlans = safeParseStorage("kw_shared_plans", []);
 if (!sharedPlans || sharedPlans.length === 0) {
     sharedPlans = [...defaultSharedPlans];
-    localStorage.setItem("kw_shared_plans", JSON.stringify(sharedPlans));
+    try {
+        localStorage.setItem("kw_shared_plans", JSON.stringify(sharedPlans));
+    } catch (e) {}
 }
 
-let userName = localStorage.getItem("kw_username") || "トラベラー";
-let userAvatar = localStorage.getItem("kw_avatar") || "traveler";
-let headerTitle = localStorage.getItem("kw_headertitle");
-if (headerTitle === "Kinki Wander" || !headerTitle) {
-    headerTitle = "Japan Wander";
-    localStorage.setItem("kw_headertitle", "Japan Wander");
-}
-let currentTheme = localStorage.getItem("kw_theme") || "mc-blue";
-let currentFontSize = localStorage.getItem("kw_fontsize") || "100";
-let currentLanguage = localStorage.getItem("kw_lang") || "ja";
+let userName = "トラベラー";
+let userAvatar = "traveler";
+let headerTitle = "Japan Wander";
+let currentTheme = "mc-blue";
+let currentFontSize = "100";
+let currentLanguage = "ja";
+try {
+    userName = localStorage.getItem("kw_username") || "トラベラー";
+    userAvatar = localStorage.getItem("kw_avatar") || "traveler";
+    headerTitle = localStorage.getItem("kw_headertitle");
+    if (headerTitle === "Kinki Wander" || !headerTitle) {
+        headerTitle = "Japan Wander";
+        localStorage.setItem("kw_headertitle", "Japan Wander");
+    }
+    currentTheme = localStorage.getItem("kw_theme") || "mc-blue";
+    currentFontSize = localStorage.getItem("kw_fontsize") || "100";
+    currentLanguage = localStorage.getItem("kw_lang") || "ja";
+} catch (e) {}
 
 
 let activeFilters = { season: "all", category: "all" };
@@ -2939,17 +2968,18 @@ function initApp() {
 }
 
 function saveToStorage() {
-    localStorage.setItem("kw_likes", JSON.stringify(likes));
-    localStorage.setItem("kw_anmaris", JSON.stringify(anmaris));
-    localStorage.setItem("kw_favorites", JSON.stringify(favorites));
-    localStorage.setItem("kw_plans", JSON.stringify(plans));
-    localStorage.setItem("kw_username", userName);
-    localStorage.setItem("kw_avatar", userAvatar);
-    localStorage.setItem("kw_headertitle", headerTitle);
-    localStorage.setItem("kw_theme", currentTheme);
-    localStorage.setItem("kw_fontsize", currentFontSize);
-    localStorage.setItem("kw_lang", currentLanguage);
-
+    try {
+        localStorage.setItem("kw_likes", JSON.stringify(likes));
+        localStorage.setItem("kw_anmaris", JSON.stringify(anmaris));
+        localStorage.setItem("kw_favorites", JSON.stringify(favorites));
+        localStorage.setItem("kw_plans", JSON.stringify(plans));
+        localStorage.setItem("kw_username", userName);
+        localStorage.setItem("kw_avatar", userAvatar);
+        localStorage.setItem("kw_headertitle", headerTitle);
+        localStorage.setItem("kw_theme", currentTheme);
+        localStorage.setItem("kw_fontsize", currentFontSize);
+        localStorage.setItem("kw_lang", currentLanguage);
+    } catch (e) {}
 }
 window.toggleSidebar = function () {
     const sidebar = document.getElementById("appSidebar");
@@ -3277,7 +3307,7 @@ window.applyFilters = function () {
 };
 
 window.startPersonalizedSearch = function () {
-    calculateStandStats(); // 最新数値を計算
+    calculateStandStats();
     const highestVal = Math.max(...standStats);
     const highestIndex = standStats.indexOf(highestVal);
     const labels = ["温泉・癒やし", "自然・景観", "歴史・文化", "グルメ", "アクティビティ", "都市・ショッピング"];
@@ -3293,6 +3323,7 @@ window.startPersonalizedSearch = function () {
     showToast(`💡 ${topGenreLabel}特化レコメンドモードを開始しました！`);
 
     switchView("swipe");
+    applyFilters();
 };
 
 window.disableRecommendationMode = function () {
@@ -3328,6 +3359,7 @@ function renderStack() {
                 <h3>すべての候補をチェックしました！</h3>
                 <p>気になるスポットは見つかりましたか？保存したスポットからAIによる旅行日程を作成できます。</p>
                 <div class="empty-stack-view-actions">
+                    <button class="btn-primary" onclick="resetAllFilters()">🔍 絞り込み条件をリセット</button>
                     <button class="btn-primary" onclick="resetSwipeHistory()">🔄 スワイプ履歴をリセット</button>
                     <button class="btn-primary" style="background-color: var(--secondary-color);" onclick="switchView('plan')">📋 予定を作成する</button>
                 </div>
@@ -3537,7 +3569,7 @@ function completeCardSwipe(cardEl, direction, placeData) {
         if (cardEl.parentNode === stack) {
             cardEl.remove();
         }
-        currentCardPool.shift(); // 先頭カードを消費
+        currentCardPool.shift();
 
         if (currentCardPool.length === 0) {
             isSwipeAnimating = false;
@@ -3740,8 +3772,9 @@ function selectPlanTarget(item, element) {
 
     const form = document.getElementById("planForm");
     if (form) form.classList.remove("hidden");
+    const safeItemName = escapeHTML(item.name);
     const targetName = document.getElementById("planTargetName");
-    if (targetName) targetName.innerHTML = `<span class="material-icons" style="vertical-align: middle; color: var(--primary-color);">location_on</span> <span class="place-name" data-original-name="${item.name}">${getDisplayName(item.name)}</span> 行き旅行プラン設定`;
+    if (targetName) targetName.innerHTML = `<span class="material-icons" style="vertical-align: middle; color: var(--primary-color);">location_on</span> <span class="place-name" data-original-name="${safeItemName}">${getDisplayName(item.name)}</span> 行き旅行プラン設定`;
 }
 
 async function fetchGeminiItinerary(name, pref, date, nightsText, people, budget, priorities, others, startStation) {
@@ -3796,19 +3829,18 @@ waypointsは最低3つ以上のオブジェクトを含み、配列の最初の�
             },
             body: JSON.stringify(requestBody)
         });
-        const rawText = resData.candidates[0].content.parts[0].text;
-        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        const rawText = resData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        const cleaned = rawText.replace(/```json/gi, "").replace(/```/g, "").trim();
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
             throw new Error("JSON not found in Gemini response");
         }
         return JSON.parse(jsonMatch[0]);
     } catch (error) {
-        console.error("Gemini APIでの旅行プラン生成に失敗しました:", error);
+        console.warn("Gemini APIでの旅行プラン生成に失敗しました:", error);
         throw error;
     }
 }
-
-
 
 window.togglePriorityPill = function (pill) {
     const val = pill.getAttribute("data-val");
@@ -3845,7 +3877,16 @@ async function safeFetchJson(url, options = {}) {
             console.warn("Failed to get Firebase token for safeFetchJson:", authErr);
         }
     }
-    const response = await fetch(url, opts);
+    const timeoutMs = typeof opts.timeoutMs === "number" ? opts.timeoutMs : 8000;
+    delete opts.timeoutMs;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let response;
+    try {
+        response = await fetch(url, { ...opts, signal: controller.signal });
+    } finally {
+        clearTimeout(timer);
+    }
     if (!response.ok) {
         let errMsg = `HTTP ${response.status}`;
         try {
@@ -3863,8 +3904,6 @@ async function safeFetchJson(url, options = {}) {
     }
     return await response.json();
 }
-
-
 
 async function fetchGeminiPlaces(excludeNames = []) {
     const url = getApiUrl("/api/travel/generate");
@@ -3938,7 +3977,8 @@ ${excludeStr}
         if (!jsonText) {
             throw new Error("No text candidates in Gemini response");
         }
-        const jsonMatch = jsonText.match(/\[[\s\S]*\]/);
+        const cleaned = jsonText.replace(/```json/gi, "").replace(/```/g, "").trim();
+        const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
         if (!jsonMatch) {
             throw new Error("JSON array not found in Gemini response");
         }
@@ -3953,8 +3993,8 @@ ${excludeStr}
                 season: place.season,
                 category: place.category,
                 description: place.description,
-                tags: place.tags || ["観光"],
-                companion: place.companion || ["カップル"],
+                tags: Array.isArray(place.tags) ? place.tags : ["観光"],
+                companion: Array.isArray(place.companion) ? place.companion : ["カップル"],
                 budget: place.budget || "スタンダード",
                 transport: place.transport || "公共交通機関",
                 purpose: place.purpose || "リフレッシュ",
@@ -3964,12 +4004,17 @@ ${excludeStr}
             };
         });
     } catch (error) {
-        console.error("Gemini APIでの観光地取得に失敗しました:", error);
+        console.warn("Gemini APIでの観光地取得に失敗しました:", error);
         throw error;
     }
 }
 
+let isGeneratingPlaces = false;
+
 window.generatePlacesWithAI = async function () {
+    if (isGeneratingPlaces) return;
+    isGeneratingPlaces = true;
+
     const stack = document.getElementById("card-stack");
     const container = document.getElementById("swipeActionsContainer");
     if (container) container.classList.add("hidden");
@@ -3982,7 +4027,6 @@ window.generatePlacesWithAI = async function () {
             </div>
             <h3 style="margin-top: 16px;">AIが新しい観光地を探索中...</h3>
             <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">日本全国の魅力的なスポットを生成しています</p>
-            <!-- Shinkansen Progress Bar -->
             <div class="progress-container">
                 <div class="progress-bar-track">
                     <div class="progress-bar-fill" id="placesProgressBarFill"></div>
@@ -4035,6 +4079,8 @@ window.generatePlacesWithAI = async function () {
         } else {
             applyFilters();
         }
+    } finally {
+        isGeneratingPlaces = false;
     }
 };
 
@@ -4108,20 +4154,43 @@ const STATIC_PLAN_CACHE = {
     }
 };
 
+let isGeneratingPlan = false;
+
 window.generateTravelPlan = async function (event) {
-    event.preventDefault();
-    if (!activePlanTarget) return;
+    if (event && typeof event.preventDefault === "function") {
+        event.preventDefault();
+    }
+    if (isGeneratingPlan) return;
+    if (!activePlanTarget) {
+        activePlanTarget = likes[0] || kinkiPlaces[0];
+        if (!activePlanTarget) return;
+    }
+    isGeneratingPlan = true;
 
-    const dateVal = document.getElementById("planDate").value;
-    const nightsVal = parseInt(document.getElementById("planNights").value);
-    const peopleVal = parseInt(document.getElementById("planPeople").value);
-    const budgetVal = parseInt(document.getElementById("planBudget").value);
-    const othersVal = document.getElementById("planOthers").value;
-    const startStationVal = document.getElementById("planStartStation").value;
+    const submitBtn = document.querySelector("#planForm button[type='submit']");
+    if (submitBtn) submitBtn.disabled = true;
 
-    document.getElementById("planForm").classList.add("hidden");
+    const defaultDate = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
+    const dateVal = document.getElementById("planDate")?.value || defaultDate;
+    const nightsVal = Math.min(Math.max(parseInt(document.getElementById("planNights")?.value, 10) || 1, 1), 14);
+    const peopleVal = Math.min(Math.max(parseInt(document.getElementById("planPeople")?.value, 10) || 2, 1), 50);
+    const budgetVal = Math.max(parseInt(document.getElementById("planBudget")?.value, 10) || 50000, 10000);
+    const othersVal = (document.getElementById("planOthers")?.value || "").trim().slice(0, 500);
+    const startStationVal = (document.getElementById("planStartStation")?.value || "").trim().slice(0, 100) || "東京駅";
+
+    const formEl = document.getElementById("planForm");
+    if (formEl) formEl.classList.add("hidden");
+    const proactiveEl = document.getElementById("aiProactiveView");
+    if (proactiveEl) proactiveEl.classList.add("hidden");
+    const resultsEl = document.getElementById("planResults");
+    if (resultsEl) resultsEl.classList.add("hidden");
+    const errorEl = document.getElementById("planError");
+    if (errorEl) errorEl.classList.add("hidden");
     const loadingView = document.getElementById("planLoading");
-    loadingView.classList.remove("hidden");
+    if (loadingView) {
+        loadingView.style.display = "flex";
+        loadingView.classList.remove("hidden");
+    }
 
     let progressValue = 0;
     const fill = document.getElementById("planProgressBarFill");
@@ -4154,26 +4223,35 @@ window.generateTravelPlan = async function (event) {
             if (!queryText || !String(queryText).trim()) return null;
             const q = String(queryText).trim();
             try {
-                await loadGoogleMaps();
+                await Promise.race([
+                    loadGoogleMaps(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error("Maps timeout")), 3500))
+                ]);
                 const { Geocoder } = await google.maps.importLibrary("geocoding");
                 const { Place } = await google.maps.importLibrary("places");
                 const geocoder = new Geocoder();
-                const geoLoc = await new Promise((resolve) => {
-                    geocoder.geocode({ address: q, region: "JP" }, (results, status) => {
-                        if (status === "OK" && results && results[0] && results[0].geometry && results[0].geometry.location) {
-                            const loc = results[0].geometry.location;
-                            resolve({ lat: loc.lat(), lng: loc.lng() });
-                        } else {
-                            resolve(null);
-                        }
-                    });
-                });
+                const geoLoc = await Promise.race([
+                    new Promise((resolve) => {
+                        geocoder.geocode({ address: q, region: "JP" }, (results, status) => {
+                            if (status === "OK" && results && results[0] && results[0].geometry && results[0].geometry.location) {
+                                const loc = results[0].geometry.location;
+                                resolve({ lat: loc.lat(), lng: loc.lng() });
+                            } else {
+                                resolve(null);
+                            }
+                        });
+                    }),
+                    new Promise((resolve) => setTimeout(() => resolve(null), 2500))
+                ]);
                 if (geoLoc) return geoLoc;
                 if (Place && typeof Place.searchByText === "function") {
-                    const placeRes = await Place.searchByText({
-                        textQuery: q,
-                        fields: ["location", "displayName"]
-                    });
+                    const placeRes = await Promise.race([
+                        Place.searchByText({
+                            textQuery: q,
+                            fields: ["location", "displayName"]
+                        }),
+                        new Promise((resolve) => setTimeout(() => resolve(null), 2500))
+                    ]);
                     if (placeRes && placeRes.places && placeRes.places[0] && placeRes.places[0].location) {
                         const loc = placeRes.places[0].location;
                         return {
@@ -4404,8 +4482,37 @@ window.generateTravelPlan = async function (event) {
         succeeded = true;
 
     } catch (error) {
-        console.error("プラン生成中にエラーが発生しました:", error);
-
+        console.warn("プラン生成中にエラーが発生したため、テンプレートプランへフォールバックします:", error);
+        const fallbackItinerary = generateItineraryText(
+            activePlanTarget.name, targetPref, dateVal, selectedNightsText,
+            peopleVal, budgetVal, currentPriority, othersVal
+        );
+        const destLat = typeof activePlanTarget.lat === "number" && !isNaN(activePlanTarget.lat) ? activePlanTarget.lat : 34.6901;
+        const destLon = typeof (activePlanTarget.lon ?? activePlanTarget.lng) === "number" ? (activePlanTarget.lon ?? activePlanTarget.lng) : 135.1955;
+        planObj = {
+            id: Date.now(),
+            destination: activePlanTarget.name,
+            prefecture: targetPref,
+            date: dateVal,
+            nights: nightsVal,
+            people: peopleVal,
+            budget: budgetVal,
+            lat: destLat,
+            lon: destLon,
+            itineraryText: fallbackItinerary,
+            departure: startStationVal,
+            waypoints: [
+                { lat: 34.7024, lng: 135.4959, name: startStationVal, description: "出発地" },
+                { lat: destLat, lng: destLon, name: activePlanTarget.name, description: "目的地" }
+            ]
+        };
+        plans.push(planObj);
+        saveToStorage();
+        const aiPlanTextEl = document.getElementById("aiPlanText");
+        if (aiPlanTextEl) aiPlanTextEl.innerHTML = formatItineraryHtml(fallbackItinerary);
+        const transitEl = document.getElementById("aiPlanTransitText");
+        if (transitEl) transitEl.textContent = transitAccessRoutes[activePlanTarget.name] || "公共交通機関の情報が見つかりませんでした。詳細なルートはナビアプリ等でご確認ください。";
+        succeeded = true;
     } finally {
         clearInterval(progressInterval);
 
@@ -4414,18 +4521,23 @@ window.generateTravelPlan = async function (event) {
         if (percent) percent.textContent = "100%";
 
         const elapsedTime = Date.now() - startTime;
-        const minDuration = fastMode ? 400 : 1400;
+        const minDuration = fastMode ? 400 : 1200;
         if (elapsedTime < minDuration) {
             await new Promise(resolve => setTimeout(resolve, minDuration - elapsedTime));
         }
 
-        await new Promise(resolve => setTimeout(resolve, 250));
+        await new Promise(resolve => setTimeout(resolve, 200));
 
-        loadingView.classList.add("hidden");
-        loadingView.style.display = "none";
+        if (loadingView) {
+            loadingView.classList.add("hidden");
+            loadingView.style.display = "none";
+        }
+        if (submitBtn) submitBtn.disabled = false;
+        isGeneratingPlan = false;
 
         if (succeeded) {
-            document.getElementById("planResults").classList.remove("hidden");
+            const resView = document.getElementById("planResults");
+            if (resView) resView.classList.remove("hidden");
 
             updateCountdown();
             updateGridCounts();
@@ -4638,16 +4750,20 @@ async function simulateWeather() {
     const lat = next.lat || 34.6937;
     const lon = next.lon || 135.5023;
     const cacheKey = `weather_${lat}_${lon}`;
-    const cached = sessionStorage.getItem(cacheKey);
+    let cached = null;
+    try {
+        cached = sessionStorage.getItem(cacheKey);
+    } catch (e) {}
 
     if (cached) {
-        console.log("[Weather API] Returning cached weather data");
-        const cachedData = JSON.parse(cached);
-        if (weatherIcon) weatherIcon.textContent = cachedData.emoji;
-        if (weatherTemp) weatherTemp.textContent = cachedData.temp;
-        if (weatherDesc) weatherDesc.textContent = cachedData.desc;
-        if (weatherLocation) weatherLocation.textContent = `📍 ${next.destination} (${next.prefecture})の天気`;
-        return;
+        try {
+            const cachedData = JSON.parse(cached);
+            if (weatherIcon) weatherIcon.textContent = cachedData.emoji;
+            if (weatherTemp) weatherTemp.textContent = cachedData.temp;
+            if (weatherDesc) weatherDesc.textContent = cachedData.desc;
+            if (weatherLocation) weatherLocation.textContent = `📍 ${next.destination} (${next.prefecture})の天気`;
+            return;
+        } catch (e) {}
     }
 
     try {
@@ -4655,7 +4771,7 @@ async function simulateWeather() {
         url.searchParams.append("latitude", lat);
         url.searchParams.append("longitude", lon);
 
-        const data = await safeFetchJson(url.toString());
+        const data = await safeFetchJson(url.toString(), { timeoutMs: 4500 });
 
         const tempVal = Math.round(data.main.temp) + "°C";
         const descVal = data.weather[0].description;
@@ -4666,7 +4782,9 @@ async function simulateWeather() {
             desc: descVal,
             emoji: emoji
         };
-        sessionStorage.setItem(cacheKey, JSON.stringify(weatherResult));
+        try {
+            sessionStorage.setItem(cacheKey, JSON.stringify(weatherResult));
+        } catch (e) {}
 
         if (weatherIcon) weatherIcon.textContent = emoji;
         if (weatherTemp) weatherTemp.textContent = tempVal;
@@ -4696,15 +4814,15 @@ async function simulateWeather() {
 function getWeatherIconEmoji(iconCode) {
     if (!iconCode) return "🌤️";
     const map = {
-        "01": "☀️", // clear sky
-        "02": "⛅", // few clouds
-        "03": "☁️", // scattered clouds
-        "04": "☁️", // broken clouds
-        "09": "🌧️", // shower rain
-        "10": "🌦️", // rain
-        "11": "⛈️", // thunderstorm
-        "13": "❄️", // snow
-        "50": "🌫️"  // mist
+        "01": "☀️",
+        "02": "⛅",
+        "03": "☁️",
+        "04": "☁️",
+        "09": "🌧️",
+        "10": "🌦️",
+        "11": "⛈️",
+        "13": "❄️",
+        "50": "🌫️"
     };
     const prefix = iconCode.substring(0, 2);
     return map[prefix] || "🌤️";
@@ -4747,7 +4865,7 @@ function initSliderSwipe() {
     });
 }
 
-let standStats = [50, 50, 50, 50, 50, 50]; // 温泉・癒やし, 自然・景観, 歴史・文化, グルメ, アクティビティ, 都市・ショッピング
+let standStats = [50, 50, 50, 50, 50, 50];
 let myChart = null;
 
 function calculateStandStats() {
@@ -4920,7 +5038,7 @@ function updateChart() {
     const canvas = document.getElementById("standChart");
     if (!canvas) return;
 
-    calculateStandStats(); // パラメータを最新に再計算
+    calculateStandStats();
 
     const ctx = canvas.getContext("2d");
     if (myChart) myChart.destroy();
@@ -5343,7 +5461,6 @@ window.renderShareView = function () {
                         <div class="preview-toggle-btn">行程をすべて表示</div>
                     </div>
 
-                    <!-- 旅スタンド相性診断 UI -->
                     <div class="compatibility-container" id="compat-container-${sp.id}">
                         <button class="btn-compatibility" onclick="checkStandCompatibility(${sp.id}, ${standStatsArr})">
                             <span class="material-icons" style="font-size: 1.1rem; vertical-align: middle; margin-right: 4px;">bolt</span>
@@ -5351,7 +5468,6 @@ window.renderShareView = function () {
                         </button>
                     </div>
 
-                    <!-- リアクションエリア -->
                     <div class="reactions-bar">
                         <button class="reaction-btn" onclick="reactToPlan(${sp.id}, 'like')">
                             <span>👍</span> <span class="react-count">${reactions.like}</span>
@@ -5386,10 +5502,15 @@ window.renderShareView = function () {
             const isAlreadyShared = sharedPlans.some(sp => sp.author.includes(userName) && sp.destination === p.destination && sp.date === p.date);
             const div = document.createElement("div");
             div.className = "my-shareable-item";
+            const safeDest = escapeHTML(p.destination);
+            const safeDate = escapeHTML(p.date);
+            const safePeople = escapeHTML(p.people);
+            const safeBudget = escapeHTML(p.budget ? p.budget.toLocaleString() : "0");
+            const nights = parseInt(p.nights, 10) || 0;
             div.innerHTML = `
                 <div style="flex: 1;">
-                    <span class="shareable-title">📅 ${p.destination} の旅 (${p.nights}泊${p.nights + 1}日)</span>
-                    <span class="shareable-sub">日付: ${p.date} | 人数: ${p.people}名 | 予算: ${p.budget.toLocaleString()}円</span>
+                    <span class="shareable-title">📅 ${safeDest} の旅 (${nights}泊${nights + 1}日)</span>
+                    <span class="shareable-sub">日付: ${safeDate} | 人数: ${safePeople}名 | 予算: ${safeBudget}円</span>
                 </div>
                 <button class="btn-primary" style="padding: 6px 14px; font-size: 0.8rem; background-color: ${isAlreadyShared ? 'var(--text-muted)' : 'var(--primary-color)'};" onclick="sharePlan(${p.id})" ${isAlreadyShared ? 'disabled' : ''}>
                     ${isAlreadyShared ? '投稿済み' : '共有する'}
@@ -5509,7 +5630,7 @@ window.useSharedPlan = function (sharedPlanId) {
         id: Date.now(),
         destination: sp.destination,
         prefecture: sp.prefecture,
-        date: new Date().toISOString().split('T')[0], // 今日をデフォルト出発日に設定
+        date: new Date().toISOString().split('T')[0],
         nights: sp.nights,
         people: sp.people,
         budget: sp.budget,
@@ -5526,7 +5647,7 @@ window.useSharedPlan = function (sharedPlanId) {
     switchView("home");
 };
 
-let isSignUpMode = false; // デフォルトはログイン（サインイン）モード
+let isSignUpMode = false;
 
 function clearAuthInputs() {
     const emailInput = document.getElementById("authEmail");
@@ -5748,12 +5869,18 @@ function removeTypingIndicator(id) {
     if (el) el.remove();
 }
 
+let isSendingChat = false;
+
 window.handleSendChatMessage = async function (event) {
-    event.preventDefault();
+    if (event && typeof event.preventDefault === "function") {
+        event.preventDefault();
+    }
+    if (isSendingChat) return;
     const input = document.getElementById("chatInput");
     if (!input) return;
-    const messageText = input.value.trim();
-    if (!messageText) return;
+    const rawText = input.value.trim();
+    if (!rawText) return;
+    const messageText = rawText.slice(0, 500);
 
     input.value = "";
     appendChatBubble("user", messageText);
@@ -5781,12 +5908,20 @@ window.handleSendChatMessage = async function (event) {
 
     if (messageText.includes("プラン作成") || messageText.includes("プランを作って") || messageText.includes("プランを立てて") || messageText.includes("プラン生成")) {
         if (activePlanTarget === null || activePlanTarget === undefined) {
-            appendChatBubble("ai", "プランを作成するために、まずは気になるスポットを選択して目的地に設定してください！");
-            return;
+            activePlanTarget = likes[0] || kinkiPlaces[0] || null;
+            if (!activePlanTarget) {
+                appendChatBubble("ai", "プランを作成するために、まずは気になるスポットを選択して目的地に設定してください！");
+                return;
+            }
         }
+        switchView("plan");
         generateTravelPlan(event);
         return;
     }
+
+    isSendingChat = true;
+    const submitBtn = document.querySelector("#chatBotForm button[type='submit']");
+    if (submitBtn) submitBtn.disabled = true;
     const typingId = appendTypingIndicator();
 
     try {
@@ -5826,6 +5961,9 @@ ${targetPlan.itineraryText}
 ユーザーからの相談: ${apiMessageText}`;
         }
 
+        if (chatHistory.length > 16) {
+            chatHistory = chatHistory.slice(-12);
+        }
         chatHistory.push({ role: "user", parts: [{ text: fullPrompt }] });
 
         const chatUrl = getApiUrl("/api/travel/generate");
@@ -5835,21 +5973,24 @@ ${targetPlan.itineraryText}
             body: JSON.stringify({ contents: chatHistory })
         });
 
-        const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || "申し訳ありません、お答えを生成できませんでした。";
+        const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || "ご希望のエリアやテーマに合わせておすすめの観光スポットをご案内できます！";
         chatHistory.push({ role: "model", parts: [{ text: replyText }] });
 
         removeTypingIndicator(typingId);
 
         if (chatEditMode && plans.length > 0) {
             try {
-                const clean = replyText.replace(/```json|```/g, "").trim();
-                const parsed = JSON.parse(clean);
+                const clean = replyText.replace(/```json/gi, "").replace(/```/g, "").trim();
+                const jsonMatch = clean.match(/\{[\s\S]*\}/);
+                const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : clean);
                 appendChatBubble("ai", parsed.message || "プランを更新しました！");
-                plans[plans.length - 1].itineraryText = parsed.updatedItinerary;
-                saveToStorage();
-                const planTextEl = document.getElementById("aiPlanText");
-                if (planTextEl) planTextEl.innerHTML = formatItineraryHtml(parsed.updatedItinerary);
-                showToast("✏️ プランを更新しました！");
+                if (parsed.updatedItinerary) {
+                    plans[plans.length - 1].itineraryText = parsed.updatedItinerary;
+                    saveToStorage();
+                    const planTextEl = document.getElementById("aiPlanText");
+                    if (planTextEl) planTextEl.innerHTML = formatItineraryHtml(parsed.updatedItinerary);
+                    showToast("✏️ プランを更新しました！");
+                }
             } catch (e) {
                 appendChatBubble("ai", replyText);
             }
@@ -5861,6 +6002,9 @@ ${targetPlan.itineraryText}
         removeTypingIndicator(typingId);
         console.warn("Chat message send error:", error);
         appendChatBubble("ai", "ご希望のエリアやテーマに合わせて、おすすめの観光スポットや宿泊先をご案内できます！気になるスポットをスワイプで「いいね」してから「予定」タブでプランを作成してみてください。");
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
+        isSendingChat = false;
     }
 };
 
@@ -6017,11 +6161,15 @@ window.renderHomePlans = function () {
     displayPlans.forEach(plan => {
         const card = document.createElement("div");
         card.className = "home-plan-item";
+        const safeDest = escapeHTML(plan.destination);
+        const safeDate = escapeHTML(plan.date);
+        const safePeople = escapeHTML(plan.people);
+        const nights = parseInt(plan.nights, 10) || 0;
 
         card.innerHTML = `
             <div class="home-plan-item-info" style="cursor:pointer; flex:1; min-width:0;">
-                <span class="home-plan-dest">📅 ${plan.destination} の旅</span>
-                <span class="home-plan-date">出発日: ${plan.date} | ${plan.nights}泊${plan.nights + 1}日 | ${plan.people}名</span>
+                <span class="home-plan-dest">📅 ${safeDest} の旅</span>
+                <span class="home-plan-date">出発日: ${safeDate} | ${nights}泊${nights + 1}日 | ${safePeople}名</span>
             </div>
             <button class="sim3d-launch-mini-btn" title="3Dルートシミュレーション">
                 <span class="material-icons" style="font-size:1.1rem;">route</span>
@@ -6089,7 +6237,7 @@ window.handleHomeCta = function () {
 
 function generateProactiveItineraryText(title, spots, companion, transport, budget) {
     const dates = new Date();
-    dates.setDate(dates.getDate() + 7); // デフォルトで来週
+    dates.setDate(dates.getDate() + 7);
     const dateStr = dates.toISOString().split('T')[0];
 
     let text = `【AI先回り提案】${title}\n`;
@@ -6183,7 +6331,7 @@ window.renderProactiveSuggestions = function () {
         let defaultPairs = [
             {
                 title: "【AI推奨】秋の京都歴史・自然巡り周遊ルート",
-                spots: [kinkiPlaces[0], kinkiPlaces[11]], // 清水寺 & 伏見稲荷
+                spots: [kinkiPlaces[0], kinkiPlaces[11]],
                 prefecture: "京都",
                 season: "秋",
                 companion: "カップル",
@@ -6193,7 +6341,7 @@ window.renderProactiveSuggestions = function () {
             },
             {
                 title: "【AI推奨】有馬温泉と六甲山絶景ドライブ",
-                spots: [kinkiPlaces[1], kinkiPlaces[25]], // 有馬温泉 & 六甲山テラス
+                spots: [kinkiPlaces[1], kinkiPlaces[25]],
                 prefecture: "兵庫",
                 season: "冬",
                 companion: "カップル",
@@ -6366,7 +6514,8 @@ window.editProactiveSuggestion = function (sugId) {
     const budgetVal = sug.budget === "低予算" ? "30000" : sug.budget === "ラグジュアリー" ? "100000" : "50000";
     document.getElementById("planBudget").value = budgetVal;
 
-    document.getElementById("planTargetName").innerHTML = `<span class="material-icons" style="vertical-align: middle; color: var(--primary-color);">location_on</span> <span class="place-name" data-original-name="${spot.name}">${getDisplayName(spot.name)}</span> 行き旅行プラン設定`;
+    const safeSpotName = escapeHTML(spot.name);
+    document.getElementById("planTargetName").innerHTML = `<span class="material-icons" style="vertical-align: middle; color: var(--primary-color);">location_on</span> <span class="place-name" data-original-name="${safeSpotName}">${getDisplayName(spot.name)}</span> 行き旅行プラン設定`;
     document.getElementById("planOthers").value = "AI先回り提案をカスタマイズ中";
 
     document.querySelectorAll("#priorityPills .priority-pill").forEach(p => {
