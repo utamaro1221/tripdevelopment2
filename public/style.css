@@ -2518,13 +2518,14 @@ body.chat-drawer-open .app-content {
 
 .chat-drawer {
     position: fixed;
-    top: 0;
+    top: 60px;
     bottom: 90px;
     right: 0;
     width: 100%;
     max-width: min(420px, 100vw);
-    height: calc(100% - 90px);
+    height: calc(100vh - 150px);
     background-color: var(--card-bg);
+    border-top: 1px solid var(--border-color);
     border-left: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
     box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
@@ -2555,6 +2556,7 @@ body.chat-drawer-open .app-content {
         border-left: none;
         border-top: 1px solid var(--border-color);
         border-bottom: 1px solid var(--border-color);
+        border-top-left-radius: 0;
         box-sizing: border-box;
     }
 
@@ -2564,11 +2566,12 @@ body.chat-drawer-open .app-content {
 }
 
 .chat-drawer-header {
-    padding: 20px 24px;
+    padding: 16px 20px;
     border-bottom: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .chat-drawer-title {
@@ -2600,10 +2603,10 @@ body.chat-drawer-open .app-content {
 .chat-drawer-body {
     flex: 1;
     overflow-y: auto;
-    padding: 24px;
+    padding: 16px 20px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     background-color: var(--bg-color);
 }
 
@@ -4389,42 +4392,48 @@ textarea {
         grid-template-areas:
             "hero  saved"
             "plans saved"
-            "chat  chat";
-        grid-template-rows: minmax(320px, 1fr) auto auto;
-        align-content: stretch;
-        align-items: stretch;
+            "chat  saved";
+        grid-template-rows: auto auto auto;
+        align-content: start;
+        align-items: start;
         column-gap: 24px;
         row-gap: 16px;
-        padding: 20px max(28px, calc((100% - var(--content-max)) / 2)) 120px !important;
+        padding: 24px max(28px, calc((100% - var(--content-max)) / 2)) 120px !important;
         max-width: 100% !important;
         overflow-y: auto !important;
     }
 
-    
     .home-empty-state,
     .home-hero-card {
         grid-area: hero;
+        width: 100%;
         max-width: none;
         margin: 0;
+        box-sizing: border-box;
     }
 
     .home-hero-card {
         height: auto;
-        min-height: 0;
+        min-height: 200px;
         padding: 28px 32px;
     }
 
     .home-empty-state {
         display: flex;
         flex-direction: column;
+        height: auto;
     }
 
     .home-empty-state .cta-card {
-        flex: 1;
+        flex: 0 0 auto;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        padding: 32px 24px;
+        min-height: 200px;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .home-empty-state h3,
@@ -4447,6 +4456,8 @@ textarea {
         grid-area: plans;
         max-height: clamp(140px, 30dvh, 300px);
         min-height: 0;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     #homePlansSection .home-plans-list {
@@ -4458,8 +4469,11 @@ textarea {
 
     .home-section:not(#homePlansSection) {
         grid-area: saved;
-        min-height: 0;
-        max-height: clamp(340px, 60dvh, 650px);
+        align-self: stretch;
+        width: 100%;
+        box-sizing: border-box;
+        min-height: 220px;
+        max-height: clamp(280px, 55dvh, 520px);
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -4520,7 +4534,11 @@ textarea {
     
     .home-ai-chat-bar-container {
         grid-area: chat;
-        max-width: none;
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        box-sizing: border-box;
+        min-width: 0;
     }
 
     .home-ai-chat-bar {
