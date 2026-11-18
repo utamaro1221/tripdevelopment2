@@ -23,7 +23,7 @@ let simStopPoints = [];
 let simStoppedIndexes = [];
 let simStopTimer = null;
 let AdvancedMarkerElement = null;
-let isDemoLocked = true;
+const isDemoLocked = true;
 
 const spotCategories = {
     "清水寺": "history",
@@ -619,7 +619,6 @@ export async function open3DRouteSimulation(plan) {
     simOverlayEl.classList.remove("hidden");
     document.body.classList.add("sim3d-open");
     document.body.style.overflow = "hidden";
-    isDemoLocked = true;
     window.isDemoLocked = true;
     if (typeof window.enableDemoLock === "function") {
         window.enableDemoLock();
